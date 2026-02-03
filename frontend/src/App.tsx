@@ -110,6 +110,7 @@ function App() {
             matches={matches}
             players={players}
             eloHistory={eloHistory}
+            onMatchDeleted={handleMatchRecorded}
           />
         )}
       </main>
@@ -125,6 +126,10 @@ function App() {
           player={selectedPlayer}
           matches={matches}
           onClose={() => setSelectedPlayer(null)}
+          onPlayerUpdated={() => {
+            handleMatchRecorded();
+            setSelectedPlayer(null);
+          }}
         />
       )}
     </div>

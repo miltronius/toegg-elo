@@ -9,12 +9,19 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
-import { getEloHistory, Match, Player } from "../lib/supabase";
+import {
+  getEloHistory,
+  deletePlayer,
+  updatePlayerName,
+  Match,
+  Player,
+} from "../lib/supabase";
 
 interface PlayerDetailProps {
   player: Player;
   matches: Match[];
   onClose: () => void;
+  onPlayerUpdated?: () => void;
 }
 
 interface ChartData {
@@ -25,10 +32,18 @@ interface ChartData {
   winrate: number;
 }
 
-export function PlayerDetail({ player, matches, onClose }: PlayerDetailProps) {
+export function PlayerDetail({
+  player,
+  matches,
+  onClose,
+  onPlayerUpdated,
+}: PlayerDetailProps) {
   const [eloHistory, setEloHistory] = useState<any[]>([]);
   const [chartData, setChartData] = useState<ChartData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [newName, setNewName] = useState(player.name);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     loadPlayerData();
@@ -73,6 +88,49 @@ export function PlayerDetail({ player, matches, onClose }: PlayerDetailProps) {
     }
   };
 
+  const handleSaveName = async () => {
+    if (newName === player.name || !newName.trim()) {
+      setIsEditingName(false);
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      await updatePlayerName(player.id, newName);
+      onPlayerUpdated?.();
+      setIsEditingName(false);
+    } catch (error) {
+      alert(
+        "Failed to update name: " +
+          (error instanceof Error ? error.message : "Unknown error"),
+      );
+      setNewName(player.name);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDeletePlayer = async () => {
+    if (
+      !confirm(
+        `Delete player "${player.name}"? This will remove all their matches and stats.`,
+      )
+    ) {
+      return;
+    }
+
+    try {
+      await deletePlayer(player.id);
+      onPlayerUpdated?.();
+      onClose();
+    } catch (error) {
+      alert(
+        "Failed to delete player: " +
+          (error instanceof Error ? error.message : "Unknown error"),
+      );
+    }
+  };
+
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div
@@ -80,10 +138,52 @@ export function PlayerDetail({ player, matches, onClose }: PlayerDetailProps) {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="player-detail-header">
-          <h2>{player.name}</h2>
-          <button className="close-btn" onClick={onClose}>
-            ✕
-          </button>
+          {isEditingName ? (
+            <div className="name-edit-form">
+              <input
+                type="text"
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                onKeyPress={(e) => {
+                  if (e.key === "Enter") handleSaveName();
+                }}
+                disabled={isSaving}
+                autoFocus
+              />
+              <button
+                onClick={handleSaveName}
+                disabled={isSaving}
+                className="btn-small"
+              >
+                {isSaving ? "..." : "✓"}
+              </button>
+              <button
+                onClick={() => {
+                  setIsEditingName(false);
+                  setNewName(player.name);
+                }}
+                disabled={isSaving}
+                className="btn-small btn-cancel"
+              >
+                ✕
+              </button>
+            </div>
+          ) : (
+            <h2
+              onClick={() => setIsEditingName(true)}
+              className="clickable-name"
+            >
+              {player.name}
+            </h2>
+          )}
+          <div className="header-buttons">
+            <button className="close-btn" onClick={onClose}>
+              ✕
+            </button>
+            <button className="btn-delete-sm" onClick={handleDeletePlayer}>
+              🗑️
+            </button>
+          </div>
         </div>
 
         <div className="player-stats-grid">

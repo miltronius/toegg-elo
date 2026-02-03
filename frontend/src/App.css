@@ -407,6 +407,61 @@ button[type="button"]:disabled {
   background-color: rgba(239, 68, 68, 0.1);
 }
 
+.player-elo-details {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.9rem;
+  padding: 0.5rem;
+  border-radius: 0.25rem;
+  background: rgba(255, 255, 255, 0.4);
+}
+
+.player-name {
+  font-weight: 500;
+  min-width: 100px;
+}
+
+.elo-before {
+  color: var(--text-light);
+  font-size: 0.85rem;
+}
+
+.elo-arrow {
+  color: var(--text-light);
+  font-weight: 300;
+}
+
+.elo-after {
+  font-weight: 600;
+  min-width: 45px;
+}
+
+.elo-after.positive {
+  color: var(--success);
+}
+
+.elo-after.negative {
+  color: var(--error);
+}
+
+.elo-change-detail {
+  font-size: 0.8rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  font-weight: 500;
+}
+
+.elo-change-detail.positive {
+  color: var(--success);
+  background-color: rgba(16, 185, 129, 0.15);
+}
+
+.elo-change-detail.negative {
+  color: var(--error);
+  background-color: rgba(239, 68, 68, 0.15);
+}
+
 .match-divider {
   display: flex;
   align-items: center;
@@ -574,4 +629,103 @@ button[type="button"]:disabled {
   text-align: center;
   padding: 2rem;
   color: var(--text-light);
+}
+
+/* Edit/Delete Actions */
+.name-edit-form {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex: 1;
+}
+
+.name-edit-form input {
+  flex: 1;
+  padding: 0.5rem;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.btn-small {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.9rem;
+  background-color: var(--primary);
+  color: white;
+  border: none;
+  border-radius: 0.25rem;
+  cursor: pointer;
+}
+
+.btn-small:hover {
+  background-color: var(--primary-dark);
+}
+
+.btn-small:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-cancel {
+  background-color: var(--error);
+}
+
+.btn-cancel:hover {
+  background-color: var(--error);
+}
+
+.clickable-name {
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.clickable-name:hover {
+  opacity: 0.7;
+}
+
+.header-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.btn-delete-sm {
+  background: none;
+  border: none;
+  font-size: 1.25rem;
+  cursor: pointer;
+  padding: 0.5rem;
+  transition: transform 0.2s;
+}
+
+.btn-delete-sm:hover {
+  transform: scale(1.2);
+}
+
+.btn-delete {
+  background-color: var(--error);
+  color: white;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 0.25rem;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: all 0.2s;
+}
+
+.btn-delete:hover {
+  background-color: var(--error);
+  opacity: 0.8;
+}
+
+.btn-delete:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.match-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border-light);
 }
