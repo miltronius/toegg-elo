@@ -99,3 +99,101 @@ export async function getEloHistory(playerId: string): Promise<EloHistory[]> {
   if (error) throw error;
   return data || [];
 }
+
+export async function deleteMatch(matchId: string) {
+  // First, get the match to know which players were involved
+  const { data: matchData } = await supabase
+    .from("matches")
+    .select(
+      "team_a_player_1_id, team_a_player_2_id, team_b_player_1_id, team_b_player_2_id",
+    )
+    .eq("id", matchId)
+    .single();
+
+  if (!matchData) throw new Error("Match not found");
+
+  const affectedPlayerIds = [
+    matchData.team_a_player_1_id,
+    matchData.team_a_player_2_id,
+    matchData.team_b_player_1_id,
+    matchData.team_b_player_2_id,
+  ];
+
+  // Delete elo_history records for this match
+  const { error: historyError } = await supabase
+    .from("elo_history")
+    .delete()
+    .eq("match_id", matchId);
+
+  if (historyError) throw historyError;
+
+  // Delete the match
+  const { error: matchError } = await supabase
+    .from("matches")
+    .delete()
+    .eq("id", matchId);
+
+  if (matchError) throw matchError;
+
+  // Recalculate stats for each affected player
+  for (const playerId of affectedPlayerIds) {
+    const playerHistory = await getEloHistory(playerId);
+
+    if (playerHistory.length > 0) {
+      const lastEntry = playerHistory[0];
+      await supabase
+        .from("players")
+        .update({
+          current_elo: lastEntry.elo_after,
+          matches_played: playerHistory.length,
+          wins: playerHistory.filter((h) => h.elo_change > 0).length,
+          losses: playerHistory.filter((h) => h.elo_change < 0).length,
+        })
+        .eq("id", playerId);
+    } else {
+      // Reset to default if no history left
+      await supabase
+        .from("players")
+        .update({
+          current_elo: 1500,
+          matches_played: 0,
+          wins: 0,
+          losses: 0,
+        })
+        .eq("id", playerId);
+    }
+  }
+}
+
+export async function deletePlayer(playerId: string) {
+  // Delete all elo_history for this player
+  await supabase.from("elo_history").delete().eq("player_id", playerId);
+
+  // Delete all matches involving this player
+  const { data: matches } = await supabase
+    .from("matches")
+    .select("id")
+    .or(
+      `team_a_player_1_id.eq.${playerId},team_a_player_2_id.eq.${playerId},team_b_player_1_id.eq.${playerId},team_b_player_2_id.eq.${playerId}`,
+    );
+
+  if (matches) {
+    for (const match of matches) {
+      await deleteMatch(match.id);
+    }
+  }
+
+  // Delete the player
+  const { error } = await supabase.from("players").delete().eq("id", playerId);
+
+  if (error) throw error;
+}
+
+export async function updatePlayerName(playerId: string, newName: string) {
+  const { error } = await supabase
+    .from("players")
+    .update({ name: newName })
+    .eq("id", playerId);
+
+  if (error) throw error;
+}
