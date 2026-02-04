@@ -180,9 +180,6 @@ export function PlayerDetail({
             <button className="close-btn" onClick={onClose}>
               ✕
             </button>
-            <button className="btn-delete-sm" onClick={handleDeletePlayer}>
-              🗑️
-            </button>
           </div>
         </div>
 
