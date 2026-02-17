@@ -311,20 +311,32 @@ button[type="button"]:disabled {
   color: var(--primary);
 }
 
+th.matches {
+  text-align: center;
+}
+
 .matches {
   text-align: center;
   color: var(--text-light);
 }
 
-.record {
+th.record {
   text-align: center;
-  font-weight: 500;
+  font-weight: 600;
 }
 
-.winrate {
+td.record {
+  text-align: center;
+}
+
+th.winrate {
+  text-align: center;
+}
+
+td.winrate {
+  color: var(--success);
   text-align: center;
   font-weight: 500;
-  color: var(--success);
 }
 
 /* Match History */

@@ -19,10 +19,10 @@ export function Leaderboard({ players, onPlayerClick }: LeaderboardProps) {
             <tr>
               <th>Rank</th>
               <th>Name</th>
-              <th>ELO</th>
-              <th>Matches</th>
-              <th>W-L</th>
-              <th>Winrate</th>
+              <th>Elo</th>
+              <th className="matches">Matches</th>
+              <th className="record">W-L</th>
+              <th className="winrate">Winrate</th>
             </tr>
           </thead>
           <tbody>
