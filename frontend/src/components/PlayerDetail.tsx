@@ -8,6 +8,7 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
+  ReferenceLine,
 } from "recharts";
 import {
   getEloHistory,
@@ -110,27 +111,6 @@ export function PlayerDetail({
     }
   };
 
-  const handleDeletePlayer = async () => {
-    if (
-      !confirm(
-        `Delete player "${player.name}"? This will remove all their matches and stats.`,
-      )
-    ) {
-      return;
-    }
-
-    try {
-      await deletePlayer(player.id);
-      onPlayerUpdated?.();
-      onClose();
-    } catch (error) {
-      alert(
-        "Failed to delete player: " +
-          (error instanceof Error ? error.message : "Unknown error"),
-      );
-    }
-  };
-
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div
@@ -224,6 +204,19 @@ export function PlayerDetail({
                   <YAxis domain={["dataMin - 50", "dataMax + 50"]} />
                   <Tooltip />
                   <Legend />
+                  <ReferenceLine
+                    y={1500}
+                    stroke="#f59e0b"
+                    strokeDasharray="6 4"
+                    strokeWidth={1.5}
+                    label={{
+                      value: "1500",
+                      position: "insideTopRight",
+                      fill: "#f59e0b",
+                      fontSize: 12,
+                      dy: -20,
+                    }}
+                  />
                   <Line
                     type="monotone"
                     dataKey="elo"
