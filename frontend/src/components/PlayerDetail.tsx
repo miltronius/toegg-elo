@@ -168,6 +168,7 @@ export function PlayerDetail({
             <div className="stat-label">Current ELO</div>
             <div className="stat-value">{player.current_elo}</div>
           </div>
+          {/*
           <div className="stat-card">
             <div className="stat-label">Total Matches</div>
             <div className="stat-value">{player.matches_played}</div>
@@ -178,6 +179,7 @@ export function PlayerDetail({
               {player.wins}-{player.losses}
             </div>
           </div>
+                      */}
           <div className="stat-card">
             <div className="stat-label">Winrate</div>
             <div className="stat-value">

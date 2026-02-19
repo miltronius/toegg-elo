@@ -20,8 +20,10 @@ export function Leaderboard({ players, onPlayerClick }: LeaderboardProps) {
               <th>Rank</th>
               <th>Name</th>
               <th>Elo</th>
+              {/*
               <th className="matches">Matches</th>
               <th className="record">W-L</th>
+              */}
               <th className="winrate">Winrate</th>
             </tr>
           </thead>
@@ -40,10 +42,12 @@ export function Leaderboard({ players, onPlayerClick }: LeaderboardProps) {
                   <td className="rank">#{index + 1}</td>
                   <td className="name">{player.name}</td>
                   <td className="elo">{player.current_elo}</td>
+                  {/*
                   <td className="matches">{player.matches_played}</td>
                   <td className="record">
                     {player.wins}-{player.losses}
                   </td>
+                  */}
                   <td className="winrate">{winrate}%</td>
                 </tr>
               );
