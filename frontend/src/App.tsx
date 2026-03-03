@@ -38,10 +38,8 @@ function App() {
         getPlayers(),
         getMatches(),
       ]);
-
       setPlayers(playersData);
       setMatches(matchesData);
-
       // Load ELO history for all players
       const historyMap = new Map<string, EloHistory[]>();
       for (const player of playersData) {
@@ -64,6 +62,9 @@ function App() {
     await loadData();
   };
 
+  // Flatten the per-player history map into a single array for the Leaderboard
+  const allEloHistory: EloHistory[] = Array.from(eloHistory.values()).flat();
+
   if (loading) {
     return <div className="loading">Loading...</div>;
   }
@@ -76,7 +77,6 @@ function App() {
           + New Player
         </button>
       </header>
-
       <nav className="tabs">
         <button
           className={`tab ${activeTab === "leaderboard" ? "active" : ""}`}
@@ -97,10 +97,13 @@ function App() {
           History
         </button>
       </nav>
-
       <main className="app-content">
         {activeTab === "leaderboard" && (
-          <Leaderboard players={players} onPlayerClick={setSelectedPlayer} />
+          <Leaderboard
+            players={players}
+            history={allEloHistory}
+            onPlayerClick={setSelectedPlayer}
+          />
         )}
         {activeTab === "match" && (
           <MatchForm players={players} onMatchRecorded={handleMatchRecorded} />
@@ -114,13 +117,11 @@ function App() {
           />
         )}
       </main>
-
       <CreatePlayerModal
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
         onPlayerCreated={handlePlayerCreated}
       />
-
       {selectedPlayer && (
         <PlayerDetail
           player={selectedPlayer}
