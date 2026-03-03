@@ -197,3 +197,13 @@ export async function updatePlayerName(playerId: string, newName: string) {
 
   if (error) throw error;
 }
+
+export async function getAllEloHistory(): Promise<EloHistory[]> {
+  const { data, error } = await supabase
+    .from("elo_history")
+    .select("*")
+    .order("created_at", { ascending: true });
+
+  if (error) throw error;
+  return data || [];
+}
