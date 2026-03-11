@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { getPlayers, createPlayer, Player } from "../lib/supabase";
+import { useState } from "react";
+import { createPlayer, Player } from "../lib/supabase";
 
 interface CreatePlayerModalProps {
   isOpen: boolean;
