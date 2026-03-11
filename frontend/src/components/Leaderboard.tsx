@@ -4,7 +4,7 @@ import { Player, EloHistory } from "../lib/supabase";
 interface LeaderboardProps {
   players: Player[];
   history: EloHistory[];
-  onPlayerClick: (player: Player) => void;
+  onPlayerClick?: (player: Player) => void;
 }
 
 interface Snapshot {
@@ -103,13 +103,18 @@ export function Leaderboard({ players, history, onPlayerClick }: LeaderboardProp
   const innerW = Math.max(10, (svgWidth || 600) - PAD.left - PAD.right);
   const innerH = chartH - PAD.top - PAD.bottom;
 
+  const matchFirst = matchIndices[0] ?? 0;
+  const matchLast  = matchIndices.at(-1) ?? 1;
+  const padLeft    = PAD.left;
+  const padTop     = PAD.top;
+
   const xScale = useCallback(
-    (m: number) => PAD.left + ((m - (matchIndices[0] ?? 0)) / ((matchIndices.at(-1) ?? 1) - (matchIndices[0] ?? 0) || 1)) * innerW,
-    [matchIndices, innerW, PAD.left]
+    (m: number) => padLeft + ((m - matchFirst) / ((matchLast - matchFirst) || 1)) * innerW,
+    [matchFirst, matchLast, innerW, padLeft]
   );
   const yScale = useCallback(
-    (rank: number) => PAD.top + ((rank - 1) / (nPlayers - 1 || 1)) * innerH,
-    [nPlayers, innerH, PAD.top]
+    (rank: number) => padTop + ((rank - 1) / (nPlayers - 1 || 1)) * innerH,
+    [nPlayers, innerH, padTop]
   );
 
   if (players.length === 0) {

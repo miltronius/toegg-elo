@@ -7,6 +7,43 @@ const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || "";
 
 export const supabase = createClient(supabaseUrl, supabaseKey);
 
+export type Role = "viewer" | "user" | "admin";
+
+export type Profile = {
+  id: string;
+  email: string;
+  role: Role;
+  created_at: string;
+};
+
+export async function getMyRole(): Promise<Role> {
+  const { data: { user } } = await supabase.auth.getUser();
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user!.id)
+    .single();
+  if (error) throw error;
+  return data.role as Role;
+}
+
+export async function getAllProfiles(): Promise<Profile[]> {
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("*")
+    .order("created_at", { ascending: true });
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function updateUserRole(userId: string, role: Role) {
+  const { error } = await supabase
+    .from("profiles")
+    .update({ role })
+    .eq("id", userId);
+  if (error) throw error;
+}
+
 export type Player = {
   id: string;
   name: string;
