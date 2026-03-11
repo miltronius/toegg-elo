@@ -12,8 +12,8 @@ import {
 } from "recharts";
 import {
   getEloHistory,
-  deletePlayer,
   updatePlayerName,
+  EloHistory,
   Match,
   Player,
 } from "../lib/supabase";
@@ -35,11 +35,10 @@ interface ChartData {
 
 export function PlayerDetail({
   player,
-  matches,
+  matches: _matches,
   onClose,
   onPlayerUpdated,
 }: PlayerDetailProps) {
-  const [eloHistory, setEloHistory] = useState<any[]>([]);
   const [chartData, setChartData] = useState<ChartData[]>([]);
   const [loading, setLoading] = useState(true);
   const [isEditingName, setIsEditingName] = useState(false);
@@ -47,17 +46,13 @@ export function PlayerDetail({
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    loadPlayerData();
-  }, [player.id]);
+    const loadPlayerData = async () => {
+      setLoading(true);
+      try {
+        const history: EloHistory[] = await getEloHistory(player.id);
 
-  const loadPlayerData = async () => {
-    setLoading(true);
-    try {
-      const history = await getEloHistory(player.id);
-      setEloHistory(history);
-
-      // Build chart data from history
-      const data: ChartData[] = history
+        // Build chart data from history
+        const data: ChartData[] = history
         .sort(
           (a, b) =>
             new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
@@ -87,7 +82,9 @@ export function PlayerDetail({
     } finally {
       setLoading(false);
     }
-  };
+    };
+    loadPlayerData();
+  }, [player.id]);
 
   const handleSaveName = async () => {
     if (newName === player.name || !newName.trim()) {
