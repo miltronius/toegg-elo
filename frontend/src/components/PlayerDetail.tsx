@@ -39,7 +39,8 @@ export function PlayerDetail({
   onClose,
   onPlayerUpdated,
 }: PlayerDetailProps) {
-  const [chartData, setChartData] = useState<ChartData[]>([]);
+  const [chartData, setChartData] = useState<{ perGame: ChartData[]; perDate: ChartData[] }>({ perGame: [], perDate: [] });
+  const [xAxisMode, setXAxisMode] = useState<"game" | "date">("date");
   const [loading, setLoading] = useState(true);
   const [isEditingName, setIsEditingName] = useState(false);
   const [newName, setNewName] = useState(player.name);
@@ -68,7 +69,7 @@ export function PlayerDetail({
           const winrate = total > 0 ? (cumulativeWins / total) * 100 : 0;
 
           return {
-            date: new Date(entry.created_at).toLocaleDateString(),
+            date: new Date(entry.created_at).toLocaleDateString("de-CH", { day: "2-digit", month: "2-digit", year: "numeric" }),
             elo: entry.elo_after,
             cumWins: cumulativeWins,
             cumLosses: cumulativeLosses,
@@ -76,7 +77,14 @@ export function PlayerDetail({
           };
         });
 
-      setChartData(data);
+      // Aggregate by date: keep last entry per day
+      const byDate = new Map<string, ChartData>();
+      for (const entry of data) {
+        byDate.set(entry.date, entry);
+      }
+      const dateData = Array.from(byDate.values());
+
+      setChartData({ perGame: data, perDate: dateData });
     } catch (error) {
       console.error("Failed to load player data:", error);
     } finally {
@@ -190,14 +198,29 @@ export function PlayerDetail({
 
         {loading ? (
           <div className="loading-state">Loading charts...</div>
-        ) : chartData.length === 0 ? (
+        ) : chartData.perGame.length === 0 ? (
           <div className="empty-state">No match history yet</div>
         ) : (
           <>
+            <div className="lb-toggle" style={{ width: "fit-content" }}>
+              <button
+                className={`lb-toggle-btn${xAxisMode === "date" ? " active" : ""}`}
+                onClick={() => setXAxisMode("date")}
+              >
+                Per Date
+              </button>
+              <button
+                className={`lb-toggle-btn${xAxisMode === "game" ? " active" : ""}`}
+                onClick={() => setXAxisMode("game")}
+              >
+                Per Game
+              </button>
+            </div>
+
             <div className="chart-container">
               <h3>ELO Progression</h3>
               <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={chartData}>
+                <LineChart data={xAxisMode === "date" ? chartData.perDate : chartData.perGame}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="date" />
                   <YAxis domain={["dataMin - 50", "dataMax + 50"]} />
@@ -231,7 +254,7 @@ export function PlayerDetail({
             <div className="chart-container">
               <h3>Winrate Over Time</h3>
               <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={chartData}>
+                <LineChart data={xAxisMode === "date" ? chartData.perDate : chartData.perGame}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="date" />
                   <YAxis domain={[0, 100]} label={{ value: "%" }} />
