@@ -31,8 +31,8 @@ export function AuthScreen({ onClose }: { onClose?: () => void }) {
 
   if (signedUp) {
     return (
-      <div className="auth-screen" onClick={onClose}>
-        <div className="auth-card" onClick={(e) => e.stopPropagation()}>
+      <div className="auth-screen">
+        <div className="auth-card">
           <h1>TöggElo⚽</h1>
           <div className="auth-success">
             <p>Account created! Check your email to confirm your address, then log in.</p>
@@ -46,8 +46,8 @@ export function AuthScreen({ onClose }: { onClose?: () => void }) {
   }
 
   return (
-    <div className="auth-screen" onClick={onClose}>
-      <div className="auth-card" onClick={(e) => e.stopPropagation()}>
+    <div className="auth-screen">
+      <div className="auth-card">
         {onClose && (
           <button className="auth-close-btn" onClick={onClose}>✕</button>
         )}
