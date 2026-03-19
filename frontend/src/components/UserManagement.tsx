@@ -67,7 +67,7 @@ export function UserManagement() {
                 {saving === profile.id && <span className="saving-indicator"> saving...</span>}
               </td>
               <td className="text-light">
-                {new Date(profile.created_at).toLocaleDateString()}
+                {new Date(profile.created_at).toLocaleDateString("de-CH", { day: "2-digit", month: "2-digit", year: "numeric" })}
               </td>
             </tr>
           ))}

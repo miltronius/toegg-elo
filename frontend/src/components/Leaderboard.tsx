@@ -144,12 +144,67 @@ function buildEloProgressionData(
   return data;
 }
 
+function buildEloProgressionDataByDate(
+  players: Player[],
+  history: EloHistory[],
+): Record<string, number | string>[] {
+  if (!history.length) return [];
+  const sorted = [...history].sort(
+    (a, b) =>
+      new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+  );
+  const currentElo: Record<string, number> = {};
+  const firstSeen: Record<string, boolean> = {};
+  for (const h of sorted) {
+    if (!firstSeen[h.player_id]) {
+      currentElo[h.player_id] = h.elo_before;
+      firstSeen[h.player_id] = true;
+    }
+  }
+  players.forEach((p) => {
+    if (currentElo[p.id] === undefined) currentElo[p.id] = p.current_elo;
+  });
+
+  const startPoint: Record<string, number | string> = { label: "Start" };
+  players.forEach((p) => {
+    startPoint[p.name] = currentElo[p.id] ?? p.current_elo;
+  });
+  const data: Record<string, number | string>[] = [startPoint];
+
+  // Group matches by date, preserving chronological order
+  const dateOrder: string[] = [];
+  const byDate: Record<string, EloHistory[]> = {};
+  for (const h of sorted) {
+    const date = new Date(h.created_at).toLocaleDateString("de-CH", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    });
+    if (!byDate[date]) {
+      byDate[date] = [];
+      dateOrder.push(date);
+    }
+    byDate[date].push(h);
+  }
+
+  dateOrder.forEach((date) => {
+    for (const h of byDate[date]) currentElo[h.player_id] = h.elo_after;
+    const point: Record<string, number | string> = { label: date };
+    players.forEach((p) => {
+      point[p.name] = currentElo[p.id] ?? p.current_elo;
+    });
+    data.push(point);
+  });
+  return data;
+}
+
 export function Leaderboard({
   players,
   history,
   onPlayerClick,
 }: LeaderboardProps) {
   const [view, setView] = useState<"table" | "bump" | "elo">("table");
+  const [eloXAxis, setEloXAxis] = useState<"date" | "game">("date");
   const [hovered, setHovered] = useState<string | null>(null);
   const [tooltip, setTooltip] = useState<{
     x: number;
@@ -175,6 +230,7 @@ export function Leaderboard({
   );
   const snapshots = buildSnapshots(players, history);
   const eloData = buildEloProgressionData(players, history);
+  const eloDateData = buildEloProgressionDataByDate(players, history);
   const matchIndices = [...new Set(snapshots.map((s) => s.match_index))].sort(
     (a, b) => a - b,
   );
@@ -549,6 +605,20 @@ export function Leaderboard({
       {/* ── ELO PROGRESSION CHART VIEW ── */}
       {view === "elo" && (
         <div className="bump-chart-wrap">
+          <div className="lb-toggle" style={{ width: "fit-content", marginBottom: "12px" }}>
+            <button
+              className={`lb-toggle-btn${eloXAxis === "date" ? " active" : ""}`}
+              onClick={() => setEloXAxis("date")}
+            >
+              Per Date
+            </button>
+            <button
+              className={`lb-toggle-btn${eloXAxis === "game" ? " active" : ""}`}
+              onClick={() => setEloXAxis("game")}
+            >
+              Per Game
+            </button>
+          </div>
           <div className="bump-legend">
             {sortedPlayers.map((p, i) => (
               <button
@@ -582,7 +652,7 @@ export function Leaderboard({
           >
             <ResponsiveContainer width="100%" height="100%">
               <LineChart
-                data={eloData}
+                data={eloXAxis === "date" ? eloDateData : eloData}
                 margin={{ top: 12, right: 110, bottom: 8, left: 8 }}
               >
                 <CartesianGrid
@@ -627,10 +697,9 @@ export function Leaderboard({
                       strokeOpacity={dimmed ? 0.12 : 1}
                       dot={false}
                       activeDot={{ r: 4 }}
-                      isAnimationActive={false}
                       label={
                         <EloLineLabel
-                          dataLength={eloData.length}
+                          dataLength={eloXAxis === "date" ? eloDateData.length : eloData.length}
                           playerName={p.name}
                           color={color}
                           dimmed={dimmed}

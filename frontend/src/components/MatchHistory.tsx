@@ -127,7 +127,7 @@ export function MatchHistory({
                 </div>
                 <div className="match-footer">
                   <div className="match-time">
-                    {new Date(match.created_at).toLocaleString()}
+                    {new Date(match.created_at).toLocaleString("de-CH", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}
                   </div>
                   <button
                     className="btn-delete"
