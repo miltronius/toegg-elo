@@ -237,20 +237,20 @@ export function Leaderboard({
             <TableIcon /> Table
           </button>
           <button
-            className={`lb-toggle-btn${view === "bump" ? " active" : ""}`}
-            onClick={() => setView("bump")}
-            disabled={snapshots.length === 0}
-            title={snapshots.length === 0 ? "No match history yet" : undefined}
-          >
-            <BumpIcon /> Bump Chart
-          </button>
-          <button
             className={`lb-toggle-btn${view === "elo" ? " active" : ""}`}
             onClick={() => setView("elo")}
             disabled={eloData.length === 0}
             title={eloData.length === 0 ? "No match history yet" : undefined}
           >
             <EloIcon /> ELO Chart
+          </button>
+          <button
+            className={`lb-toggle-btn${view === "bump" ? " active" : ""}`}
+            onClick={() => setView("bump")}
+            disabled={snapshots.length === 0}
+            title={snapshots.length === 0 ? "No match history yet" : undefined}
+          >
+            <BumpIcon /> Bump Chart (rank)
           </button>
         </div>
       </div>
@@ -583,7 +583,7 @@ export function Leaderboard({
             <ResponsiveContainer width="100%" height="100%">
               <LineChart
                 data={eloData}
-                margin={{ top: 12, right: 24, bottom: 8, left: 8 }}
+                margin={{ top: 12, right: 110, bottom: 8, left: 8 }}
               >
                 <CartesianGrid
                   strokeDasharray="3 3"
@@ -614,21 +614,33 @@ export function Leaderboard({
                     fill: "#aaa",
                   }}
                 />
-                {sortedPlayers.map((p, i) => (
-                  <Line
-                    key={p.id}
-                    type="monotone"
-                    dataKey={p.name}
-                    stroke={playerColor(i, sortedPlayers.length)}
-                    strokeWidth={hovered === p.id ? 3 : 1.5}
-                    strokeOpacity={hovered && hovered !== p.id ? 0.12 : 1}
-                    dot={false}
-                    activeDot={{ r: 4 }}
-                    isAnimationActive={false}
-                    onMouseEnter={() => setHovered(p.id)}
-                    onMouseLeave={() => setHovered(null)}
-                  />
-                ))}
+                {sortedPlayers.map((p, i) => {
+                  const color = playerColor(i, sortedPlayers.length);
+                  const dimmed = !!(hovered && hovered !== p.id);
+                  return (
+                    <Line
+                      key={p.id}
+                      type="monotone"
+                      dataKey={p.name}
+                      stroke={color}
+                      strokeWidth={hovered === p.id ? 3 : 1.5}
+                      strokeOpacity={dimmed ? 0.12 : 1}
+                      dot={false}
+                      activeDot={{ r: 4 }}
+                      isAnimationActive={false}
+                      label={
+                        <EloLineLabel
+                          dataLength={eloData.length}
+                          playerName={p.name}
+                          color={color}
+                          dimmed={dimmed}
+                        />
+                      }
+                      onMouseEnter={() => setHovered(p.id)}
+                      onMouseLeave={() => setHovered(null)}
+                    />
+                  );
+                })}
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -651,6 +663,42 @@ function TableIcon() {
       <rect x="1" y="6.5" width="14" height="2.5" rx="1" />
       <rect x="1" y="11" width="14" height="2.5" rx="1" />
     </svg>
+  );
+}
+
+interface EloLineLabelProps {
+  x?: number;
+  y?: number;
+  index?: number;
+  dataLength: number;
+  playerName: string;
+  color: string;
+  dimmed: boolean;
+}
+
+function EloLineLabel({
+  x = 0,
+  y = 0,
+  index = 0,
+  dataLength,
+  playerName,
+  color,
+  dimmed,
+}: EloLineLabelProps) {
+  if (index !== dataLength - 1) return null;
+  return (
+    <text
+      x={x + 8}
+      y={y}
+      fill={color}
+      fontSize={12}
+      fontWeight={500}
+      dominantBaseline="middle"
+      fillOpacity={dimmed ? 0.18 : 1}
+      style={{ transition: "fill-opacity 0.2s" }}
+    >
+      {playerName}
+    </text>
   );
 }
 
