@@ -1,4 +1,14 @@
 import { useState, useRef, useEffect, useCallback } from "react";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ReferenceLine,
+  ResponsiveContainer,
+} from "recharts";
 import { Player, EloHistory } from "../lib/supabase";
 
 interface LeaderboardProps {
@@ -87,12 +97,59 @@ function buildPath(
     .join(" ");
 }
 
+function buildEloProgressionData(
+  players: Player[],
+  history: EloHistory[],
+): Record<string, number | string>[] {
+  if (!history.length) return [];
+  const sorted = [...history].sort(
+    (a, b) =>
+      new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+  );
+  const matchOrder: string[] = [];
+  const byMatch: Record<string, EloHistory[]> = {};
+  for (const h of sorted) {
+    if (!byMatch[h.match_id]) {
+      byMatch[h.match_id] = [];
+      matchOrder.push(h.match_id);
+    }
+    byMatch[h.match_id].push(h);
+  }
+  const currentElo: Record<string, number> = {};
+  const firstSeen: Record<string, boolean> = {};
+  for (const h of sorted) {
+    if (!firstSeen[h.player_id]) {
+      currentElo[h.player_id] = h.elo_before;
+      firstSeen[h.player_id] = true;
+    }
+  }
+  players.forEach((p) => {
+    if (currentElo[p.id] === undefined) currentElo[p.id] = p.current_elo;
+  });
+
+  const startPoint: Record<string, number | string> = { label: "Start" };
+  players.forEach((p) => {
+    startPoint[p.name] = currentElo[p.id] ?? p.current_elo;
+  });
+  const data: Record<string, number | string>[] = [startPoint];
+
+  matchOrder.forEach((matchId, idx) => {
+    for (const h of byMatch[matchId]) currentElo[h.player_id] = h.elo_after;
+    const point: Record<string, number | string> = { label: `M${idx + 1}` };
+    players.forEach((p) => {
+      point[p.name] = currentElo[p.id] ?? p.current_elo;
+    });
+    data.push(point);
+  });
+  return data;
+}
+
 export function Leaderboard({
   players,
   history,
   onPlayerClick,
 }: LeaderboardProps) {
-  const [view, setView] = useState<"table" | "bump">("table");
+  const [view, setView] = useState<"table" | "bump" | "elo">("table");
   const [hovered, setHovered] = useState<string | null>(null);
   const [tooltip, setTooltip] = useState<{
     x: number;
@@ -117,6 +174,7 @@ export function Leaderboard({
     (a, b) => b.current_elo - a.current_elo,
   );
   const snapshots = buildSnapshots(players, history);
+  const eloData = buildEloProgressionData(players, history);
   const matchIndices = [...new Set(snapshots.map((s) => s.match_index))].sort(
     (a, b) => a - b,
   );
@@ -166,7 +224,7 @@ export function Leaderboard({
 
   return (
     <div
-      className={`card leaderboard-card${view === "bump" ? " lb-expanded" : ""}`}
+      className={`card leaderboard-card${view !== "table" ? " lb-expanded" : ""}`}
     >
       {/* ── Header ── */}
       <div className="lb-header">
@@ -185,6 +243,14 @@ export function Leaderboard({
             title={snapshots.length === 0 ? "No match history yet" : undefined}
           >
             <BumpIcon /> Bump Chart
+          </button>
+          <button
+            className={`lb-toggle-btn${view === "elo" ? " active" : ""}`}
+            onClick={() => setView("elo")}
+            disabled={eloData.length === 0}
+            title={eloData.length === 0 ? "No match history yet" : undefined}
+          >
+            <EloIcon /> ELO Chart
           </button>
         </div>
       </div>
@@ -480,6 +546,100 @@ export function Leaderboard({
           </p>
         </div>
       )}
+      {/* ── ELO PROGRESSION CHART VIEW ── */}
+      {view === "elo" && (
+        <div className="bump-chart-wrap">
+          <div className="bump-legend">
+            {sortedPlayers.map((p, i) => (
+              <button
+                key={p.id}
+                className="bump-legend-btn"
+                style={{
+                  opacity: hovered && hovered !== p.id ? 0.28 : 1,
+                  borderColor:
+                    hovered === p.id
+                      ? playerColor(i, sortedPlayers.length)
+                      : undefined,
+                }}
+                onMouseEnter={() => setHovered(p.id)}
+                onMouseLeave={() => setHovered(null)}
+                onClick={() => onPlayerClick?.(p)}
+              >
+                <span
+                  className="bump-legend-dot"
+                  style={{ background: playerColor(i, sortedPlayers.length) }}
+                />
+                {p.name}
+              </button>
+            ))}
+          </div>
+
+          <div
+            style={{
+              width: "100%",
+              height: Math.max(320, nPlayers * 48),
+            }}
+          >
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart
+                data={eloData}
+                margin={{ top: 12, right: 24, bottom: 8, left: 8 }}
+              >
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke="var(--bump-grid)"
+                />
+                <XAxis
+                  dataKey="label"
+                  tick={{ fontSize: 11 }}
+                  interval="preserveStartEnd"
+                />
+                <YAxis
+                  domain={["auto", "auto"]}
+                  tick={{ fontSize: 11 }}
+                  width={48}
+                />
+                <Tooltip
+                  contentStyle={{ fontSize: 12 }}
+                  itemSorter={(item) => -(item.value as number)}
+                />
+                <ReferenceLine
+                  y={1500}
+                  stroke="#aaa"
+                  strokeDasharray="4 4"
+                  label={{
+                    value: "1500",
+                    position: "insideBottomRight",
+                    fontSize: 10,
+                    fill: "#aaa",
+                  }}
+                />
+                {sortedPlayers.map((p, i) => (
+                  <Line
+                    key={p.id}
+                    type="monotone"
+                    dataKey={p.name}
+                    stroke={playerColor(i, sortedPlayers.length)}
+                    strokeWidth={hovered === p.id ? 3 : 1.5}
+                    strokeOpacity={hovered && hovered !== p.id ? 0.12 : 1}
+                    dot={false}
+                    activeDot={{ r: 4 }}
+                    isAnimationActive={false}
+                    onMouseEnter={() => setHovered(p.id)}
+                    onMouseLeave={() => setHovered(null)}
+                  />
+                ))}
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+
+          <p className="bump-hint">
+            {isMobile
+              ? "Tap a line to highlight"
+              : "Hover a line to highlight · click a name to view player"}
+          </p>
+        </div>
+      )}
     </div>
   );
 }
@@ -490,6 +650,22 @@ function TableIcon() {
       <rect x="1" y="2" width="14" height="2.5" rx="1" />
       <rect x="1" y="6.5" width="14" height="2.5" rx="1" />
       <rect x="1" y="11" width="14" height="2.5" rx="1" />
+    </svg>
+  );
+}
+
+function EloIcon() {
+  return (
+    <svg
+      width={13}
+      height={13}
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.8}
+    >
+      <polyline points="1,13 5,8 9,10 13,4" />
+      <line x1="1" y1="13" x2="15" y2="13" strokeWidth={1} />
     </svg>
   );
 }
