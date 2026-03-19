@@ -890,12 +890,33 @@ td.winrate {
 }
 
 /* Auth Screen */
+@keyframes auth-bg-shift {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
 .auth-screen {
-  min-height: 100vh;
+  position: fixed;
+  inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--bg);
+  z-index: 1000;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  background: linear-gradient(
+    135deg,
+    rgba(120, 0, 255, 0.35),
+    rgba(200, 0, 255, 0.30),
+    rgba(255, 0, 180, 0.30),
+    rgba(255, 100, 0, 0.30),
+    rgba(80, 0, 255, 0.35),
+    rgba(255, 0, 120, 0.30),
+    rgba(100, 0, 200, 0.35)
+  );
+  background-size: 400% 400%;
+  animation: auth-bg-shift 25s ease infinite;
 }
 
 .auth-card {
@@ -906,7 +927,7 @@ td.winrate {
   padding: 2.5rem;
   width: 100%;
   max-width: 400px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.35);
 }
 
 .auth-close-btn {
@@ -943,6 +964,7 @@ td.winrate {
   flex-direction: column;
   gap: 1rem;
 }
+
 
 .btn-full {
   width: 100%;
