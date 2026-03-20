@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Match, Player, EloHistory, deleteMatch } from "../lib/supabase";
+import { useAuth } from "../contexts/AuthContext";
 
 interface MatchHistoryProps {
   matches: Match[];
@@ -14,6 +15,9 @@ export function MatchHistory({
   eloHistory,
   onMatchDeleted,
 }: MatchHistoryProps) {
+  const { role } = useAuth();
+  const canDelete = role === "user" || role === "admin";
+  const latestMatchId = matches[0]?.id;
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const playerMap = new Map(players.map((p) => [p.id, p]));
 
@@ -129,13 +133,15 @@ export function MatchHistory({
                   <div className="match-time">
                     {new Date(match.created_at).toLocaleString("de-CH", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}
                   </div>
-                  <button
-                    className="btn-delete"
-                    onClick={() => handleDeleteMatch(match.id)}
-                    disabled={deletingId === match.id}
-                  >
-                    {deletingId === match.id ? "Deleting..." : "Delete"}
-                  </button>
+                  {canDelete && match.id === latestMatchId && (
+                    <button
+                      className="btn-delete"
+                      onClick={() => handleDeleteMatch(match.id)}
+                      disabled={deletingId === match.id}
+                    >
+                      {deletingId === match.id ? "Deleting..." : "Delete"}
+                    </button>
+                  )}
                 </div>
               </div>
             );

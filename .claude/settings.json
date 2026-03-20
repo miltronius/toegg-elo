@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find /c/dev/toegg-elo -type f \\\\\\(-name *.sql -o -name *.py -o -name Makefile -o -name docker-compose* \\\\\\))",
+      "Bash(grep -E \"\\\\.\\(py|rs|sql|prisma|js|mjs\\)$\")"
+    ]
+  }
+}
