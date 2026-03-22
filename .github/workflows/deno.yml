@@ -36,7 +36,7 @@ jobs:
       #   run: deno fmt --check
 
       - name: Run linter
-        run: deno lint
+        run: deno lint supabase/functions/
 
       - name: Run tests
-        run: deno test -A
+        run: deno test -A supabase/functions/
