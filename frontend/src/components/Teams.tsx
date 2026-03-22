@@ -77,7 +77,7 @@ export function Teams({ teams, players, onTeamClick }: TeamsProps) {
   const [view, setView] = useState<"table" | "card">(
     () => (localStorage.getItem(STORAGE_KEY) as "table" | "card") ?? "table",
   );
-  const [sortBy, setSortBy] = useState<SortKey>("elo");
+  const [sortBy, setSortBy] = useState<SortKey>("winrate");
   const [sortAsc, setSortAsc] = useState(false);
   const [filterPlayerId, setFilterPlayerId] = useState<string>("");
 
@@ -104,10 +104,10 @@ export function Teams({ teams, players, onTeamClick }: TeamsProps) {
         t.player_id_hi === filterPlayerId,
     );
 
-  // eloRank is always ELO desc — used for rank/medal assignment
-  const eloRank = new Map(
+  // rankMap is always wins desc → winrate desc — used for rank/medal assignment
+  const rankMap = new Map(
     [...filtered]
-      .sort((a, b) => b.combinedElo - a.combinedElo)
+      .sort((a, b) => b.wins - a.wins || b.winRate - a.winRate)
       .map((t, i) => [t.key, i]),
   );
 
@@ -120,7 +120,7 @@ export function Teams({ teams, players, onTeamClick }: TeamsProps) {
     }
     let diff = 0;
     if (sortBy === "elo") diff = b.combinedElo - a.combinedElo;
-    else if (sortBy === "winrate") diff = b.winRate - a.winRate;
+    else if (sortBy === "winrate") diff = b.wins - a.wins || b.winRate - a.winRate;
     else diff = b.matchesPlayed - a.matchesPlayed;
     return sortAsc ? -diff : diff;
   });
@@ -245,8 +245,8 @@ export function Teams({ teams, players, onTeamClick }: TeamsProps) {
                 style={{ borderLeft: `4px solid ${teamColor(team)}` }}
               >
                 <td className="rank">
-                  {MEDALS[eloRank.get(team.key)!] ??
-                    `#${eloRank.get(team.key)! + 1}`}
+                  {MEDALS[rankMap.get(team.key)!] ??
+                    `#${rankMap.get(team.key)! + 1}`}
                 </td>
                 <td className="name" style={{ padding: 0 }}>
                   <TeamTooltip
@@ -330,9 +330,9 @@ export function Teams({ teams, players, onTeamClick }: TeamsProps) {
                 color={teamColor(team)}
               >
                 <div className="team-card-names">
-                  {MEDALS[eloRank.get(team.key)!] && (
+                  {MEDALS[rankMap.get(team.key)!] && (
                     <span style={{ marginRight: "0.35rem" }}>
-                      {MEDALS[eloRank.get(team.key)!]}
+                      {MEDALS[rankMap.get(team.key)!]}
                     </span>
                   )}
                   {getTeamDisplayName(team, players)}
