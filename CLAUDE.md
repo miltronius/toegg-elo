@@ -39,7 +39,8 @@ Copy `frontend/.env.example` to `frontend/.env.local` and fill in:
 - `frontend/src/lib/supabase.ts` — all Supabase queries and mutations; single source of truth for data access
 - `frontend/src/contexts/AuthContext.tsx` — wraps the app, exposes `useAuth()` with user, role, and auth methods
 - `frontend/src/App.tsx` — main orchestrator; owns `loadData()` for refetching all state, passes data + callbacks to children
-- `frontend/src/components/` — tab-based UI: Leaderboard, MatchForm, MatchHistory, PlayerDetail/Modal, UserManagement
+- `frontend/src/lib/teamUtils.ts` — pure team stat computation (`computeTeamStats`, `teamColor`, `teamKey`); no DB calls
+- `frontend/src/components/` — tab-based UI: Leaderboard, Teams, TeamDetail, MatchForm, MatchHistory, PlayerDetail/Modal, UserManagement
 
 ### Data Flow
 1. `App.tsx` calls `loadData()` on mount and after any mutation
@@ -60,6 +61,7 @@ A `handle_new_user()` trigger auto-creates a `viewer` profile in the `profiles` 
 - `matches` — team_a/team_b player IDs (2v2), winning_team
 - `elo_history` — per-match ELO snapshots (elo_before, elo_after, elo_change)
 - `profiles` — linked to `auth.users`, stores role
+- `team_names` — optional name + 2 aliases + color per canonical player pair (player_id_lo < player_id_hi); stats are derived from matches at runtime in `teamUtils.ts`, not stored
 
 ### ELO Calculation (Deno function)
 - Standard ELO with K=32

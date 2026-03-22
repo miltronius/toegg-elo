@@ -235,6 +235,45 @@ export async function updatePlayerName(playerId: string, newName: string) {
   if (error) throw error;
 }
 
+export type TeamNameRow = {
+  player_id_lo: string;
+  player_id_hi: string;
+  name: string | null;
+  alias_1: string | null;
+  alias_2: string | null;
+  color: string | null;
+  updated_at: string;
+};
+
+export async function getTeamNames(): Promise<TeamNameRow[]> {
+  const { data, error } = await supabase.from("team_names").select("*");
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function upsertTeamName(
+  playerIdLo: string,
+  playerIdHi: string,
+  name: string | null,
+  alias1: string | null,
+  alias2: string | null,
+  color: string | null,
+): Promise<void> {
+  const { error } = await supabase.from("team_names").upsert(
+    {
+      player_id_lo: playerIdLo,
+      player_id_hi: playerIdHi,
+      name,
+      alias_1: alias1,
+      alias_2: alias2,
+      color,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "player_id_lo,player_id_hi" },
+  );
+  if (error) throw error;
+}
+
 export async function getAllEloHistory(): Promise<EloHistory[]> {
   const { data, error } = await supabase
     .from("elo_history")

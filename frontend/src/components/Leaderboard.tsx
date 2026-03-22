@@ -204,6 +204,8 @@ export function Leaderboard({
   onPlayerClick,
 }: LeaderboardProps) {
   const [view, setView] = useState<"table" | "bump" | "elo">("table");
+  const [sortBy, setSortBy] = useState<"elo" | "name" | "winrate">("elo");
+  const [sortAsc, setSortAsc] = useState(false);
   const [eloXAxis, setEloXAxis] = useState<"date" | "game">("date");
   const [hovered, setHovered] = useState<string | null>(null);
   const [tooltip, setTooltip] = useState<{
@@ -225,9 +227,27 @@ export function Leaderboard({
     return () => ro.disconnect();
   }, [view]);
 
+  // sortedPlayers is always ELO desc — used for charts and color assignment
   const sortedPlayers = [...players].sort(
     (a, b) => b.current_elo - a.current_elo,
   );
+
+  const handleSort = (key: "elo" | "name" | "winrate") => {
+    if (sortBy === key) setSortAsc((a) => !a);
+    else { setSortBy(key); setSortAsc(false); }
+  };
+
+  const tableRows = [...sortedPlayers].sort((a, b) => {
+    const winrateOf = (p: Player) => {
+      const t = p.wins + p.losses;
+      return t > 0 ? p.wins / t : 0;
+    };
+    let diff = 0;
+    if (sortBy === "elo") diff = b.current_elo - a.current_elo;
+    else if (sortBy === "name") diff = a.name.localeCompare(b.name);
+    else diff = winrateOf(b) - winrateOf(a);
+    return sortAsc ? -diff : diff;
+  });
   const snapshots = buildSnapshots(players, history);
   const eloData = buildEloProgressionData(players, history);
   const eloDateData = buildEloProgressionDataByDate(players, history);
@@ -317,23 +337,31 @@ export function Leaderboard({
           <thead>
             <tr>
               <th>Rank</th>
-              <th>Name</th>
-              <th>Elo</th>
-              <th className="winrate">Winrate</th>
+              <th style={{ cursor: "pointer" }} onClick={() => handleSort("name")}>
+                Name {sortBy === "name" && (sortAsc ? "▴" : "▾")}
+              </th>
+              <th style={{ cursor: "pointer" }} onClick={() => handleSort("elo")}>
+                ELO {sortBy === "elo" && (sortAsc ? "▴" : "▾")}
+              </th>
+              <th className="winrate" style={{ cursor: "pointer" }} onClick={() => handleSort("winrate")}>
+                Winrate {sortBy === "winrate" && (sortAsc ? "▴" : "▾")}
+              </th>
             </tr>
           </thead>
           <tbody>
-            {sortedPlayers.map((player, index) => {
+            {tableRows.map((player, index) => {
               const total = player.wins + player.losses;
               const winrate =
                 total > 0 ? ((player.wins / total) * 100).toFixed(1) : "0";
+              // rank is always by ELO desc
+              const rank = sortedPlayers.findIndex((p) => p.id === player.id) + 1;
               return (
                 <tr
                   key={player.id}
                   onClick={() => onPlayerClick?.(player)}
                   className="clickable-row"
                 >
-                  <td className="rank">#{index + 1}</td>
+                  <td className="rank">#{rank}</td>
                   <td className="name">{player.name}</td>
                   <td className="elo">{player.current_elo}</td>
                   <td className="winrate">{winrate}%</td>
