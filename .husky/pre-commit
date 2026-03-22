@@ -1,0 +1,2 @@
+(cd frontend && pnpm lint && pnpm test)
+(cd supabase/functions/calculate-elo && deno lint && deno test -A)

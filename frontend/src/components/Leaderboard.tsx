@@ -349,7 +349,7 @@ export function Leaderboard({
             </tr>
           </thead>
           <tbody>
-            {tableRows.map((player, index) => {
+            {tableRows.map((player) => {
               const total = player.wins + player.losses;
               const winrate =
                 total > 0 ? ((player.wins / total) * 100).toFixed(1) : "0";
