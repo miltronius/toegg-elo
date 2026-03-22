@@ -1,11 +1,13 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   getPlayers,
   getMatches,
   getEloHistory,
+  getTeamNames,
   Player,
   Match,
   EloHistory,
+  TeamNameRow,
 } from "./lib/supabase";
 import { useAuth } from "./contexts/AuthContext";
 import { AuthScreen } from "./components/AuthScreen";
@@ -15,6 +17,9 @@ import { Leaderboard } from "./components/Leaderboard";
 import { MatchHistory } from "./components/MatchHistory";
 import { PlayerDetail } from "./components/PlayerDetail";
 import { UserManagement } from "./components/UserManagement";
+import { Teams } from "./components/Teams";
+import { TeamDetail } from "./components/TeamDetail";
+import { computeTeamStats, TeamStats } from "./lib/teamUtils";
 import "./App.css";
 
 function App() {
@@ -24,12 +29,14 @@ function App() {
   const [eloHistory, setEloHistory] = useState<Map<string, EloHistory[]>>(
     new Map(),
   );
+  const [teamNames, setTeamNames] = useState<TeamNameRow[]>([]);
+  const [selectedTeam, setSelectedTeam] = useState<TeamStats | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [authOpen, setAuthOpen] = useState(false);
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<
-    "leaderboard" | "history" | "match" | "users"
+    "leaderboard" | "history" | "match" | "users" | "teams"
   >("leaderboard");
 
   const canEdit = role === "user" || role === "admin";
@@ -47,12 +54,14 @@ function App() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [playersData, matchesData] = await Promise.all([
+      const [playersData, matchesData, teamNamesData] = await Promise.all([
         getPlayers(),
         getMatches(),
+        getTeamNames(),
       ]);
       setPlayers(playersData);
       setMatches(matchesData);
+      setTeamNames(teamNamesData);
       const historyMap = new Map<string, EloHistory[]>();
       for (const player of playersData) {
         const history = await getEloHistory(player.id);
@@ -67,6 +76,10 @@ function App() {
   };
 
   const allEloHistory: EloHistory[] = Array.from(eloHistory.values()).flat();
+  const teams = useMemo(
+    () => computeTeamStats(matches, players, teamNames),
+    [matches, players, teamNames],
+  );
 
   if (authLoading || loading) {
     return <div className="loading">Loading...</div>;
@@ -104,6 +117,12 @@ function App() {
           onClick={() => setActiveTab("leaderboard")}
         >
           Leaderboard
+        </button>
+        <button
+          className={`tab ${activeTab === "teams" ? "active" : ""}`}
+          onClick={() => setActiveTab("teams")}
+        >
+          Teams
         </button>
         {canEdit && (
           <button
@@ -147,6 +166,13 @@ function App() {
             onMatchDeleted={loadData}
           />
         )}
+        {activeTab === "teams" && (
+          <Teams
+            teams={teams}
+            players={players}
+            onTeamClick={setSelectedTeam}
+          />
+        )}
         {activeTab === "users" && isAdmin && <UserManagement />}
       </main>
       {canEdit && (
@@ -164,6 +190,19 @@ function App() {
           onPlayerUpdated={() => {
             loadData();
             setSelectedPlayer(null);
+          }}
+        />
+      )}
+      {selectedTeam && (
+        <TeamDetail
+          team={selectedTeam}
+          players={players}
+          allTeams={teams}
+          canEdit={canEdit}
+          onClose={() => setSelectedTeam(null)}
+          onNamesUpdated={() => {
+            loadData();
+            setSelectedTeam(null);
           }}
         />
       )}

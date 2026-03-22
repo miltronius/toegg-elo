@@ -5,7 +5,8 @@ A dashboard to track 2v2 table soccer (foosball) matches and rank players using 
 ## Features
 
 - Record 2v2 matches and automatically recalculate ELO ratings
-- Leaderboard with player rankings and ELO history charts
+- Leaderboard with player rankings, sortable by ELO / name / winrate, with ELO history charts
+- Teams tab: all player pairs with combined ELO, win rate, rivals, custom names/colors
 - Match history with per-match ELO changes
 - Role-based access: viewers, users (can record matches), admins
 - Magic link login
