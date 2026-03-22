@@ -36,7 +36,9 @@ jobs:
       #   run: deno fmt --check
 
       - name: Run linter
-        run: deno lint supabase/functions/
+        working-directory: supabase/functions/calculate-elo
+        run: deno lint
 
       - name: Run tests
-        run: deno test -A supabase/functions/
+        working-directory: supabase/functions/calculate-elo
+        run: deno test -A
