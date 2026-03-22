@@ -118,12 +118,14 @@ function App() {
         >
           Leaderboard
         </button>
-        <button
-          className={`tab ${activeTab === "teams" ? "active" : ""}`}
-          onClick={() => setActiveTab("teams")}
-        >
-          Teams
-        </button>
+        {user && (
+          <button
+            className={`tab ${activeTab === "teams" ? "active" : ""}`}
+            onClick={() => setActiveTab("teams")}
+          >
+            Teams
+          </button>
+        )}
         {canEdit && (
           <button
             className={`tab ${activeTab === "match" ? "active" : ""}`}
