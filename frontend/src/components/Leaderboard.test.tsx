@@ -148,3 +148,4 @@ describe("Leaderboard — winrate", () => {
     expect(screen.getByText("0%")).toBeInTheDocument();
   });
 });
+

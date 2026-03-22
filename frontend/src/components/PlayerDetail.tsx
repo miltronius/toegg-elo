@@ -18,11 +18,38 @@ import {
   Player,
 } from "../lib/supabase";
 
+interface HeadToHead {
+  playerId: string;
+  wins: number;
+  losses: number;
+}
+
+function computeHeadToHead(playerId: string, matches: Match[]): HeadToHead[] {
+  const stats = new Map<string, { wins: number; losses: number }>();
+  for (const m of matches) {
+    const inA = m.team_a_player_1_id === playerId || m.team_a_player_2_id === playerId;
+    const inB = m.team_b_player_1_id === playerId || m.team_b_player_2_id === playerId;
+    if (!inA && !inB) continue;
+    const opponents = inA
+      ? [m.team_b_player_1_id, m.team_b_player_2_id]
+      : [m.team_a_player_1_id, m.team_a_player_2_id];
+    const won = (inA && m.winning_team === "A") || (inB && m.winning_team === "B");
+    for (const oppId of opponents) {
+      const s = stats.get(oppId) ?? { wins: 0, losses: 0 };
+      if (won) s.wins++; else s.losses++;
+      stats.set(oppId, s);
+    }
+  }
+  return Array.from(stats.entries()).map(([pid, s]) => ({ playerId: pid, ...s }));
+}
+
 interface PlayerDetailProps {
   player: Player;
+  players: Player[];
   matches: Match[];
   onClose: () => void;
   onPlayerUpdated?: () => void;
+  onNavigate?: (player: Player) => void;
 }
 
 interface ChartData {
@@ -35,16 +62,44 @@ interface ChartData {
 
 export function PlayerDetail({
   player,
-  matches: _matches,
+  players,
+  matches,
   onClose,
   onPlayerUpdated,
+  onNavigate,
 }: PlayerDetailProps) {
+  const playerMap = new Map(players.map((p) => [p.id, p]));
+  const sortedPlayers = [...players].sort((a, b) => b.current_elo - a.current_elo);
+  const currentIndex = sortedPlayers.findIndex((p) => p.id === player.id);
+  const prevPlayer = currentIndex > 0 ? sortedPlayers[currentIndex - 1] : null;
+  const nextPlayer = currentIndex < sortedPlayers.length - 1 ? sortedPlayers[currentIndex + 1] : null;
+  const h2h = computeHeadToHead(player.id, matches);
+  const topEnemy = [...h2h]
+    .sort((a, b) => b.wins - a.wins || (b.wins + b.losses) - (a.wins + a.losses))
+    .find((h) => h.wins > 0);
+  const nemesis = [...h2h]
+    .sort((a, b) => b.losses - a.losses || (b.wins + b.losses) - (a.wins + a.losses))
+    .find((h) => h.losses > 0);
   const [chartData, setChartData] = useState<{ perGame: ChartData[]; perDate: ChartData[] }>({ perGame: [], perDate: [] });
   const [xAxisMode, setXAxisMode] = useState<"game" | "date">("date");
   const [loading, setLoading] = useState(true);
   const [isEditingName, setIsEditingName] = useState(false);
   const [newName, setNewName] = useState(player.name);
   const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    if (!onNavigate) return;
+    const handleKey = (e: KeyboardEvent) => {
+      if (isEditingName) return;
+      if (e.key === "ArrowLeft" || e.key === "a" || e.key === "A") {
+        if (prevPlayer) onNavigate(prevPlayer);
+      } else if (e.key === "ArrowRight" || e.key === "d" || e.key === "D") {
+        if (nextPlayer) onNavigate(nextPlayer);
+      }
+    };
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [onNavigate, prevPlayer, nextPlayer, isEditingName]);
 
   useEffect(() => {
     const loadPlayerData = async () => {
@@ -162,6 +217,26 @@ export function PlayerDetail({
             </h2>
           )}
           <div className="header-buttons">
+            {onNavigate && (
+              <>
+                <button
+                  className="btn-small"
+                  onClick={() => prevPlayer && onNavigate(prevPlayer)}
+                  disabled={!prevPlayer}
+                  title={prevPlayer ? prevPlayer.name : undefined}
+                >
+                  ‹
+                </button>
+                <button
+                  className="btn-small"
+                  onClick={() => nextPlayer && onNavigate(nextPlayer)}
+                  disabled={!nextPlayer}
+                  title={nextPlayer ? nextPlayer.name : undefined}
+                >
+                  ›
+                </button>
+              </>
+            )}
             <button className="close-btn" onClick={onClose}>
               ✕
             </button>
@@ -194,10 +269,32 @@ export function PlayerDetail({
               %
             </div>
           </div>
+          {topEnemy && (
+            <div className="stat-card">
+              <div className="stat-label">Top Enemy</div>
+              <div className="stat-value stat-value--name">
+                {playerMap.get(topEnemy.playerId)?.name ?? "?"}
+              </div>
+              <div className="stat-sub">{topEnemy.wins} – {topEnemy.losses}</div>
+            </div>
+          )}
+          {nemesis && (
+            <div className="stat-card">
+              <div className="stat-label">Nemesis</div>
+              <div className="stat-value stat-value--name">
+                {playerMap.get(nemesis.playerId)?.name ?? "?"}
+              </div>
+              <div className="stat-sub">{nemesis.wins} – {nemesis.losses}</div>
+            </div>
+          )}
         </div>
 
         {loading ? (
-          <div className="loading-state">Loading charts...</div>
+          <>
+            <div className="chart-skeleton chart-skeleton--toggle" />
+            <div className="chart-skeleton chart-skeleton--chart" />
+            <div className="chart-skeleton chart-skeleton--chart" />
+          </>
         ) : chartData.perGame.length === 0 ? (
           <div className="empty-state">No match history yet</div>
         ) : (

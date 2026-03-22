@@ -187,12 +187,14 @@ function App() {
       {selectedPlayer && canEdit && (
         <PlayerDetail
           player={selectedPlayer}
+          players={players}
           matches={matches}
           onClose={() => setSelectedPlayer(null)}
           onPlayerUpdated={() => {
             loadData();
             setSelectedPlayer(null);
           }}
+          onNavigate={setSelectedPlayer}
         />
       )}
       {selectedTeam && (

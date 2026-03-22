@@ -95,22 +95,27 @@ export function Teams({ teams, players, onTeamClick }: TeamsProps) {
     }
   };
 
-  const filtered = filterPlayerId
-    ? teams.filter(
-        (t) =>
-          t.player_id_lo === filterPlayerId ||
-          t.player_id_hi === filterPlayerId,
-      )
-    : teams;
+  const filtered = teams
+    .filter((t) => t.matchesPlayed >= 2)
+    .filter(
+      (t) =>
+        !filterPlayerId ||
+        t.player_id_lo === filterPlayerId ||
+        t.player_id_hi === filterPlayerId,
+    );
 
   // eloRank is always ELO desc — used for rank/medal assignment
   const eloRank = new Map(
-    [...filtered].sort((a, b) => b.combinedElo - a.combinedElo).map((t, i) => [t.key, i]),
+    [...filtered]
+      .sort((a, b) => b.combinedElo - a.combinedElo)
+      .map((t, i) => [t.key, i]),
   );
 
   const sorted = [...filtered].sort((a, b) => {
     if (sortBy === "name") {
-      const diff = getTeamDisplayName(a, players).localeCompare(getTeamDisplayName(b, players));
+      const diff = getTeamDisplayName(a, players).localeCompare(
+        getTeamDisplayName(b, players),
+      );
       return sortAsc ? diff : -diff;
     }
     let diff = 0;
@@ -122,13 +127,19 @@ export function Teams({ teams, players, onTeamClick }: TeamsProps) {
 
   const playerMap = new Map(players.map((p) => [p.id, p]));
 
-  const teamPlayers = (t: TeamStats): [Player | undefined, Player | undefined] => {
+  const teamPlayers = (
+    t: TeamStats,
+  ): [Player | undefined, Player | undefined] => {
     const p1 = playerMap.get(t.player_id_lo);
     const p2 = playerMap.get(t.player_id_hi);
-    return (p1?.current_elo ?? 0) >= (p2?.current_elo ?? 0) ? [p1, p2] : [p2, p1];
+    return (p1?.current_elo ?? 0) >= (p2?.current_elo ?? 0)
+      ? [p1, p2]
+      : [p2, p1];
   };
 
-  const rivalDisplay = (rivalKey: string): { name: string; color: string; rivalTeam: TeamStats | undefined } => {
+  const rivalDisplay = (
+    rivalKey: string,
+  ): { name: string; color: string; rivalTeam: TeamStats | undefined } => {
     const [lo, hi] = teamKeyParts(rivalKey);
     const rivalTeam = teams.find((t) => t.key === rivalKey);
     const name =
@@ -185,6 +196,8 @@ export function Teams({ teams, players, onTeamClick }: TeamsProps) {
         </div>
       </div>
 
+      <p className="teams-filter-note">Only teams with ≥ 2 matches are shown.</p>
+
       {sorted.length === 0 && (
         <div className="empty-state">No teams found for this player.</div>
       )}
@@ -193,7 +206,10 @@ export function Teams({ teams, players, onTeamClick }: TeamsProps) {
           <thead>
             <tr>
               <th className="rank">#</th>
-              <th style={{ cursor: "pointer" }} onClick={() => handleSort("name")}>
+              <th
+                style={{ cursor: "pointer" }}
+                onClick={() => handleSort("name")}
+              >
                 Team {sortBy === "name" && (sortAsc ? "▴" : "▾")}
               </th>
               <th
@@ -229,10 +245,14 @@ export function Teams({ teams, players, onTeamClick }: TeamsProps) {
                 style={{ borderLeft: `4px solid ${teamColor(team)}` }}
               >
                 <td className="rank">
-                  {MEDALS[eloRank.get(team.key)!] ?? `#${eloRank.get(team.key)! + 1}`}
+                  {MEDALS[eloRank.get(team.key)!] ??
+                    `#${eloRank.get(team.key)! + 1}`}
                 </td>
                 <td className="name" style={{ padding: 0 }}>
-                  <TeamTooltip tooltipPlayers={teamPlayers(team)} color={teamColor(team)}>
+                  <TeamTooltip
+                    tooltipPlayers={teamPlayers(team)}
+                    color={teamColor(team)}
+                  >
                     <div style={{ padding: "1rem" }}>
                       <div>{getTeamDisplayName(team, players)}</div>
                       {(team.nameRow?.alias_1 || team.nameRow?.alias_2) && (
@@ -258,19 +278,38 @@ export function Teams({ teams, players, onTeamClick }: TeamsProps) {
                 <td style={{ fontSize: "0.85rem", padding: 0 }}>
                   {team.rivals[0] ? (
                     (() => {
-                      const { name, color, rivalTeam } = rivalDisplay(team.rivals[0].key);
+                      const { name, color, rivalTeam } = rivalDisplay(
+                        team.rivals[0].key,
+                      );
                       const rPlayers = rivalTeam ? teamPlayers(rivalTeam) : [];
                       return (
                         <TeamTooltip tooltipPlayers={rPlayers} color={color}>
-                          <span style={{ display: "flex", alignItems: "center", gap: "0.4rem", padding: "1rem" }}>
-                            <span className="team-color-dot" style={{ background: color }} />
-                            <span className="text-light">{name} ({team.rivals[0].matchesPlayed}×)</span>
+                          <span
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "0.4rem",
+                              padding: "1rem",
+                            }}
+                          >
+                            <span
+                              className="team-color-dot"
+                              style={{ background: color }}
+                            />
+                            <span className="text-light">
+                              {name} ({team.rivals[0].matchesPlayed}×)
+                            </span>
                           </span>
                         </TeamTooltip>
                       );
                     })()
                   ) : (
-                    <span style={{ padding: "1rem", display: "block" }} className="text-light">—</span>
+                    <span
+                      style={{ padding: "1rem", display: "block" }}
+                      className="text-light"
+                    >
+                      —
+                    </span>
                   )}
                 </td>
               </tr>
@@ -286,10 +325,15 @@ export function Teams({ teams, players, onTeamClick }: TeamsProps) {
               onClick={() => onTeamClick(team)}
               style={{ borderLeft: `4px solid ${teamColor(team)}` }}
             >
-              <TeamTooltip tooltipPlayers={teamPlayers(team)} color={teamColor(team)}>
+              <TeamTooltip
+                tooltipPlayers={teamPlayers(team)}
+                color={teamColor(team)}
+              >
                 <div className="team-card-names">
                   {MEDALS[eloRank.get(team.key)!] && (
-                    <span style={{ marginRight: "0.35rem" }}>{MEDALS[eloRank.get(team.key)!]}</span>
+                    <span style={{ marginRight: "0.35rem" }}>
+                      {MEDALS[eloRank.get(team.key)!]}
+                    </span>
                   )}
                   {getTeamDisplayName(team, players)}
                 </div>
@@ -315,12 +359,17 @@ export function Teams({ teams, players, onTeamClick }: TeamsProps) {
               </div>
               {team.rivals[0] &&
                 (() => {
-                  const { name, color, rivalTeam } = rivalDisplay(team.rivals[0].key);
+                  const { name, color, rivalTeam } = rivalDisplay(
+                    team.rivals[0].key,
+                  );
                   const rPlayers = rivalTeam ? teamPlayers(rivalTeam) : [];
                   return (
                     <TeamTooltip tooltipPlayers={rPlayers} color={color}>
                       <div className="team-rival-tag">
-                        <span className="team-color-dot" style={{ background: color }} />
+                        <span
+                          className="team-color-dot"
+                          style={{ background: color }}
+                        />
                         {name} ({team.rivals[0].matchesPlayed}×)
                       </div>
                     </TeamTooltip>

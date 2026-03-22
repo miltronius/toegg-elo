@@ -628,7 +628,46 @@ td.winrate {
   color: var(--primary);
 }
 
+.stat-value--name {
+  font-size: 1.1rem;
+  word-break: break-word;
+}
+
+.stat-sub {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  margin-top: 0.15rem;
+}
+
 .chart-container {
+  margin-bottom: 2rem;
+}
+
+@keyframes skeleton-shimmer {
+  from { background-position: 200% 0; }
+  to   { background-position: -200% 0; }
+}
+
+.chart-skeleton {
+  border-radius: 8px;
+  background: linear-gradient(
+    90deg,
+    var(--bg-light) 25%,
+    var(--bg) 50%,
+    var(--bg-light) 75%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.4s ease-in-out infinite;
+}
+
+.chart-skeleton--toggle {
+  height: 36px;
+  margin-bottom: 1rem;
+  width: 160px;
+}
+
+.chart-skeleton--chart {
+  height: 340px;
   margin-bottom: 2rem;
 }
 
@@ -1142,6 +1181,12 @@ td.winrate {
   color: var(--text-light);
 }
 
+.h2h-record {
+  color: var(--text-secondary);
+  font-size: 0.8em;
+  margin-left: 0.3em;
+}
+
 /* ── Teams ──────────────────────────────────────────────────── */
 
 .teams-header {
@@ -1155,6 +1200,12 @@ td.winrate {
 
 .teams-header h2 {
   margin: 0;
+}
+
+.teams-filter-note {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  margin: -8px 0 12px;
 }
 
 .teams-controls {

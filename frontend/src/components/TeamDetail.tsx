@@ -124,7 +124,7 @@ export function TeamDetail({
           <div className="stat-card">
             <div className="stat-label">Record</div>
             <div className="stat-value" style={{ fontSize: "1.1rem" }}>
-              {team.wins}W – {team.losses}L
+              {team.wins} – {team.losses}
             </div>
           </div>
         </div>
