@@ -140,29 +140,33 @@ describe("computeTeamStats", () => {
     expect(ab.rivals[0].losses).toBe(1);
   });
 
-  it("returns at most 3 rivals sorted by matches played", () => {
-    // AB plays CD ×3, EF ×2, GH ×1  (need 4 distinct opponents but we only have 4 players — use ghosts)
+  it("returns at most 3 rivals sorted by losses (nemesis) then matches played", () => {
+    // AB loses to EF ×2 (fewer games but more losses → should be #1 nemesis)
+    // AB beats CD ×3 (more games but 0 losses → ranked lower)
+    // AB loses to GH ×1 (1 loss, fewer matches → ranked #2)
     const e = p("eee", "Eve", 1450);
     const f = p("fff", "Frank", 1350);
     const g = p("ggg", "Grace", 1250);
     const h = p("hhh", "Henry", 1150);
     const allPlayers = [alice, bob, carl, dave, e, f, g, h];
     const matches: Match[] = [
-      match("aaa", "bbb", "ccc", "ddd", "A"),
-      match("aaa", "bbb", "ccc", "ddd", "A"),
-      match("aaa", "bbb", "ccc", "ddd", "A"),
-      match("aaa", "bbb", "eee", "fff", "A"),
-      match("aaa", "bbb", "eee", "fff", "A"),
-      match("aaa", "bbb", "ggg", "hhh", "A"),
-      // 4th opponent
-      match("aaa", "bbb", "ccc", "eee", "A"),
+      match("aaa", "bbb", "ccc", "ddd", "A"), // AB wins
+      match("aaa", "bbb", "ccc", "ddd", "A"), // AB wins
+      match("aaa", "bbb", "ccc", "ddd", "A"), // AB wins (3 games, 0 losses vs CD)
+      match("aaa", "bbb", "eee", "fff", "B"), // AB loses
+      match("aaa", "bbb", "eee", "fff", "B"), // AB loses (2 games, 2 losses vs EF)
+      match("aaa", "bbb", "ggg", "hhh", "B"), // AB loses (1 game, 1 loss vs GH)
     ];
     const teams = computeTeamStats(matches, allPlayers, []);
     const ab = teams.find((t) => t.player_id_lo === "aaa")!;
     expect(ab.rivals.length).toBeLessThanOrEqual(3);
-    expect(ab.rivals[0].matchesPlayed).toBeGreaterThanOrEqual(
-      ab.rivals[1]?.matchesPlayed ?? 0,
-    );
+    // EF is the nemesis (2 losses) — must be first
+    const efKey = teamKey("eee", "fff");
+    expect(ab.rivals[0].key).toBe(efKey);
+    expect(ab.rivals[0].losses).toBe(2);
+    // CD has 0 losses — should be last despite most matches
+    const cdKey = teamKey("ccc", "ddd");
+    expect(ab.rivals[ab.rivals.length - 1].key).toBe(cdKey);
   });
 });
 

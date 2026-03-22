@@ -83,7 +83,7 @@ export function computeTeamStats(
       const p2 = playerMap.get(data.hi);
       const total = data.wins + data.losses;
       const rivals = [...data.opponents.entries()]
-        .sort((a, b) => b[1].played - a[1].played)
+        .sort((a, b) => b[1].losses - a[1].losses || b[1].played - a[1].played)
         .slice(0, 3)
         .map(([k, r]) => ({ key: k, matchesPlayed: r.played, wins: r.wins, losses: r.losses }));
 
