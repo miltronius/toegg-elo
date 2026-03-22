@@ -221,7 +221,7 @@ export function Teams({ teams, players, onTeamClick }: TeamsProps) {
             </tr>
           </thead>
           <tbody>
-            {sorted.map((team, i) => (
+            {sorted.map((team) => (
               <tr
                 key={team.key}
                 className="clickable-row"
@@ -279,7 +279,7 @@ export function Teams({ teams, players, onTeamClick }: TeamsProps) {
         </table>
       ) : sorted.length > 0 ? (
         <div className="teams-grid">
-          {sorted.map((team, i) => (
+          {sorted.map((team) => (
             <div
               key={team.key}
               className="team-card"

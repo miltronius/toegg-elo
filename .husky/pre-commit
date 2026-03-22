@@ -1,1 +1,1 @@
-cd frontend && pnpm test
+cd frontend && pnpm lint && pnpm test
