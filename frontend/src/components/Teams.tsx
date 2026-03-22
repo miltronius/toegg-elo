@@ -20,7 +20,6 @@ function TeamTooltip({
   const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
   return (
     <div
-      style={{ width: "100%", height: "100%" }}
       onMouseMove={(e) => setPos({ x: e.clientX, y: e.clientY })}
       onMouseLeave={() => setPos(null)}
     >
