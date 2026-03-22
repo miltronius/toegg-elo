@@ -6,9 +6,10 @@ A dashboard to track 2v2 table soccer (foosball) matches and rank players using 
 
 - Record 2v2 matches and automatically recalculate ELO ratings
 - Leaderboard with player rankings, sortable by ELO / name / winrate, with ELO history charts
-- Teams tab: all player pairs with combined ELO, win rate, rivals, custom names/colors
+- Player detail modal with ELO progression, winrate chart, Top Enemy & Nemesis stats, and ‹ › keyboard navigation (← → / A D)
+- Teams tab: all player pairs (≥ 2 matches) with combined ELO, win rate, nemesis rival, custom names/colors
 - Match history with per-match ELO changes
-- Role-based access: viewers, users (can record matches), admins
+- Role-based access: viewers (read-only), users (record matches & edit), admins (full control)
 - Magic link login
 
 ## ELO Calculation
@@ -58,4 +59,5 @@ The app runs at `http://localhost:5173`.
 pnpm dev      # Start development server
 pnpm build    # Production build
 pnpm lint     # Lint
+pnpm test     # Run Vitest unit/component tests
 ```
