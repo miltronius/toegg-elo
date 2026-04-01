@@ -41,6 +41,8 @@ function App() {
 
   const canEdit = role === "user" || role === "admin";
   const isAdmin = role === "admin";
+  const canSeeFullHistory = role === "user" || role === "admin";
+  const visibleMatches = canSeeFullHistory ? matches : matches.slice(0, 5);
 
   useEffect(() => {
     loadData();
@@ -162,7 +164,7 @@ function App() {
         )}
         {activeTab === "history" && (
           <MatchHistory
-            matches={matches}
+            matches={visibleMatches}
             players={players}
             eloHistory={eloHistory}
             onMatchDeleted={loadData}

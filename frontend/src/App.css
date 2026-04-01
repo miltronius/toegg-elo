@@ -291,6 +291,13 @@ button[type="button"]:disabled {
   background-color: var(--bg);
 }
 
+.leaderboard-table tbody tr.elo-1500-sep td {
+  padding: 0;
+  height: 3px;
+  background: #888;
+  border: none;
+}
+
 .leaderboard-table tbody tr.row-top {
   background-color: rgba(100, 220, 130, 0.10);
 }

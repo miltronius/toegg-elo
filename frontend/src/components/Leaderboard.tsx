@@ -206,6 +206,7 @@ export function Leaderboard({
   const [view, setView] = useState<"table" | "bump" | "elo">("table");
   const [sortBy, setSortBy] = useState<"elo" | "name" | "winrate">("elo");
   const [sortAsc, setSortAsc] = useState(false);
+  const [show1500Sep, setShow1500Sep] = useState(true);
   const [eloXAxis, setEloXAxis] = useState<"date" | "game">("date");
   const [hovered, setHovered] = useState<string | null>(null);
   const [tooltip, setTooltip] = useState<{
@@ -305,29 +306,39 @@ export function Leaderboard({
       {/* ── Header ── */}
       <div className="lb-header">
         <h2>Leaderboard</h2>
-        <div className="lb-toggle">
-          <button
-            className={`lb-toggle-btn${view === "table" ? " active" : ""}`}
-            onClick={() => setView("table")}
-          >
-            <TableIcon /> Table
-          </button>
-          <button
-            className={`lb-toggle-btn${view === "elo" ? " active" : ""}`}
-            onClick={() => setView("elo")}
-            disabled={eloData.length === 0}
-            title={eloData.length === 0 ? "No match history yet" : undefined}
-          >
-            <EloIcon /> ELO Chart
-          </button>
-          <button
-            className={`lb-toggle-btn${view === "bump" ? " active" : ""}`}
-            onClick={() => setView("bump")}
-            disabled={snapshots.length === 0}
-            title={snapshots.length === 0 ? "No match history yet" : undefined}
-          >
-            <BumpIcon /> Bump Chart (rank)
-          </button>
+        <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+          <div className="lb-toggle">
+            <button
+              className={`lb-toggle-btn${show1500Sep ? " active" : ""}`}
+              onClick={() => setShow1500Sep((v) => !v)}
+            >
+              Starting Elo Line
+            </button>
+          </div>
+          <div className="lb-toggle">
+            <button
+              className={`lb-toggle-btn${view === "table" ? " active" : ""}`}
+              onClick={() => setView("table")}
+            >
+              <TableIcon /> Table
+            </button>
+            <button
+              className={`lb-toggle-btn${view === "elo" ? " active" : ""}`}
+              onClick={() => setView("elo")}
+              disabled={eloData.length === 0}
+              title={eloData.length === 0 ? "No match history yet" : undefined}
+            >
+              <EloIcon /> ELO Chart
+            </button>
+            <button
+              className={`lb-toggle-btn${view === "bump" ? " active" : ""}`}
+              onClick={() => setView("bump")}
+              disabled={snapshots.length === 0}
+              title={snapshots.length === 0 ? "No match history yet" : undefined}
+            >
+              <BumpIcon /> Bump Chart (rank)
+            </button>
+          </div>
         </div>
       </div>
 
@@ -349,28 +360,40 @@ export function Leaderboard({
             </tr>
           </thead>
           <tbody>
-            {tableRows.map((player) => {
-              const total = player.wins + player.losses;
-              const winrate =
-                total > 0 ? ((player.wins / total) * 100).toFixed(1) : "0";
-              // rank is always by ELO desc
-              const rank = sortedPlayers.findIndex((p) => p.id === player.id) + 1;
-              const playerCount = sortedPlayers.length;
-              const rowClass =
-                rank <= 5 ? "row-top" : rank > playerCount - 5 ? "row-bottom" : "";
-              return (
-                <tr
-                  key={player.id}
-                  onClick={() => onPlayerClick?.(player)}
-                  className={`clickable-row${rowClass ? ` ${rowClass}` : ""}`}
-                >
-                  <td className="rank">#{rank}</td>
-                  <td className="name">{player.name}</td>
-                  <td className="elo">{player.current_elo}</td>
-                  <td className="winrate">{winrate}%</td>
-                </tr>
-              );
-            })}
+            {(() => {
+              const anyAt1500 = tableRows.some((p) => p.current_elo === 1500);
+              const show1500Line = show1500Sep && sortBy === "elo" && !anyAt1500;
+              return tableRows.flatMap((player, idx) => {
+                const total = player.wins + player.losses;
+                const winrate =
+                  total > 0 ? ((player.wins / total) * 100).toFixed(1) : "0";
+                const rank = sortedPlayers.findIndex((p) => p.id === player.id) + 1;
+                const playerCount = sortedPlayers.length;
+                const rowClass =
+                  rank <= 5 ? "row-top" : rank > playerCount - 5 ? "row-bottom" : "";
+                const row = (
+                  <tr
+                    key={player.id}
+                    onClick={() => onPlayerClick?.(player)}
+                    className={`clickable-row${rowClass ? ` ${rowClass}` : ""}`}
+                  >
+                    <td className="rank">#{rank}</td>
+                    <td className="name">{player.name}</td>
+                    <td className="elo">{player.current_elo}</td>
+                    <td className="winrate">{winrate}%</td>
+                  </tr>
+                );
+                const next = tableRows[idx + 1];
+                const insertLine =
+                  show1500Line &&
+                  next &&
+                  ((player.current_elo > 1500 && next.current_elo < 1500) ||
+                    (player.current_elo < 1500 && next.current_elo > 1500));
+                return insertLine
+                  ? [row, <tr key="sep-1500" className="elo-1500-sep"><td colSpan={4} /></tr>]
+                  : [row];
+              });
+            })()}
           </tbody>
         </table>
       )}
