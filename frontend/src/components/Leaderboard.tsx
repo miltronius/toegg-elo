@@ -355,11 +355,14 @@ export function Leaderboard({
                 total > 0 ? ((player.wins / total) * 100).toFixed(1) : "0";
               // rank is always by ELO desc
               const rank = sortedPlayers.findIndex((p) => p.id === player.id) + 1;
+              const playerCount = sortedPlayers.length;
+              const rowClass =
+                rank <= 5 ? "row-top" : rank > playerCount - 5 ? "row-bottom" : "";
               return (
                 <tr
                   key={player.id}
                   onClick={() => onPlayerClick?.(player)}
-                  className="clickable-row"
+                  className={`clickable-row${rowClass ? ` ${rowClass}` : ""}`}
                 >
                   <td className="rank">#{rank}</td>
                   <td className="name">{player.name}</td>

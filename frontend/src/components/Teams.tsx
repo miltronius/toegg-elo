@@ -69,7 +69,7 @@ interface TeamsProps {
   onTeamClick: (team: TeamStats) => void;
 }
 
-type SortKey = "elo" | "winrate" | "matches" | "name";
+type SortKey = "rank" | "elo" | "winrate" | "matches" | "name";
 
 const STORAGE_KEY = "teams-view";
 
@@ -77,7 +77,7 @@ export function Teams({ teams, players, onTeamClick }: TeamsProps) {
   const [view, setView] = useState<"table" | "card">(
     () => (localStorage.getItem(STORAGE_KEY) as "table" | "card") ?? "table",
   );
-  const [sortBy, setSortBy] = useState<SortKey>("winrate");
+  const [sortBy, setSortBy] = useState<SortKey>("rank");
   const [sortAsc, setSortAsc] = useState(false);
   const [filterPlayerId, setFilterPlayerId] = useState<string>("");
 
@@ -95,18 +95,18 @@ export function Teams({ teams, players, onTeamClick }: TeamsProps) {
     }
   };
 
-  const filtered = teams
-    .filter((t) => t.matchesPlayed >= 2)
-    .filter(
-      (t) =>
-        !filterPlayerId ||
-        t.player_id_lo === filterPlayerId ||
-        t.player_id_hi === filterPlayerId,
-    );
+  const eligible = teams.filter((t) => t.matchesPlayed >= 2);
 
-  // rankMap is always wins desc → winrate desc — used for rank/medal assignment
-  const rankMap = new Map(
-    [...filtered]
+  const filtered = eligible.filter(
+    (t) =>
+      !filterPlayerId ||
+      t.player_id_lo === filterPlayerId ||
+      t.player_id_hi === filterPlayerId,
+  );
+
+  // globalRankMap uses all eligible teams (before player filter) for stable rank/medal assignment
+  const globalRankMap = new Map(
+    [...eligible]
       .sort((a, b) => b.wins - a.wins || b.winRate - a.winRate)
       .map((t, i) => [t.key, i]),
   );
@@ -119,8 +119,9 @@ export function Teams({ teams, players, onTeamClick }: TeamsProps) {
       return sortAsc ? diff : -diff;
     }
     let diff = 0;
-    if (sortBy === "elo") diff = b.combinedElo - a.combinedElo;
-    else if (sortBy === "winrate") diff = b.wins - a.wins || b.winRate - a.winRate;
+    if (sortBy === "rank") diff = globalRankMap.get(a.key)! - globalRankMap.get(b.key)!;
+    else if (sortBy === "elo") diff = b.combinedElo - a.combinedElo;
+    else if (sortBy === "winrate") diff = b.winRate - a.winRate;
     else diff = b.matchesPlayed - a.matchesPlayed;
     return sortAsc ? -diff : diff;
   });
@@ -205,7 +206,9 @@ export function Teams({ teams, players, onTeamClick }: TeamsProps) {
         <table className="leaderboard-table">
           <thead>
             <tr>
-              <th className="rank">#</th>
+              <th className="rank" style={{ cursor: "pointer" }} onClick={() => handleSort("rank")}>
+                # {sortBy === "rank" && (sortAsc ? "▴" : "▾")}
+              </th>
               <th
                 style={{ cursor: "pointer" }}
                 onClick={() => handleSort("name")}
@@ -237,16 +240,21 @@ export function Teams({ teams, players, onTeamClick }: TeamsProps) {
             </tr>
           </thead>
           <tbody>
-            {sorted.map((team) => (
+            {sorted.map((team) => {
+              const rankIdx = globalRankMap.get(team.key)!;
+              const totalTeams = eligible.length;
+              const rowClass =
+                rankIdx < 3 ? "row-top" : rankIdx >= totalTeams - 3 ? "row-bottom" : "";
+              return (
               <tr
                 key={team.key}
-                className="clickable-row"
+                className={`clickable-row${rowClass ? ` ${rowClass}` : ""}`}
                 onClick={() => onTeamClick(team)}
                 style={{ borderLeft: `4px solid ${teamColor(team)}` }}
               >
                 <td className="rank">
-                  {MEDALS[rankMap.get(team.key)!] ??
-                    `#${rankMap.get(team.key)! + 1}`}
+                  {MEDALS[globalRankMap.get(team.key)!] ??
+                    `#${globalRankMap.get(team.key)! + 1}`}
                 </td>
                 <td className="name" style={{ padding: 0 }}>
                   <TeamTooltip
@@ -313,7 +321,8 @@ export function Teams({ teams, players, onTeamClick }: TeamsProps) {
                   )}
                 </td>
               </tr>
-            ))}
+            );
+            })}
           </tbody>
         </table>
       ) : sorted.length > 0 ? (
@@ -330,9 +339,9 @@ export function Teams({ teams, players, onTeamClick }: TeamsProps) {
                 color={teamColor(team)}
               >
                 <div className="team-card-names">
-                  {MEDALS[rankMap.get(team.key)!] && (
+                  {MEDALS[globalRankMap.get(team.key)!] && (
                     <span style={{ marginRight: "0.35rem" }}>
-                      {MEDALS[rankMap.get(team.key)!]}
+                      {MEDALS[globalRankMap.get(team.key)!]}
                     </span>
                   )}
                   {getTeamDisplayName(team, players)}
