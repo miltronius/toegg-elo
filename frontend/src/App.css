@@ -291,6 +291,19 @@ button[type="button"]:disabled {
   background-color: var(--bg);
 }
 
+.leaderboard-table tbody tr.row-top {
+  background-color: rgba(100, 220, 130, 0.10);
+}
+.leaderboard-table tbody tr.row-top:hover {
+  background-color: rgba(100, 220, 130, 0.20);
+}
+.leaderboard-table tbody tr.row-bottom {
+  background-color: rgba(220, 80, 80, 0.10);
+}
+.leaderboard-table tbody tr.row-bottom:hover {
+  background-color: rgba(220, 80, 80, 0.20);
+}
+
 .leaderboard-table tbody tr.clickable-row {
   cursor: pointer;
 }
@@ -637,6 +650,59 @@ td.winrate {
   font-size: 0.78rem;
   color: var(--text-secondary);
   margin-top: 0.15rem;
+}
+
+.friends-enemies {
+  display: flex;
+  gap: 2rem;
+  margin-top: 2rem;
+}
+
+.friends-enemies-col {
+  flex: 1;
+}
+
+.friends-enemies-col h3 {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--text-light);
+  margin-bottom: 0.75rem;
+  letter-spacing: 0.04em;
+}
+
+.fe-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  counter-reset: fe-counter;
+}
+
+.fe-list li {
+  counter-increment: fe-counter;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0;
+  border-bottom: 1px solid var(--border-light);
+  font-size: 0.9rem;
+}
+
+.fe-list li::before {
+  content: counter(fe-counter);
+  min-width: 1.2rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-light);
+}
+
+.fe-name {
+  flex: 1;
+}
+
+.fe-count {
+  font-size: 0.8rem;
+  color: var(--text-light);
 }
 
 .chart-container {

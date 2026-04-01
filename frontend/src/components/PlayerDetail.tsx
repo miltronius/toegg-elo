@@ -27,20 +27,51 @@ interface HeadToHead {
 function computeHeadToHead(playerId: string, matches: Match[]): HeadToHead[] {
   const stats = new Map<string, { wins: number; losses: number }>();
   for (const m of matches) {
-    const inA = m.team_a_player_1_id === playerId || m.team_a_player_2_id === playerId;
-    const inB = m.team_b_player_1_id === playerId || m.team_b_player_2_id === playerId;
+    const inA =
+      m.team_a_player_1_id === playerId || m.team_a_player_2_id === playerId;
+    const inB =
+      m.team_b_player_1_id === playerId || m.team_b_player_2_id === playerId;
     if (!inA && !inB) continue;
     const opponents = inA
       ? [m.team_b_player_1_id, m.team_b_player_2_id]
       : [m.team_a_player_1_id, m.team_a_player_2_id];
-    const won = (inA && m.winning_team === "A") || (inB && m.winning_team === "B");
+    const won =
+      (inA && m.winning_team === "A") || (inB && m.winning_team === "B");
     for (const oppId of opponents) {
       const s = stats.get(oppId) ?? { wins: 0, losses: 0 };
-      if (won) s.wins++; else s.losses++;
+      if (won) s.wins++;
+      else s.losses++;
       stats.set(oppId, s);
     }
   }
-  return Array.from(stats.entries()).map(([pid, s]) => ({ playerId: pid, ...s }));
+  return Array.from(stats.entries()).map(([pid, s]) => ({
+    playerId: pid,
+    ...s,
+  }));
+}
+
+function computeFriends(
+  playerId: string,
+  matches: Match[],
+): { playerId: string; count: number }[] {
+  const counts = new Map<string, number>();
+  for (const m of matches) {
+    const inA =
+      m.team_a_player_1_id === playerId || m.team_a_player_2_id === playerId;
+    const inB =
+      m.team_b_player_1_id === playerId || m.team_b_player_2_id === playerId;
+    if (!inA && !inB) continue;
+    const teammates = inA
+      ? [m.team_a_player_1_id, m.team_a_player_2_id]
+      : [m.team_b_player_1_id, m.team_b_player_2_id];
+    for (const tmId of teammates) {
+      if (tmId === playerId) continue;
+      counts.set(tmId, (counts.get(tmId) ?? 0) + 1);
+    }
+  }
+  return Array.from(counts.entries())
+    .map(([pid, count]) => ({ playerId: pid, count }))
+    .sort((a, b) => b.count - a.count);
 }
 
 interface PlayerDetailProps {
@@ -69,18 +100,32 @@ export function PlayerDetail({
   onNavigate,
 }: PlayerDetailProps) {
   const playerMap = new Map(players.map((p) => [p.id, p]));
-  const sortedPlayers = [...players].sort((a, b) => b.current_elo - a.current_elo);
+  const sortedPlayers = [...players].sort(
+    (a, b) => b.current_elo - a.current_elo,
+  );
   const currentIndex = sortedPlayers.findIndex((p) => p.id === player.id);
   const prevPlayer = currentIndex > 0 ? sortedPlayers[currentIndex - 1] : null;
-  const nextPlayer = currentIndex < sortedPlayers.length - 1 ? sortedPlayers[currentIndex + 1] : null;
+  const nextPlayer =
+    currentIndex < sortedPlayers.length - 1
+      ? sortedPlayers[currentIndex + 1]
+      : null;
   const h2h = computeHeadToHead(player.id, matches);
+  const topFriends = computeFriends(player.id, matches).slice(0, 3);
+  const topEnemies = [...h2h]
+    .sort((a, b) => b.wins + b.losses - (a.wins + a.losses))
+    .slice(0, 3);
   const topEnemy = [...h2h]
-    .sort((a, b) => b.wins - a.wins || (b.wins + b.losses) - (a.wins + a.losses))
+    .sort((a, b) => b.wins - a.wins || b.wins + b.losses - (a.wins + a.losses))
     .find((h) => h.wins > 0);
   const nemesis = [...h2h]
-    .sort((a, b) => b.losses - a.losses || (b.wins + b.losses) - (a.wins + a.losses))
+    .sort(
+      (a, b) => b.losses - a.losses || b.wins + b.losses - (a.wins + a.losses),
+    )
     .find((h) => h.losses > 0);
-  const [chartData, setChartData] = useState<{ perGame: ChartData[]; perDate: ChartData[] }>({ perGame: [], perDate: [] });
+  const [chartData, setChartData] = useState<{
+    perGame: ChartData[];
+    perDate: ChartData[];
+  }>({ perGame: [], perDate: [] });
   const [xAxisMode, setXAxisMode] = useState<"game" | "date">("date");
   const [loading, setLoading] = useState(true);
   const [isEditingName, setIsEditingName] = useState(false);
@@ -109,42 +154,47 @@ export function PlayerDetail({
 
         // Build chart data from history
         const data: ChartData[] = history
-        .sort(
-          (a, b) =>
-            new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
-        )
-        .map((entry, index) => {
-          const cumulativeWins = history
-            .slice(0, index + 1)
-            .filter((h) => h.elo_change > 0).length;
-          const cumulativeLosses = history
-            .slice(0, index + 1)
-            .filter((h) => h.elo_change < 0).length;
-          const total = cumulativeWins + cumulativeLosses;
-          const winrate = total > 0 ? (cumulativeWins / total) * 100 : 0;
+          .sort(
+            (a, b) =>
+              new Date(a.created_at).getTime() -
+              new Date(b.created_at).getTime(),
+          )
+          .map((entry, index) => {
+            const cumulativeWins = history
+              .slice(0, index + 1)
+              .filter((h) => h.elo_change > 0).length;
+            const cumulativeLosses = history
+              .slice(0, index + 1)
+              .filter((h) => h.elo_change < 0).length;
+            const total = cumulativeWins + cumulativeLosses;
+            const winrate = total > 0 ? (cumulativeWins / total) * 100 : 0;
 
-          return {
-            date: new Date(entry.created_at).toLocaleDateString("de-CH", { day: "2-digit", month: "2-digit", year: "numeric" }),
-            elo: entry.elo_after,
-            cumWins: cumulativeWins,
-            cumLosses: cumulativeLosses,
-            winrate,
-          };
-        });
+            return {
+              date: new Date(entry.created_at).toLocaleDateString("de-CH", {
+                day: "2-digit",
+                month: "2-digit",
+                year: "numeric",
+              }),
+              elo: entry.elo_after,
+              cumWins: cumulativeWins,
+              cumLosses: cumulativeLosses,
+              winrate,
+            };
+          });
 
-      // Aggregate by date: keep last entry per day
-      const byDate = new Map<string, ChartData>();
-      for (const entry of data) {
-        byDate.set(entry.date, entry);
+        // Aggregate by date: keep last entry per day
+        const byDate = new Map<string, ChartData>();
+        for (const entry of data) {
+          byDate.set(entry.date, entry);
+        }
+        const dateData = Array.from(byDate.values());
+
+        setChartData({ perGame: data, perDate: dateData });
+      } catch (error) {
+        console.error("Failed to load player data:", error);
+      } finally {
+        setLoading(false);
       }
-      const dateData = Array.from(byDate.values());
-
-      setChartData({ perGame: data, perDate: dateData });
-    } catch (error) {
-      console.error("Failed to load player data:", error);
-    } finally {
-      setLoading(false);
-    }
     };
     loadPlayerData();
   }, [player.id]);
@@ -271,11 +321,13 @@ export function PlayerDetail({
           </div>
           {topEnemy && (
             <div className="stat-card">
-              <div className="stat-label">Top Enemy</div>
+              <div className="stat-label">Favorite Enemy</div>
               <div className="stat-value stat-value--name">
                 {playerMap.get(topEnemy.playerId)?.name ?? "?"}
               </div>
-              <div className="stat-sub">{topEnemy.wins} – {topEnemy.losses}</div>
+              <div className="stat-sub">
+                {topEnemy.wins} – {topEnemy.losses}
+              </div>
             </div>
           )}
           {nemesis && (
@@ -284,7 +336,9 @@ export function PlayerDetail({
               <div className="stat-value stat-value--name">
                 {playerMap.get(nemesis.playerId)?.name ?? "?"}
               </div>
-              <div className="stat-sub">{nemesis.wins} – {nemesis.losses}</div>
+              <div className="stat-sub">
+                {nemesis.wins} – {nemesis.losses}
+              </div>
             </div>
           )}
         </div>
@@ -317,7 +371,11 @@ export function PlayerDetail({
             <div className="chart-container">
               <h3>ELO Progression</h3>
               <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={xAxisMode === "date" ? chartData.perDate : chartData.perGame}>
+                <LineChart
+                  data={
+                    xAxisMode === "date" ? chartData.perDate : chartData.perGame
+                  }
+                >
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="date" />
                   <YAxis domain={["dataMin - 50", "dataMax + 50"]} />
@@ -351,7 +409,11 @@ export function PlayerDetail({
             <div className="chart-container">
               <h3>Winrate Over Time</h3>
               <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={xAxisMode === "date" ? chartData.perDate : chartData.perGame}>
+                <LineChart
+                  data={
+                    xAxisMode === "date" ? chartData.perDate : chartData.perGame
+                  }
+                >
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="date" />
                   <YAxis domain={[0, 100]} label={{ value: "%" }} />
@@ -369,6 +431,37 @@ export function PlayerDetail({
               </ResponsiveContainer>
             </div>
           </>
+        )}
+
+        {(topFriends.length > 0 || topEnemies.length > 0) && (
+          <div className="friends-enemies">
+            {topFriends.length > 0 && (
+              <div className="friends-enemies-col">
+                <h3>Top Friends</h3>
+                <ol className="fe-list">
+                  {topFriends.map((f) => (
+                    <li key={f.playerId}>
+                      <span className="fe-name">{playerMap.get(f.playerId)?.name ?? "?"}</span>
+                      <span className="fe-count">{f.count}×</span>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            )}
+            {topEnemies.length > 0 && (
+              <div className="friends-enemies-col">
+                <h3>Top Enemies</h3>
+                <ol className="fe-list">
+                  {topEnemies.map((e) => (
+                    <li key={e.playerId}>
+                      <span className="fe-name">{playerMap.get(e.playerId)?.name ?? "?"}</span>
+                      <span className="fe-count">{e.wins + e.losses}×</span>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            )}
+          </div>
         )}
       </div>
     </div>
