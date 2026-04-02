@@ -19,7 +19,6 @@ import {
 } from "../lib/supabase";
 import {
   computeTeammateCounts,
-  computeOpponentCounts,
   buildAchievementStatuses,
   type PlayerAchievementRow,
 } from "../lib/achievements";
