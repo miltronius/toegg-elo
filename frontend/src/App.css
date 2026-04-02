@@ -1656,13 +1656,20 @@ td.winrate {
   padding-bottom: 1rem;
 }
 
+.achievement-gallery-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+
 .achievement-section-heading {
   font-size: 0.78rem;
   text-transform: uppercase;
   font-weight: 600;
   color: var(--text-light);
   letter-spacing: 0.05em;
-  margin-bottom: 0.75rem;
+  margin-bottom: 0;
 }
 
 .achievement-grid {
@@ -1682,10 +1689,33 @@ td.winrate {
   text-align: center;
   gap: 0.35rem;
   transition: box-shadow 0.2s, transform 0.15s;
+  position: relative;
+}
+
+.achievement-card[data-unlocked]::after {
+  content: "Unlocked " attr(data-unlocked);
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--text);
+  color: white;
+  font-size: 0.68rem;
+  white-space: nowrap;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s;
+  z-index: 10;
+}
+
+.achievement-card[data-unlocked]:hover::after {
+  opacity: 1;
 }
 
 .achievement-card:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 16px color-mix(in srgb, var(--achievement-rarity-color, #6b7280) 40%, transparent);
   transform: translateY(-2px);
 }
 

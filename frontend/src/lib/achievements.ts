@@ -101,9 +101,9 @@ export const RARITY_TIERS: {
   color: string;
   label: string;
 }[] = [
-  { tier: "legendary", maxPercent: 10, color: "#f59e0b", label: "Legendary" },
-  { tier: "rare", maxPercent: 25, color: "#8b5cf6", label: "Rare" },
-  { tier: "uncommon", maxPercent: 50, color: "#3b82f6", label: "Uncommon" },
+  { tier: "legendary", maxPercent: 10, color: "#f97316", label: "Legendary" },
+  { tier: "rare", maxPercent: 25, color: "#a855f7", label: "Rare" },
+  { tier: "uncommon", maxPercent: 50, color: "#22c55e", label: "Uncommon" },
   { tier: "common", maxPercent: 100, color: "#6b7280", label: "Common" },
 ];
 
@@ -285,6 +285,24 @@ export function rarityColorForTier(tier: RarityTier): string {
   return RARITY_TIERS.find((r) => r.tier === tier)?.color ?? "#6b7280";
 }
 
+/** Compute rarity purely from match/player data — used when the DB table is empty. */
+export function computeClientSideRarityMap(
+  allPlayers: Player[],
+  matches: Match[],
+): Map<AchievementId, number> {
+  const countMap = new Map<AchievementId, number>();
+  for (const player of allPlayers) {
+    for (const { achievementId } of computeAchievementsForPlayer(player.id, player, matches)) {
+      countMap.set(achievementId, (countMap.get(achievementId) ?? 0) + 1);
+    }
+  }
+  const rarityMap = new Map<AchievementId, number>();
+  for (const [id, count] of countMap) {
+    rarityMap.set(id, allPlayers.length > 0 ? (count / allPlayers.length) * 100 : 0);
+  }
+  return rarityMap;
+}
+
 // ---------------------------------------------------------------------------
 // Build display statuses (unlocked list + rarity → AchievementStatus[])
 // ---------------------------------------------------------------------------
@@ -292,11 +310,13 @@ export function rarityColorForTier(tier: RarityTier): string {
 export function buildAchievementStatuses(
   playerId: string,
   player: Player,
+  allPlayers: Player[],
   matches: Match[],
   allRows: PlayerAchievementRow[],
-  totalPlayers: number,
 ): AchievementStatus[] {
-  const rarityMap = computeRarityMap(allRows, totalPlayers);
+  const rarityMap = allRows.length > 0
+    ? computeRarityMap(allRows, allPlayers.length)
+    : computeClientSideRarityMap(allPlayers, matches);
 
   // Use DB rows as the source of truth for unlocked state; fall back to live
   // computation if the player has no rows yet (e.g. brand-new player).

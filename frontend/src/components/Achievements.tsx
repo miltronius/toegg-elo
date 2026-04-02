@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { CSSProperties } from "react";
 import {
   ACHIEVEMENT_DEFINITIONS,
@@ -30,9 +31,9 @@ export function Achievements({
       const statuses = buildAchievementStatuses(
         player.id,
         player,
+        players,
         matches,
         allAchievementRows,
-        players.length,
       );
       const unlockedCount = statuses.filter((s) => s.unlocked).length;
       return { player, statuses, unlockedCount };
@@ -154,16 +155,49 @@ export function AchievementGallery({
   statuses,
   players,
 }: AchievementGalleryProps) {
+  const [sortMode, setSortMode] = useState<"rarity" | "date">("rarity");
   const playerMap = new Map(players.map((p) => [p.id, p]));
-  const unlocked = statuses.filter((s) => s.unlocked);
+
+  const unlocked = statuses
+    .filter((s) => s.unlocked)
+    .sort((a, b) => {
+      if (sortMode === "rarity") {
+        // lower percent = rarer = first; undefined rarity goes last
+        const ap = a.rarityPercent ?? Infinity;
+        const bp = b.rarityPercent ?? Infinity;
+        return ap - bp;
+      } else {
+        // most recently unlocked first; undefined date goes last
+        const ad = a.unlockedAt?.getTime() ?? 0;
+        const bd = b.unlockedAt?.getTime() ?? 0;
+        return bd - ad;
+      }
+    });
+
   const locked = statuses.filter((s) => !s.unlocked);
 
   return (
     <div className="achievement-gallery">
       {unlocked.length > 0 && (
         <section>
-          <div className="achievement-section-heading">
-            Unlocked ({unlocked.length})
+          <div className="achievement-gallery-header">
+            <div className="achievement-section-heading">
+              Unlocked ({unlocked.length})
+            </div>
+            <div className="lb-toggle">
+              <button
+                className={`lb-toggle-btn${sortMode === "rarity" ? " active" : ""}`}
+                onClick={() => setSortMode("rarity")}
+              >
+                By Rarity
+              </button>
+              <button
+                className={`lb-toggle-btn${sortMode === "date" ? " active" : ""}`}
+                onClick={() => setSortMode("date")}
+              >
+                By Date
+              </button>
+            </div>
           </div>
           <div className="achievement-grid">
             {unlocked.map((s) => (
@@ -202,7 +236,7 @@ interface AchievementCardProps {
 }
 
 function AchievementCard({ status, playerMap, locked }: AchievementCardProps) {
-  const { definition, rarityTier, rarityPercent, meta } = status;
+  const { definition, rarityTier, rarityPercent, meta, unlockedAt } = status;
 
   const color = rarityTier ? rarityColorForTier(rarityTier) : undefined;
   const tierInfo = rarityTier
@@ -220,6 +254,10 @@ function AchievementCard({ status, playerMap, locked }: AchievementCardProps) {
     }
   }
 
+  const unlockedLabel = unlockedAt
+    ? unlockedAt.toLocaleDateString("de-CH", { day: "2-digit", month: "2-digit", year: "numeric" })
+    : undefined;
+
   return (
     <div
       className={`achievement-card${locked ? " achievement-card--locked" : ""}`}
@@ -228,6 +266,7 @@ function AchievementCard({ status, playerMap, locked }: AchievementCardProps) {
           ? ({ "--achievement-rarity-color": color } as CSSProperties)
           : undefined
       }
+      data-unlocked={!locked && unlockedLabel ? unlockedLabel : undefined}
     >
       <div className="achievement-icon">
         {locked ? "🔒" : definition.icon}
@@ -241,7 +280,7 @@ function AchievementCard({ status, playerMap, locked }: AchievementCardProps) {
           style={{ color, borderColor: color }}
         >
           {tierInfo.label}
-          {rarityPercent !== undefined && ` · ${rarityPercent.toFixed(0)}%`}
+          {rarityPercent !== undefined && ` · ${rarityPercent.toFixed(0)}% of players`}
         </span>
       )}
     </div>

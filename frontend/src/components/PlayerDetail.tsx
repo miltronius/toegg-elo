@@ -221,9 +221,9 @@ export function PlayerDetail({
   const achievementStatuses = buildAchievementStatuses(
     player.id,
     player,
+    players,
     matches,
     allAchievementRows,
-    players.length,
   );
 
   return (
