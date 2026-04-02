@@ -55,6 +55,109 @@ function calculateNewElo(
   return Math.round(newElo);
 }
 
+// ---------------------------------------------------------------------------
+// Achievement computation (inlined to stay within this function's import map)
+// ---------------------------------------------------------------------------
+
+type AchievementId =
+  | "win_5" | "lose_5" | "play_20"
+  | "all_weekdays" | "triple_day"
+  | "best_friend" | "sworn_enemies";
+
+interface AchievementPlayer {
+  id: string;
+  wins: number;
+  losses: number;
+  matches_played: number;
+}
+
+interface AchievementMatch {
+  id: string;
+  team_a_player_1_id: string;
+  team_a_player_2_id: string;
+  team_b_player_1_id: string;
+  team_b_player_2_id: string;
+  winning_team: string;
+  created_at: string;
+}
+
+function tmCounts(playerId: string, matches: AchievementMatch[]): Map<string, number> {
+  const c = new Map<string, number>();
+  for (const m of matches) {
+    const inA = m.team_a_player_1_id === playerId || m.team_a_player_2_id === playerId;
+    const inB = m.team_b_player_1_id === playerId || m.team_b_player_2_id === playerId;
+    if (!inA && !inB) continue;
+    const tms = inA ? [m.team_a_player_1_id, m.team_a_player_2_id] : [m.team_b_player_1_id, m.team_b_player_2_id];
+    for (const t of tms) { if (t !== playerId) c.set(t, (c.get(t) ?? 0) + 1); }
+  }
+  return c;
+}
+
+function oppCounts(playerId: string, matches: AchievementMatch[]): Map<string, number> {
+  const c = new Map<string, number>();
+  for (const m of matches) {
+    const inA = m.team_a_player_1_id === playerId || m.team_a_player_2_id === playerId;
+    const inB = m.team_b_player_1_id === playerId || m.team_b_player_2_id === playerId;
+    if (!inA && !inB) continue;
+    const opps = inA ? [m.team_b_player_1_id, m.team_b_player_2_id] : [m.team_a_player_1_id, m.team_a_player_2_id];
+    for (const o of opps) c.set(o, (c.get(o) ?? 0) + 1);
+  }
+  return c;
+}
+
+function computeForPlayer(
+  p: AchievementPlayer,
+  matches: AchievementMatch[],
+): { achievementId: AchievementId; meta: Record<string, unknown> | null }[] {
+  const now = new Date().toISOString();
+  const result: { achievementId: AchievementId; meta: Record<string, unknown> | null }[] = [];
+  const pm = matches.filter(
+    (m) => m.team_a_player_1_id === p.id || m.team_a_player_2_id === p.id ||
+           m.team_b_player_1_id === p.id || m.team_b_player_2_id === p.id,
+  );
+
+  if (p.wins >= 5) result.push({ achievementId: "win_5", meta: null });
+  if (p.losses >= 5) result.push({ achievementId: "lose_5", meta: null });
+  if (p.matches_played >= 20) result.push({ achievementId: "play_20", meta: null });
+
+  const days = new Set(pm.map((m) => new Date(m.created_at).getUTCDay()));
+  if (days.size === 7) result.push({ achievementId: "all_weekdays", meta: null });
+
+  const buckets = new Map<string, number>();
+  for (const m of pm) { const d = m.created_at.slice(0, 10); buckets.set(d, (buckets.get(d) ?? 0) + 1); }
+  if ([...buckets.values()].some((n) => n >= 3)) result.push({ achievementId: "triple_day", meta: null });
+
+  let bestPid = "", bestCnt = 0;
+  for (const [pid, cnt] of tmCounts(p.id, matches)) { if (cnt > bestCnt) { bestCnt = cnt; bestPid = pid; } }
+  if (bestPid && bestCnt >= 10) result.push({ achievementId: "best_friend", meta: { partnerId: bestPid } });
+
+  let topOid = "", topOcnt = 0;
+  for (const [oid, cnt] of oppCounts(p.id, matches)) { if (cnt > topOcnt) { topOcnt = cnt; topOid = oid; } }
+  if (topOid && topOcnt >= 10) result.push({ achievementId: "sworn_enemies", meta: { opponentId: topOid } });
+
+  void now; // suppress unused warning
+  return result;
+}
+
+// deno-lint-ignore no-explicit-any
+async function recomputeAchievements(supabase: any, players: AchievementPlayer[], matches: AchievementMatch[]) {
+  const rows: { player_id: string; achievement_id: string; unlocked_at: string; meta: Record<string, unknown> | null }[] = [];
+  const now = new Date().toISOString();
+  for (const player of players) {
+    for (const { achievementId, meta } of computeForPlayer(player, matches)) {
+      rows.push({ player_id: player.id, achievement_id: achievementId, unlocked_at: now, meta });
+    }
+  }
+  if (rows.length === 0) return;
+  const { error } = await supabase.from("player_achievements").upsert(rows, {
+    onConflict: "player_id,achievement_id",
+    ignoreDuplicates: false,
+  });
+  if (error) throw error;
+}
+
+// ---------------------------------------------------------------------------
+
 Deno.serve(async (req) => {
   // Handle CORS
   if (req.method === "OPTIONS") {
@@ -243,6 +346,17 @@ Deno.serve(async (req) => {
         elo_after: change.eloAfter,
         elo_change: change.eloChange,
       });
+    }
+
+    // Recompute achievements for all players (non-fatal)
+    try {
+      const { data: allPlayers } = await supabase.from("players").select("*");
+      const { data: allMatches } = await supabase.from("matches").select("*");
+      if (allPlayers && allMatches) {
+        await recomputeAchievements(supabase, allPlayers, allMatches);
+      }
+    } catch (err) {
+      console.error("Achievement recompute failed (non-fatal):", err);
     }
 
     return new Response(

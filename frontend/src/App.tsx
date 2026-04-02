@@ -4,11 +4,13 @@ import {
   getMatches,
   getEloHistory,
   getTeamNames,
+  getAllPlayerAchievements,
   Player,
   Match,
   EloHistory,
   TeamNameRow,
 } from "./lib/supabase";
+import type { PlayerAchievementRow } from "./lib/achievements";
 import { useAuth } from "./contexts/AuthContext";
 import { AuthScreen } from "./components/AuthScreen";
 import { CreatePlayerModal } from "./components/PlayerModal";
@@ -19,6 +21,7 @@ import { PlayerDetail } from "./components/PlayerDetail";
 import { UserManagement } from "./components/UserManagement";
 import { Teams } from "./components/Teams";
 import { TeamDetail } from "./components/TeamDetail";
+import { Achievements } from "./components/Achievements";
 import { computeTeamStats, TeamStats } from "./lib/teamUtils";
 import "./App.css";
 
@@ -30,13 +33,15 @@ function App() {
     new Map(),
   );
   const [teamNames, setTeamNames] = useState<TeamNameRow[]>([]);
+  const [allAchievementRows, setAllAchievementRows] = useState<PlayerAchievementRow[]>([]);
   const [selectedTeam, setSelectedTeam] = useState<TeamStats | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [authOpen, setAuthOpen] = useState(false);
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
+  const [playerDetailInitialTab, setPlayerDetailInitialTab] = useState<"stats" | "achievements">("stats");
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<
-    "leaderboard" | "history" | "match" | "users" | "teams"
+    "leaderboard" | "history" | "match" | "users" | "teams" | "achievements"
   >("leaderboard");
 
   const canEdit = role === "user" || role === "admin";
@@ -56,14 +61,17 @@ function App() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [playersData, matchesData, teamNamesData] = await Promise.all([
-        getPlayers(),
-        getMatches(),
-        getTeamNames(),
-      ]);
+      const [playersData, matchesData, teamNamesData, achievementRows] =
+        await Promise.all([
+          getPlayers(),
+          getMatches(),
+          getTeamNames(),
+          getAllPlayerAchievements(),
+        ]);
       setPlayers(playersData);
       setMatches(matchesData);
       setTeamNames(teamNamesData);
+      setAllAchievementRows(achievementRows);
       const historyMap = new Map<string, EloHistory[]>();
       for (const player of playersData) {
         const history = await getEloHistory(player.id);
@@ -142,6 +150,12 @@ function App() {
         >
           History
         </button>
+        <button
+          className={`tab ${activeTab === "achievements" ? "active" : ""}`}
+          onClick={() => setActiveTab("achievements")}
+        >
+          🏅 Achievements
+        </button>
         {isAdmin && (
           <button
             className={`tab ${activeTab === "users" ? "active" : ""}`}
@@ -156,7 +170,14 @@ function App() {
           <Leaderboard
             players={players}
             history={allEloHistory}
-            onPlayerClick={canEdit ? setSelectedPlayer : undefined}
+            onPlayerClick={
+              canEdit
+                ? (player) => {
+                    setPlayerDetailInitialTab("stats");
+                    setSelectedPlayer(player);
+                  }
+                : undefined
+            }
           />
         )}
         {activeTab === "match" && canEdit && (
@@ -177,6 +198,21 @@ function App() {
             onTeamClick={setSelectedTeam}
           />
         )}
+        {activeTab === "achievements" && (
+          <Achievements
+            players={players}
+            matches={matches}
+            allAchievementRows={allAchievementRows}
+            onSelectPlayer={
+              canEdit
+                ? (player) => {
+                    setPlayerDetailInitialTab("achievements");
+                    setSelectedPlayer(player);
+                  }
+                : () => {}
+            }
+          />
+        )}
         {activeTab === "users" && isAdmin && <UserManagement />}
       </main>
       {canEdit && (
@@ -191,6 +227,8 @@ function App() {
           player={selectedPlayer}
           players={players}
           matches={matches}
+          allAchievementRows={allAchievementRows}
+          initialTab={playerDetailInitialTab}
           onClose={() => setSelectedPlayer(null)}
           onPlayerUpdated={() => {
             loadData();

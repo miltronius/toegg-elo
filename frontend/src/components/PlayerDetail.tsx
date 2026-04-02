@@ -17,6 +17,13 @@ import {
   Match,
   Player,
 } from "../lib/supabase";
+import {
+  computeTeammateCounts,
+  computeOpponentCounts,
+  buildAchievementStatuses,
+  type PlayerAchievementRow,
+} from "../lib/achievements";
+import { AchievementGallery } from "./Achievements";
 
 interface HeadToHead {
   playerId: string;
@@ -50,37 +57,15 @@ function computeHeadToHead(playerId: string, matches: Match[]): HeadToHead[] {
   }));
 }
 
-function computeFriends(
-  playerId: string,
-  matches: Match[],
-): { playerId: string; count: number }[] {
-  const counts = new Map<string, number>();
-  for (const m of matches) {
-    const inA =
-      m.team_a_player_1_id === playerId || m.team_a_player_2_id === playerId;
-    const inB =
-      m.team_b_player_1_id === playerId || m.team_b_player_2_id === playerId;
-    if (!inA && !inB) continue;
-    const teammates = inA
-      ? [m.team_a_player_1_id, m.team_a_player_2_id]
-      : [m.team_b_player_1_id, m.team_b_player_2_id];
-    for (const tmId of teammates) {
-      if (tmId === playerId) continue;
-      counts.set(tmId, (counts.get(tmId) ?? 0) + 1);
-    }
-  }
-  return Array.from(counts.entries())
-    .map(([pid, count]) => ({ playerId: pid, count }))
-    .sort((a, b) => b.count - a.count);
-}
-
 interface PlayerDetailProps {
   player: Player;
   players: Player[];
   matches: Match[];
+  allAchievementRows: PlayerAchievementRow[];
   onClose: () => void;
   onPlayerUpdated?: () => void;
   onNavigate?: (player: Player) => void;
+  initialTab?: "stats" | "achievements";
 }
 
 interface ChartData {
@@ -95,9 +80,11 @@ export function PlayerDetail({
   player,
   players,
   matches,
+  allAchievementRows,
   onClose,
   onPlayerUpdated,
   onNavigate,
+  initialTab = "stats",
 }: PlayerDetailProps) {
   const playerMap = new Map(players.map((p) => [p.id, p]));
   const sortedPlayers = [...players].sort(
@@ -109,8 +96,12 @@ export function PlayerDetail({
     currentIndex < sortedPlayers.length - 1
       ? sortedPlayers[currentIndex + 1]
       : null;
+
   const h2h = computeHeadToHead(player.id, matches);
-  const topFriends = computeFriends(player.id, matches).slice(0, 3);
+  const topFriends = Array.from(computeTeammateCounts(player.id, matches).entries())
+    .map(([playerId, count]) => ({ playerId, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 3);
   const topEnemies = [...h2h]
     .sort((a, b) => b.wins + b.losses - (a.wins + a.losses))
     .slice(0, 3);
@@ -122,6 +113,8 @@ export function PlayerDetail({
       (a, b) => b.losses - a.losses || b.wins + b.losses - (a.wins + a.losses),
     )
     .find((h) => h.losses > 0);
+
+  const [detailTab, setDetailTab] = useState<"stats" | "achievements">(initialTab);
   const [chartData, setChartData] = useState<{
     perGame: ChartData[];
     perDate: ChartData[];
@@ -131,6 +124,11 @@ export function PlayerDetail({
   const [isEditingName, setIsEditingName] = useState(false);
   const [newName, setNewName] = useState(player.name);
   const [isSaving, setIsSaving] = useState(false);
+
+  // Sync initialTab when player changes (navigation)
+  useEffect(() => {
+    setDetailTab(initialTab);
+  }, [player.id, initialTab]);
 
   useEffect(() => {
     if (!onNavigate) return;
@@ -221,6 +219,14 @@ export function PlayerDetail({
     }
   };
 
+  const achievementStatuses = buildAchievementStatuses(
+    player.id,
+    player,
+    matches,
+    allAchievementRows,
+    players.length,
+  );
+
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div
@@ -298,18 +304,6 @@ export function PlayerDetail({
             <div className="stat-label">Current ELO</div>
             <div className="stat-value">{player.current_elo}</div>
           </div>
-          {/*
-          <div className="stat-card">
-            <div className="stat-label">Total Matches</div>
-            <div className="stat-value">{player.matches_played}</div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-label">Win-Loss</div>
-            <div className="stat-value">
-              {player.wins}-{player.losses}
-            </div>
-          </div>
-                      */}
           <div className="stat-card">
             <div className="stat-label">Winrate</div>
             <div className="stat-value">
@@ -343,125 +337,162 @@ export function PlayerDetail({
           )}
         </div>
 
-        {loading ? (
-          <>
-            <div className="chart-skeleton chart-skeleton--toggle" />
-            <div className="chart-skeleton chart-skeleton--chart" />
-            <div className="chart-skeleton chart-skeleton--chart" />
-          </>
-        ) : chartData.perGame.length === 0 ? (
-          <div className="empty-state">No match history yet</div>
-        ) : (
-          <>
-            <div className="lb-toggle" style={{ width: "fit-content" }}>
-              <button
-                className={`lb-toggle-btn${xAxisMode === "date" ? " active" : ""}`}
-                onClick={() => setXAxisMode("date")}
-              >
-                Per Date
-              </button>
-              <button
-                className={`lb-toggle-btn${xAxisMode === "game" ? " active" : ""}`}
-                onClick={() => setXAxisMode("game")}
-              >
-                Per Game
-              </button>
-            </div>
+        {/* Tab toggle */}
+        <div className="lb-toggle" style={{ width: "fit-content", marginBottom: "1.25rem" }}>
+          <button
+            className={`lb-toggle-btn${detailTab === "stats" ? " active" : ""}`}
+            onClick={() => setDetailTab("stats")}
+          >
+            📊 Stats
+          </button>
+          <button
+            className={`lb-toggle-btn${detailTab === "achievements" ? " active" : ""}`}
+            onClick={() => setDetailTab("achievements")}
+          >
+            🏅 Achievements
+          </button>
+        </div>
 
-            <div className="chart-container">
-              <h3>ELO Progression</h3>
-              <ResponsiveContainer width="100%" height={300}>
-                <LineChart
-                  data={
-                    xAxisMode === "date" ? chartData.perDate : chartData.perGame
-                  }
-                >
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="date" />
-                  <YAxis domain={["dataMin - 50", "dataMax + 50"]} />
-                  <Tooltip />
-                  <Legend />
-                  <ReferenceLine
-                    y={1500}
-                    stroke="#f59e0b"
-                    strokeDasharray="6 4"
-                    strokeWidth={1.5}
-                    label={{
-                      value: "1500",
-                      position: "insideTopRight",
-                      fill: "#f59e0b",
-                      fontSize: 12,
-                      dy: -20,
-                    }}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="elo"
-                    stroke="#3b82f6"
-                    name="ELO Rating"
-                    dot={false}
-                    strokeWidth={2}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
+        {detailTab === "stats" && (
+          <>
+            {loading ? (
+              <>
+                <div className="chart-skeleton chart-skeleton--toggle" />
+                <div className="chart-skeleton chart-skeleton--chart" />
+                <div className="chart-skeleton chart-skeleton--chart" />
+              </>
+            ) : chartData.perGame.length === 0 ? (
+              <div className="empty-state">No match history yet</div>
+            ) : (
+              <>
+                <div className="lb-toggle" style={{ width: "fit-content" }}>
+                  <button
+                    className={`lb-toggle-btn${xAxisMode === "date" ? " active" : ""}`}
+                    onClick={() => setXAxisMode("date")}
+                  >
+                    Per Date
+                  </button>
+                  <button
+                    className={`lb-toggle-btn${xAxisMode === "game" ? " active" : ""}`}
+                    onClick={() => setXAxisMode("game")}
+                  >
+                    Per Game
+                  </button>
+                </div>
 
-            <div className="chart-container">
-              <h3>Winrate Over Time</h3>
-              <ResponsiveContainer width="100%" height={300}>
-                <LineChart
-                  data={
-                    xAxisMode === "date" ? chartData.perDate : chartData.perGame
-                  }
-                >
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="date" />
-                  <YAxis domain={[0, 100]} label={{ value: "%" }} />
-                  <Tooltip formatter={(value) => `${value.toFixed(1)}%`} />
-                  <Legend />
-                  <Line
-                    type="monotone"
-                    dataKey="winrate"
-                    stroke="#10b981"
-                    name="Winrate %"
-                    dot={false}
-                    strokeWidth={2}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
+                <div className="chart-container">
+                  <h3>ELO Progression</h3>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <LineChart
+                      data={
+                        xAxisMode === "date"
+                          ? chartData.perDate
+                          : chartData.perGame
+                      }
+                    >
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="date" />
+                      <YAxis domain={["dataMin - 50", "dataMax + 50"]} />
+                      <Tooltip />
+                      <Legend />
+                      <ReferenceLine
+                        y={1500}
+                        stroke="#f59e0b"
+                        strokeDasharray="6 4"
+                        strokeWidth={1.5}
+                        label={{
+                          value: "1500",
+                          position: "insideTopRight",
+                          fill: "#f59e0b",
+                          fontSize: 12,
+                          dy: -20,
+                        }}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="elo"
+                        stroke="#3b82f6"
+                        name="ELO Rating"
+                        dot={false}
+                        strokeWidth={2}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+
+                <div className="chart-container">
+                  <h3>Winrate Over Time</h3>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <LineChart
+                      data={
+                        xAxisMode === "date"
+                          ? chartData.perDate
+                          : chartData.perGame
+                      }
+                    >
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="date" />
+                      <YAxis domain={[0, 100]} label={{ value: "%" }} />
+                      <Tooltip formatter={(value) => `${value.toFixed(1)}%`} />
+                      <Legend />
+                      <Line
+                        type="monotone"
+                        dataKey="winrate"
+                        stroke="#10b981"
+                        name="Winrate %"
+                        dot={false}
+                        strokeWidth={2}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </>
+            )}
+
+            {(topFriends.length > 0 || topEnemies.length > 0) && (
+              <div className="friends-enemies">
+                {topFriends.length > 0 && (
+                  <div className="friends-enemies-col">
+                    <h3>Top Friends</h3>
+                    <ol className="fe-list">
+                      {topFriends.map((f) => (
+                        <li key={f.playerId}>
+                          <span className="fe-name">
+                            {playerMap.get(f.playerId)?.name ?? "?"}
+                          </span>
+                          <span className="fe-count">{f.count}×</span>
+                        </li>
+                      ))}
+                    </ol>
+                  </div>
+                )}
+                {topEnemies.length > 0 && (
+                  <div className="friends-enemies-col">
+                    <h3>Top Enemies</h3>
+                    <ol className="fe-list">
+                      {topEnemies.map((e) => (
+                        <li key={e.playerId}>
+                          <span className="fe-name">
+                            {playerMap.get(e.playerId)?.name ?? "?"}
+                          </span>
+                          <span className="fe-count">
+                            {e.wins + e.losses}×
+                          </span>
+                        </li>
+                      ))}
+                    </ol>
+                  </div>
+                )}
+              </div>
+            )}
           </>
         )}
 
-        {(topFriends.length > 0 || topEnemies.length > 0) && (
-          <div className="friends-enemies">
-            {topFriends.length > 0 && (
-              <div className="friends-enemies-col">
-                <h3>Top Friends</h3>
-                <ol className="fe-list">
-                  {topFriends.map((f) => (
-                    <li key={f.playerId}>
-                      <span className="fe-name">{playerMap.get(f.playerId)?.name ?? "?"}</span>
-                      <span className="fe-count">{f.count}×</span>
-                    </li>
-                  ))}
-                </ol>
-              </div>
-            )}
-            {topEnemies.length > 0 && (
-              <div className="friends-enemies-col">
-                <h3>Top Enemies</h3>
-                <ol className="fe-list">
-                  {topEnemies.map((e) => (
-                    <li key={e.playerId}>
-                      <span className="fe-name">{playerMap.get(e.playerId)?.name ?? "?"}</span>
-                      <span className="fe-count">{e.wins + e.losses}×</span>
-                    </li>
-                  ))}
-                </ol>
-              </div>
-            )}
-          </div>
+        {detailTab === "achievements" && (
+          <AchievementGallery
+            statuses={achievementStatuses}
+            players={players}
+          />
         )}
       </div>
     </div>
