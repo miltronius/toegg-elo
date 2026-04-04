@@ -283,3 +283,36 @@ export async function getAllEloHistory(): Promise<EloHistory[]> {
   if (error) throw error;
   return data || [];
 }
+
+// ---------------------------------------------------------------------------
+// Achievements
+// ---------------------------------------------------------------------------
+
+export type { PlayerAchievementRow } from "./achievements";
+
+export async function getAllPlayerAchievements() {
+  const { data, error } = await supabase
+    .from("player_achievements")
+    .select("*");
+  if (error) throw error;
+  return (data ?? []) as import("./achievements").PlayerAchievementRow[];
+}
+
+export async function getPlayerAchievements(playerId: string) {
+  const { data, error } = await supabase
+    .from("player_achievements")
+    .select("*")
+    .eq("player_id", playerId);
+  if (error) throw error;
+  return (data ?? []) as import("./achievements").PlayerAchievementRow[];
+}
+
+export async function upsertPlayerAchievements(
+  rows: Omit<import("./achievements").PlayerAchievementRow, "id">[],
+): Promise<void> {
+  const { error } = await supabase.from("player_achievements").upsert(rows, {
+    onConflict: "player_id,achievement_id",
+    ignoreDuplicates: false,
+  });
+  if (error) throw error;
+}

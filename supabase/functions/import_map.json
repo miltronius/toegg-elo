@@ -1,0 +1,6 @@
+{
+  "imports": {
+    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@2",
+    "@std/assert": "jsr:@std/assert@^1.0.0"
+  }
+}
