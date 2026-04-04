@@ -6,13 +6,29 @@ import type { Player, Match } from "./supabase";
 // ---------------------------------------------------------------------------
 
 export type AchievementId =
+  | "win_1"
   | "win_5"
+  | "win_10"
+  | "win_20"
+  | "win_50"
+  | "lose_1"
   | "lose_5"
+  | "lose_10"
+  | "lose_20"
+  | "lose_50"
+  | "play_10"
   | "play_20"
+  | "play_50"
+  | "play_100"
+  | "play_200"
   | "all_weekdays"
   | "triple_day"
+  | "triple_win_day"
   | "best_friend"
-  | "sworn_enemies";
+  | "bff"
+  | "sworn_enemies"
+  | "arch_nemesis"
+  | "achievement_hunter";
 
 export type RarityTier = "legendary" | "rare" | "uncommon" | "common";
 
@@ -52,10 +68,40 @@ export interface PlayerAchievementRow {
 
 export const ACHIEVEMENT_DEFINITIONS: AchievementDefinition[] = [
   {
+    id: "win_1",
+    icon: "🥇",
+    name: "First Victory",
+    description: "Win your first match",
+  },
+  {
     id: "win_5",
     icon: "🎯",
     name: "Five-Win Club",
     description: "Win 5 matches over your career",
+  },
+  {
+    id: "win_10",
+    icon: "🏆",
+    name: "Ten Wins",
+    description: "Win 10 matches",
+  },
+  {
+    id: "win_20",
+    icon: "🌟",
+    name: "Twenty Wins",
+    description: "Win 20 matches",
+  },
+  {
+    id: "win_50",
+    icon: "👑",
+    name: "Champion",
+    description: "Win 50 matches",
+  },
+  {
+    id: "lose_1",
+    icon: "😅",
+    name: "First Defeat",
+    description: "Lose your first match",
   },
   {
     id: "lose_5",
@@ -64,10 +110,52 @@ export const ACHIEVEMENT_DEFINITIONS: AchievementDefinition[] = [
     description: "Lose 5 matches — every champion knows defeat",
   },
   {
-    id: "play_20",
+    id: "lose_10",
+    icon: "😤",
+    name: "Resilient",
+    description: "Lose 10 matches",
+  },
+  {
+    id: "lose_20",
+    icon: "💪",
+    name: "Never Give Up",
+    description: "Lose 20 matches",
+  },
+  {
+    id: "lose_50",
+    icon: "🧱",
+    name: "Iron Will",
+    description: "Lose 50 matches — still standing",
+  },
+  {
+    id: "play_10",
     icon: "🎮",
+    name: "Getting Started",
+    description: "Play 10 total matches",
+  },
+  {
+    id: "play_20",
+    icon: "🕹️",
     name: "Committed Player",
     description: "Play 20 total matches",
+  },
+  {
+    id: "play_50",
+    icon: "🎰",
+    name: "Dedicated",
+    description: "Play 50 total matches",
+  },
+  {
+    id: "play_100",
+    icon: "💯",
+    name: "Centurion",
+    description: "Play 100 total matches",
+  },
+  {
+    id: "play_200",
+    icon: "🚀",
+    name: "Legend",
+    description: "Play 200 total matches",
   },
   {
     id: "all_weekdays",
@@ -78,8 +166,14 @@ export const ACHIEVEMENT_DEFINITIONS: AchievementDefinition[] = [
   {
     id: "triple_day",
     icon: "⚡",
-    name: "Hat-Trick Day",
+    name: "Hattrick Day",
     description: "Play 3 or more matches in a single calendar day",
+  },
+  {
+    id: "triple_win_day",
+    icon: "🔥",
+    name: "Dominant Day",
+    description: "Win 3 or more matches in a single calendar day",
   },
   {
     id: "best_friend",
@@ -88,10 +182,28 @@ export const ACHIEVEMENT_DEFINITIONS: AchievementDefinition[] = [
     description: "Play 10+ matches on the same team as one partner",
   },
   {
+    id: "bff",
+    icon: "💞",
+    name: "BFF",
+    description: "Play 20+ matches on the same team as one partner",
+  },
+  {
     id: "sworn_enemies",
     icon: "⚔️",
     name: "Sworn Enemies",
     description: "Face the same opponent in 10+ matches",
+  },
+  {
+    id: "arch_nemesis",
+    icon: "💀⚔️",
+    name: "Arch Nemesis",
+    description: "Face the same opponent in 20+ matches",
+  },
+  {
+    id: "achievement_hunter",
+    icon: "🎖️",
+    name: "Achievement Hunter",
+    description: "Unlock 10 achievements",
   },
 ];
 
@@ -177,20 +289,41 @@ export function computeAchievementsForPlayer(
       m.team_b_player_2_id === playerId,
   );
 
-  // win_5
-  if (player.wins >= 5) {
+  // win milestones
+  if (player.wins >= 1)
+    unlocked.push({ achievementId: "win_1", unlockedAt: now });
+  if (player.wins >= 5)
     unlocked.push({ achievementId: "win_5", unlockedAt: now });
-  }
+  if (player.wins >= 10)
+    unlocked.push({ achievementId: "win_10", unlockedAt: now });
+  if (player.wins >= 20)
+    unlocked.push({ achievementId: "win_20", unlockedAt: now });
+  if (player.wins >= 50)
+    unlocked.push({ achievementId: "win_50", unlockedAt: now });
 
-  // lose_5
-  if (player.losses >= 5) {
+  // lose milestones
+  if (player.losses >= 1)
+    unlocked.push({ achievementId: "lose_1", unlockedAt: now });
+  if (player.losses >= 5)
     unlocked.push({ achievementId: "lose_5", unlockedAt: now });
-  }
+  if (player.losses >= 10)
+    unlocked.push({ achievementId: "lose_10", unlockedAt: now });
+  if (player.losses >= 20)
+    unlocked.push({ achievementId: "lose_20", unlockedAt: now });
+  if (player.losses >= 50)
+    unlocked.push({ achievementId: "lose_50", unlockedAt: now });
 
-  // play_20
-  if (player.matches_played >= 20) {
+  // play milestones
+  if (player.matches_played >= 10)
+    unlocked.push({ achievementId: "play_10", unlockedAt: now });
+  if (player.matches_played >= 20)
     unlocked.push({ achievementId: "play_20", unlockedAt: now });
-  }
+  if (player.matches_played >= 50)
+    unlocked.push({ achievementId: "play_50", unlockedAt: now });
+  if (player.matches_played >= 100)
+    unlocked.push({ achievementId: "play_100", unlockedAt: now });
+  if (player.matches_played >= 200)
+    unlocked.push({ achievementId: "play_200", unlockedAt: now });
 
   // all_weekdays: played on all 7 days of the week (UTC)
   const weekdays = new Set(
@@ -210,6 +343,23 @@ export function computeAchievementsForPlayer(
     unlocked.push({ achievementId: "triple_day", unlockedAt: now });
   }
 
+  // triple_win_day: 3+ wins on any single UTC calendar day
+  const dayWinBuckets = new Map<string, number>();
+  for (const m of playerMatches) {
+    const playerInA =
+      m.team_a_player_1_id === playerId || m.team_a_player_2_id === playerId;
+    const won =
+      (playerInA && m.winning_team === "A") ||
+      (!playerInA && m.winning_team === "B");
+    if (won) {
+      const day = m.created_at.slice(0, 10);
+      dayWinBuckets.set(day, (dayWinBuckets.get(day) ?? 0) + 1);
+    }
+  }
+  if ([...dayWinBuckets.values()].some((count) => count >= 3)) {
+    unlocked.push({ achievementId: "triple_win_day", unlockedAt: now });
+  }
+
   // best_friend: 10+ matches with one specific teammate
   const teammateCounts = computeTeammateCounts(playerId, matches);
   let bestPartnerId: string | null = null;
@@ -227,8 +377,15 @@ export function computeAchievementsForPlayer(
       meta: { partnerId: bestPartnerId, count: bestPartnerCount },
     });
   }
+  if (bestPartnerId && bestPartnerCount >= 20) {
+    unlocked.push({
+      achievementId: "bff",
+      unlockedAt: now,
+      meta: { partnerId: bestPartnerId, count: bestPartnerCount },
+    });
+  }
 
-  // sworn_enemies: 10+ matches against one specific opponent
+  // sworn_enemies / arch_nemesis: 10+/20+ matches against one specific opponent
   const opponentCounts = computeOpponentCounts(playerId, matches);
   let topEnemyId: string | null = null;
   let topEnemyCount = 0;
@@ -244,6 +401,18 @@ export function computeAchievementsForPlayer(
       unlockedAt: now,
       meta: { opponentId: topEnemyId, count: topEnemyCount },
     });
+  }
+  if (topEnemyId && topEnemyCount >= 20) {
+    unlocked.push({
+      achievementId: "arch_nemesis",
+      unlockedAt: now,
+      meta: { opponentId: topEnemyId, count: topEnemyCount },
+    });
+  }
+
+  // achievement_hunter: must be last — counts all other unlocked achievements
+  if (unlocked.length >= 10) {
+    unlocked.push({ achievementId: "achievement_hunter", unlockedAt: now });
   }
 
   return unlocked;
@@ -266,10 +435,7 @@ export function computeRarityMap(
   }
   const rarityMap = new Map<AchievementId, number>();
   for (const [id, count] of countMap) {
-    rarityMap.set(
-      id,
-      totalPlayers > 0 ? (count / totalPlayers) * 100 : 0,
-    );
+    rarityMap.set(id, totalPlayers > 0 ? (count / totalPlayers) * 100 : 0);
   }
   return rarityMap;
 }
@@ -292,13 +458,20 @@ export function computeClientSideRarityMap(
 ): Map<AchievementId, number> {
   const countMap = new Map<AchievementId, number>();
   for (const player of allPlayers) {
-    for (const { achievementId } of computeAchievementsForPlayer(player.id, player, matches)) {
+    for (const { achievementId } of computeAchievementsForPlayer(
+      player.id,
+      player,
+      matches,
+    )) {
       countMap.set(achievementId, (countMap.get(achievementId) ?? 0) + 1);
     }
   }
   const rarityMap = new Map<AchievementId, number>();
   for (const [id, count] of countMap) {
-    rarityMap.set(id, allPlayers.length > 0 ? (count / allPlayers.length) * 100 : 0);
+    rarityMap.set(
+      id,
+      allPlayers.length > 0 ? (count / allPlayers.length) * 100 : 0,
+    );
   }
   return rarityMap;
 }
@@ -314,9 +487,10 @@ export function buildAchievementStatuses(
   matches: Match[],
   allRows: PlayerAchievementRow[],
 ): AchievementStatus[] {
-  const rarityMap = allRows.length > 0
-    ? computeRarityMap(allRows, allPlayers.length)
-    : computeClientSideRarityMap(allPlayers, matches);
+  const rarityMap =
+    allRows.length > 0
+      ? computeRarityMap(allRows, allPlayers.length)
+      : computeClientSideRarityMap(allPlayers, matches);
 
   // Use DB rows as the source of truth for unlocked state; fall back to live
   // computation if the player has no rows yet (e.g. brand-new player).
@@ -346,9 +520,7 @@ export function buildAchievementStatuses(
     return {
       definition: def,
       unlocked,
-      unlockedAt: row
-        ? new Date(row.unlocked_at)
-        : liveEntry?.unlockedAt,
+      unlockedAt: row ? new Date(row.unlocked_at) : liveEntry?.unlockedAt,
       meta: row?.meta ?? liveEntry?.meta,
       rarityPercent,
       rarityTier,
@@ -385,7 +557,7 @@ export async function recomputeAllAchievements(
 
   const { error } = await supabase.from("player_achievements").upsert(rows, {
     onConflict: "player_id,achievement_id",
-    ignoreDuplicates: false,
+    ignoreDuplicates: true,
   });
 
   if (error) throw error;
