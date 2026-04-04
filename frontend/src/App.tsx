@@ -27,7 +27,7 @@ import { UserManagement } from "./components/UserManagement";
 import { Teams } from "./components/Teams";
 import { TeamDetail } from "./components/TeamDetail";
 import { Achievements } from "./components/Achievements";
-import { Dashboard } from "./components/Dashboard";
+import { Timeline } from "./components/Timeline";
 import { SeasonDialog } from "./components/SeasonDialog";
 import { computeTeamStats, TeamStats } from "./lib/teamUtils";
 import "./App.css";
@@ -248,7 +248,7 @@ function App() {
           />
         )}
         {activeTab === "timeline" && (
-          <Dashboard
+          <Timeline
             players={players}
             matches={matches}
             eloHistory={eloHistory}

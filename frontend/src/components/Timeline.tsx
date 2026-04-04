@@ -243,7 +243,7 @@ const GROUP_LABELS: Record<EventGroup["kind"], string> = {
   rankings: "Rankings",
 };
 
-export function Dashboard({
+export function Timeline({
   players,
   matches,
   eloHistory,
