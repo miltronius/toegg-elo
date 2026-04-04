@@ -1857,6 +1857,21 @@ td.winrate {
   margin-bottom: 1.25rem;
 }
 
+.season-select {
+  padding: 0.25rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 0.375rem;
+  font-size: 0.8rem;
+  background: white;
+  cursor: pointer;
+  color: var(--text);
+}
+
+.season-select:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
 .form-hint {
   display: block;
   font-size: 0.78rem;

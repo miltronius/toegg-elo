@@ -374,6 +374,7 @@ Deno.serve(async (req) => {
       await supabase.rpc("increment_season_stats", {
         p_player_id: change.playerId,
         p_season_id: seasonId,
+        p_elo_before: change.eloBefore,
         p_elo_after: change.eloAfter,
         p_won: change.eloChange > 0,
       });

@@ -6,6 +6,7 @@ import {
   getTeamNames,
   getAllPlayerAchievements,
   getActiveSeason,
+  getSeasons,
   getPlayerSeasonStats,
   Player,
   Match,
@@ -40,6 +41,8 @@ function App() {
   const [teamNames, setTeamNames] = useState<TeamNameRow[]>([]);
   const [allAchievementRows, setAllAchievementRows] = useState<PlayerAchievementRow[]>([]);
   const [activeSeason, setActiveSeason] = useState<Season | null>(null);
+  const [seasons, setSeasons] = useState<Season[]>([]);
+  const [selectedSeason, setSelectedSeason] = useState<Season | null>(null);
   const [playerSeasonStats, setPlayerSeasonStats] = useState<PlayerSeasonStats[]>([]);
   const [selectedTeam, setSelectedTeam] = useState<TeamStats | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
@@ -68,21 +71,25 @@ function App() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [playersData, matchesData, teamNamesData, achievementRows, seasonData] =
+      const [playersData, matchesData, teamNamesData, achievementRows, seasonData, seasonsData] =
         await Promise.all([
           getPlayers(),
           getMatches(),
           getTeamNames(),
           getAllPlayerAchievements(),
           getActiveSeason(),
+          getSeasons(),
         ]);
       setPlayers(playersData);
       setMatches(matchesData);
       setTeamNames(teamNamesData);
       setAllAchievementRows(achievementRows);
       setActiveSeason(seasonData);
-      if (seasonData) {
-        const statsData = await getPlayerSeasonStats(seasonData.id);
+      setSeasons(seasonsData);
+      setSelectedSeason((prev) => prev ?? seasonData);
+      const targetSeason = seasonData;
+      if (targetSeason) {
+        const statsData = await getPlayerSeasonStats(targetSeason.id);
         setPlayerSeasonStats(statsData);
       }
       const historyMap = new Map<string, EloHistory[]>();
@@ -99,6 +106,17 @@ function App() {
   };
 
   const allEloHistory: EloHistory[] = Array.from(eloHistory.values()).flat();
+
+  const handleSeasonSelect = async (season: Season | null) => {
+    setSelectedSeason(season);
+    const targetId = season?.id ?? activeSeason?.id;
+    if (targetId) {
+      const statsData = await getPlayerSeasonStats(targetId);
+      setPlayerSeasonStats(statsData);
+    } else {
+      setPlayerSeasonStats([]);
+    }
+  };
   const teams = useMemo(
     () => computeTeamStats(matches, players, teamNames),
     [matches, players, teamNames],
@@ -188,7 +206,9 @@ function App() {
           <Leaderboard
             players={players}
             history={allEloHistory}
-            activeSeason={activeSeason}
+            seasons={seasons}
+            selectedSeason={selectedSeason}
+            onSeasonSelect={handleSeasonSelect}
             playerSeasonStats={playerSeasonStats}
             onPlayerClick={
               canEdit

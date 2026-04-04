@@ -14,7 +14,9 @@ import { Player, EloHistory, Season, PlayerSeasonStats } from "../lib/supabase";
 interface LeaderboardProps {
   players: Player[];
   history: EloHistory[];
-  activeSeason?: Season | null;
+  seasons?: Season[];
+  selectedSeason?: Season | null;
+  onSeasonSelect?: (season: Season | null) => void;
   playerSeasonStats?: PlayerSeasonStats[];
   onPlayerClick?: (player: Player) => void;
 }
@@ -203,12 +205,16 @@ function buildEloProgressionDataByDate(
 export function Leaderboard({
   players,
   history,
-  activeSeason,
+  seasons,
+  selectedSeason,
+  onSeasonSelect,
   playerSeasonStats,
   onPlayerClick,
 }: LeaderboardProps) {
   const [view, setView] = useState<"table" | "bump" | "elo">("table");
-  const [seasonView, setSeasonView] = useState<"season" | "alltime">("season");
+
+  // null selectedSeason = All-Time view
+  const isSeasonView = selectedSeason != null;
 
   // Build a map of season ELO per player for quick lookup
   const seasonStatsMap = new Map(
@@ -217,17 +223,17 @@ export function Leaderboard({
 
   // In season view: override current_elo with the season ELO and wins/losses with season values
   const effectivePlayers = players.map((p) => {
-    if (seasonView === "season" && seasonStatsMap.has(p.id)) {
+    if (isSeasonView && seasonStatsMap.has(p.id)) {
       const s = seasonStatsMap.get(p.id)!;
       return { ...p, current_elo: s.current_season_elo, wins: s.wins, losses: s.losses };
     }
     return p;
   });
 
-  // In season view: filter history to the active season only
+  // In season view: filter history to the selected season only
   const effectiveHistory =
-    seasonView === "season" && activeSeason
-      ? history.filter((h) => (h as { season_id?: string }).season_id === activeSeason.id)
+    isSeasonView && selectedSeason
+      ? history.filter((h) => (h as { season_id?: string }).season_id === selectedSeason.id)
       : history;
   const [sortBy, setSortBy] = useState<"elo" | "name" | "winrate">("elo");
   const [sortAsc, setSortAsc] = useState(false);
@@ -332,21 +338,26 @@ export function Leaderboard({
       <div className="lb-header">
         <h2>Leaderboard</h2>
         <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-          {activeSeason && (
-            <div className="lb-toggle">
-              <button
-                className={`lb-toggle-btn${seasonView === "season" ? " active" : ""}`}
-                onClick={() => setSeasonView("season")}
-              >
-                S{activeSeason.number}
-              </button>
-              <button
-                className={`lb-toggle-btn${seasonView === "alltime" ? " active" : ""}`}
-                onClick={() => setSeasonView("alltime")}
-              >
-                All-Time
-              </button>
-            </div>
+          {(seasons ?? []).length > 0 && (
+            <select
+              className="season-select"
+              value={selectedSeason?.id ?? "alltime"}
+              onChange={(e) => {
+                if (e.target.value === "alltime") {
+                  onSeasonSelect?.(null);
+                } else {
+                  const s = (seasons ?? []).find((s) => s.id === e.target.value) ?? null;
+                  onSeasonSelect?.(s);
+                }
+              }}
+            >
+              <option value="alltime">All-Time</option>
+              {(seasons ?? []).map((s) => (
+                <option key={s.id} value={s.id}>
+                  S{s.number} · {s.name}{s.is_active ? " ★" : ""}
+                </option>
+              ))}
+            </select>
           )}
           <div className="lb-toggle">
             <button
