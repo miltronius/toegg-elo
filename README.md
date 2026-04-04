@@ -5,11 +5,14 @@ A dashboard to track 2v2 table soccer (foosball) matches and rank players using 
 ## Features
 
 - Record 2v2 matches and automatically recalculate ELO ratings
-- Leaderboard with player rankings, sortable by ELO / name / winrate, with ELO history charts
-- Player detail modal with ELO progression, winrate chart, Top Enemy & Nemesis stats, and ‹ › keyboard navigation (← → / A D)
-- Teams tab: all player pairs (≥ 2 matches) with combined ELO, win rate, nemesis rival, custom names/colors
-- Match history with per-match ELO changes
-- Role-based access: viewers (read-only), users (record matches & edit), admins (full control)
+- **Timeline** — reverse-chronological daily activity feed showing match results (with per-player ELO deltas), achievements earned, rank changes, and season transitions; shown first to logged-in users
+- **Leaderboard** with player rankings, sortable by ELO / name / winrate, with ELO history charts; season-filtered
+- **Player detail modal** with ELO progression, winrate chart, Top Enemy & Nemesis stats, season dropdown, and ‹ › keyboard navigation (← → / A D)
+- **Teams tab** — all player pairs (≥ 2 matches) with combined ELO, win rate, nemesis rival, custom names/colors; season-filtered
+- **Achievements tab** — per-player achievement tracking (users/admins only)
+- Match history with per-match ELO changes and season badge
+- Season support: all views filter by season; each season has its own K-factor
+- Role-based access: viewers (read-only), users (record matches, edit, achievements), admins (full control)
 - Magic link login
 
 ## ELO Calculation
@@ -31,6 +34,8 @@ newELO = oldELO + K * (actual - expected)
 ```
 
 Where `actual` is `1` for a win and `0` for a loss. All four players in a match are updated this way, and the changes are recorded in the ELO history for trend visualization.
+
+K-factor is configurable per season (default 32).
 
 ## Tech Stack
 
