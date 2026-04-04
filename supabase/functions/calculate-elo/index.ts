@@ -197,6 +197,23 @@ Deno.serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
+    // Fetch active season to get k_factor and season_id
+    const { data: activeSeason, error: seasonError } = await supabase
+      .from("seasons")
+      .select("id, k_factor")
+      .eq("is_active", true)
+      .single();
+
+    if (seasonError || !activeSeason) {
+      return new Response(
+        JSON.stringify({ error: "No active season found" }),
+        { status: 400, headers: corsHeaders },
+      );
+    }
+
+    const seasonId = activeSeason.id;
+    const kFactor: number = activeSeason.k_factor;
+
     // Fetch all 4 players' current ELO and stats
     const { data: players, error: fetchError } = await supabase
       .from("players")
@@ -239,6 +256,7 @@ Deno.serve(async (req) => {
           teamB[0].current_elo,
           teamB[1].current_elo,
           true,
+          kFactor,
         );
         eloChanges.push({
           playerId: player.id,
@@ -254,6 +272,7 @@ Deno.serve(async (req) => {
           teamA[0].current_elo,
           teamA[1].current_elo,
           false,
+          kFactor,
         );
         eloChanges.push({
           playerId: player.id,
@@ -270,6 +289,7 @@ Deno.serve(async (req) => {
           teamB[0].current_elo,
           teamB[1].current_elo,
           false,
+          kFactor,
         );
         eloChanges.push({
           playerId: player.id,
@@ -285,6 +305,7 @@ Deno.serve(async (req) => {
           teamA[0].current_elo,
           teamA[1].current_elo,
           true,
+          kFactor,
         );
         eloChanges.push({
           playerId: player.id,
@@ -304,6 +325,7 @@ Deno.serve(async (req) => {
         team_b_player_1_id: teamBPlayer1Id,
         team_b_player_2_id: teamBPlayer2Id,
         winning_team: winningTeam,
+        season_id: seasonId,
       })
       .select()
       .single();
@@ -342,9 +364,18 @@ Deno.serve(async (req) => {
       await supabase.from("elo_history").insert({
         player_id: change.playerId,
         match_id: matchId,
+        season_id: seasonId,
         elo_before: change.eloBefore,
         elo_after: change.eloAfter,
         elo_change: change.eloChange,
+      });
+
+      // Update per-season stats
+      await supabase.rpc("increment_season_stats", {
+        p_player_id: change.playerId,
+        p_season_id: seasonId,
+        p_elo_after: change.eloAfter,
+        p_won: change.eloChange > 0,
       });
     }
 

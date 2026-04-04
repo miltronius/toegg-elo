@@ -5,10 +5,14 @@ import {
   getEloHistory,
   getTeamNames,
   getAllPlayerAchievements,
+  getActiveSeason,
+  getPlayerSeasonStats,
   Player,
   Match,
   EloHistory,
   TeamNameRow,
+  Season,
+  PlayerSeasonStats,
 } from "./lib/supabase";
 import type { PlayerAchievementRow } from "./lib/achievements";
 import { useAuth } from "./contexts/AuthContext";
@@ -22,6 +26,7 @@ import { UserManagement } from "./components/UserManagement";
 import { Teams } from "./components/Teams";
 import { TeamDetail } from "./components/TeamDetail";
 import { Achievements } from "./components/Achievements";
+import { SeasonDialog } from "./components/SeasonDialog";
 import { computeTeamStats, TeamStats } from "./lib/teamUtils";
 import "./App.css";
 
@@ -34,6 +39,8 @@ function App() {
   );
   const [teamNames, setTeamNames] = useState<TeamNameRow[]>([]);
   const [allAchievementRows, setAllAchievementRows] = useState<PlayerAchievementRow[]>([]);
+  const [activeSeason, setActiveSeason] = useState<Season | null>(null);
+  const [playerSeasonStats, setPlayerSeasonStats] = useState<PlayerSeasonStats[]>([]);
   const [selectedTeam, setSelectedTeam] = useState<TeamStats | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [authOpen, setAuthOpen] = useState(false);
@@ -61,17 +68,23 @@ function App() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [playersData, matchesData, teamNamesData, achievementRows] =
+      const [playersData, matchesData, teamNamesData, achievementRows, seasonData] =
         await Promise.all([
           getPlayers(),
           getMatches(),
           getTeamNames(),
           getAllPlayerAchievements(),
+          getActiveSeason(),
         ]);
       setPlayers(playersData);
       setMatches(matchesData);
       setTeamNames(teamNamesData);
       setAllAchievementRows(achievementRows);
+      setActiveSeason(seasonData);
+      if (seasonData) {
+        const statsData = await getPlayerSeasonStats(seasonData.id);
+        setPlayerSeasonStats(statsData);
+      }
       const historyMap = new Map<string, EloHistory[]>();
       for (const player of playersData) {
         const history = await getEloHistory(player.id);
@@ -99,6 +112,11 @@ function App() {
     <div className="app">
       <header className="app-header">
         <h1>TöggElo⚽</h1>
+        <SeasonDialog
+          activeSeason={activeSeason}
+          isAdmin={isAdmin}
+          onSeasonChanged={loadData}
+        />
         <div className="header-right">
           {canEdit && (
             <button className="btn-primary" onClick={() => setModalOpen(true)}>
@@ -170,6 +188,8 @@ function App() {
           <Leaderboard
             players={players}
             history={allEloHistory}
+            activeSeason={activeSeason}
+            playerSeasonStats={playerSeasonStats}
             onPlayerClick={
               canEdit
                 ? (player) => {

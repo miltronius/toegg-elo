@@ -9,11 +9,13 @@ import {
   ReferenceLine,
   ResponsiveContainer,
 } from "recharts";
-import { Player, EloHistory } from "../lib/supabase";
+import { Player, EloHistory, Season, PlayerSeasonStats } from "../lib/supabase";
 
 interface LeaderboardProps {
   players: Player[];
   history: EloHistory[];
+  activeSeason?: Season | null;
+  playerSeasonStats?: PlayerSeasonStats[];
   onPlayerClick?: (player: Player) => void;
 }
 
@@ -201,9 +203,32 @@ function buildEloProgressionDataByDate(
 export function Leaderboard({
   players,
   history,
+  activeSeason,
+  playerSeasonStats,
   onPlayerClick,
 }: LeaderboardProps) {
   const [view, setView] = useState<"table" | "bump" | "elo">("table");
+  const [seasonView, setSeasonView] = useState<"season" | "alltime">("season");
+
+  // Build a map of season ELO per player for quick lookup
+  const seasonStatsMap = new Map(
+    (playerSeasonStats ?? []).map((s) => [s.player_id, s]),
+  );
+
+  // In season view: override current_elo with the season ELO and wins/losses with season values
+  const effectivePlayers = players.map((p) => {
+    if (seasonView === "season" && seasonStatsMap.has(p.id)) {
+      const s = seasonStatsMap.get(p.id)!;
+      return { ...p, current_elo: s.current_season_elo, wins: s.wins, losses: s.losses };
+    }
+    return p;
+  });
+
+  // In season view: filter history to the active season only
+  const effectiveHistory =
+    seasonView === "season" && activeSeason
+      ? history.filter((h) => (h as { season_id?: string }).season_id === activeSeason.id)
+      : history;
   const [sortBy, setSortBy] = useState<"elo" | "name" | "winrate">("elo");
   const [sortAsc, setSortAsc] = useState(false);
   const [show1500Sep, setShow1500Sep] = useState(true);
@@ -229,7 +254,7 @@ export function Leaderboard({
   }, [view]);
 
   // sortedPlayers is always ELO desc — used for charts and color assignment
-  const sortedPlayers = [...players].sort(
+  const sortedPlayers = [...effectivePlayers].sort(
     (a, b) => b.current_elo - a.current_elo,
   );
 
@@ -249,9 +274,9 @@ export function Leaderboard({
     else diff = winrateOf(b) - winrateOf(a);
     return sortAsc ? -diff : diff;
   });
-  const snapshots = buildSnapshots(players, history);
-  const eloData = buildEloProgressionData(players, history);
-  const eloDateData = buildEloProgressionDataByDate(players, history);
+  const snapshots = buildSnapshots(effectivePlayers, effectiveHistory);
+  const eloData = buildEloProgressionData(effectivePlayers, effectiveHistory);
+  const eloDateData = buildEloProgressionDataByDate(effectivePlayers, effectiveHistory);
   const matchIndices = [...new Set(snapshots.map((s) => s.match_index))].sort(
     (a, b) => a - b,
   );
@@ -307,6 +332,22 @@ export function Leaderboard({
       <div className="lb-header">
         <h2>Leaderboard</h2>
         <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+          {activeSeason && (
+            <div className="lb-toggle">
+              <button
+                className={`lb-toggle-btn${seasonView === "season" ? " active" : ""}`}
+                onClick={() => setSeasonView("season")}
+              >
+                S{activeSeason.number}
+              </button>
+              <button
+                className={`lb-toggle-btn${seasonView === "alltime" ? " active" : ""}`}
+                onClick={() => setSeasonView("alltime")}
+              >
+                All-Time
+              </button>
+            </div>
+          )}
           <div className="lb-toggle">
             <button
               className={`lb-toggle-btn${show1500Sep ? " active" : ""}`}
