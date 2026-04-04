@@ -68,7 +68,8 @@ export type Match = {
 export type EloHistory = {
   id: string;
   player_id: string;
-  match_id: string;
+  match_id: string | null;
+  season_id: string | null;
   elo_before: number;
   elo_after: number;
   elo_change: number;

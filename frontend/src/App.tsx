@@ -27,6 +27,7 @@ import { UserManagement } from "./components/UserManagement";
 import { Teams } from "./components/Teams";
 import { TeamDetail } from "./components/TeamDetail";
 import { Achievements } from "./components/Achievements";
+import { Dashboard } from "./components/Dashboard";
 import { SeasonDialog } from "./components/SeasonDialog";
 import { computeTeamStats, TeamStats } from "./lib/teamUtils";
 import "./App.css";
@@ -51,7 +52,7 @@ function App() {
   const [playerDetailInitialTab, setPlayerDetailInitialTab] = useState<"stats" | "achievements">("stats");
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<
-    "leaderboard" | "history" | "match" | "users" | "teams" | "achievements"
+    "leaderboard" | "history" | "match" | "users" | "teams" | "achievements" | "timeline"
   >("leaderboard");
 
   const canEdit = role === "user" || role === "admin";
@@ -63,9 +64,14 @@ function App() {
     loadData();
   }, []);
 
-  // Close auth modal on successful login
+  // Close auth modal on successful login; switch to timeline on first login
   useEffect(() => {
-    if (user) setAuthOpen(false);
+    if (user) {
+      setAuthOpen(false);
+      setActiveTab((prev) => prev === "leaderboard" ? "timeline" : prev);
+    } else {
+      setActiveTab((prev) => prev === "timeline" ? "leaderboard" : prev);
+    }
   }, [user]);
 
   const loadData = async () => {
@@ -158,6 +164,14 @@ function App() {
         </div>
       </header>
       <nav className="tabs">
+        {user && (
+          <button
+            className={`tab ${activeTab === "timeline" ? "active" : ""}`}
+            onClick={() => setActiveTab("timeline")}
+          >
+            Timeline
+          </button>
+        )}
         <button
           className={`tab ${activeTab === "leaderboard" ? "active" : ""}`}
           onClick={() => setActiveTab("leaderboard")}
@@ -233,6 +247,15 @@ function App() {
             seasons={seasons}
           />
         )}
+        {activeTab === "timeline" && (
+          <Dashboard
+            players={players}
+            matches={matches}
+            eloHistory={eloHistory}
+            allAchievementRows={allAchievementRows}
+            seasons={seasons}
+          />
+        )}
         {activeTab === "teams" && (
           <Teams
             matches={matches}
@@ -274,6 +297,10 @@ function App() {
           players={players}
           matches={matches}
           allAchievementRows={allAchievementRows}
+          seasons={seasons}
+          selectedSeason={selectedSeason}
+          onSeasonSelect={handleSeasonSelect}
+          playerSeasonStats={playerSeasonStats}
           initialTab={playerDetailInitialTab}
           onClose={() => setSelectedPlayer(null)}
           onPlayerUpdated={() => {

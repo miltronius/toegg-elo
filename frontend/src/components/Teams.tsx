@@ -266,8 +266,10 @@ export function Teams({ matches, players, teamNames, seasons, selectedSeason, on
             {sorted.map((team) => {
               const rankIdx = globalRankMap.get(team.key)!;
               const totalTeams = eligible.length;
+              const band = totalTeams >= 10 ? 5 : totalTeams >= 6 ? 2 : 1;
+              const rank = rankIdx + 1;
               const rowClass =
-                rankIdx < 3 ? "row-top" : rankIdx >= totalTeams - 3 ? "row-bottom" : "";
+                rank <= band ? "row-top" : rank > totalTeams - band ? "row-bottom" : "";
               return (
               <tr
                 key={team.key}
