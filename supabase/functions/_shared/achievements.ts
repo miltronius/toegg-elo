@@ -1,7 +1,7 @@
 // Deno-compatible version of frontend/src/lib/achievements.ts
 // No browser-specific imports. Used by the calculate-elo edge function.
 
-import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 // ---------------------------------------------------------------------------
 // Types (mirrored from frontend)

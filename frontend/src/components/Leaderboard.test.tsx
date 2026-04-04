@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Leaderboard } from "./Leaderboard";
 import type { Player, EloHistory } from "../lib/supabase";
@@ -140,11 +140,13 @@ describe("Leaderboard — winrate", () => {
     expect(screen.getByText("50.0%")).toBeInTheDocument();
   });
 
-  it("shows 0% for a player with no matches", () => {
+  it("hides players with no matches by default, shows them when toggled", () => {
     const newbie = player("zzz", "Newbie", 1500, 0, 0);
-    render(
-      <Leaderboard players={[newbie]} history={NO_HISTORY} />,
-    );
+    render(<Leaderboard players={[newbie]} history={NO_HISTORY} />);
+    // filtered out by default (Active only = on)
+    expect(screen.queryByText("0%")).not.toBeInTheDocument();
+    // toggle off Active only → newbie appears
+    fireEvent.click(screen.getByText("Active only"));
     expect(screen.getByText("0%")).toBeInTheDocument();
   });
 });

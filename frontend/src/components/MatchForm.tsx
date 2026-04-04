@@ -12,7 +12,7 @@ export function MatchForm({ players, onMatchRecorded }: MatchFormProps) {
   const [teamA2, setTeamA2] = useState("");
   const [teamB1, setTeamB1] = useState("");
   const [teamB2, setTeamB2] = useState("");
-  const [winner, setWinner] = useState<"A" | "B" | "">("A");
+  const [winner, setWinner] = useState<"A" | "B" | "">("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -51,7 +51,7 @@ export function MatchForm({ players, onMatchRecorded }: MatchFormProps) {
       setTeamA2("");
       setTeamB1("");
       setTeamB2("");
-      setWinner("A");
+      setWinner("");
       onMatchRecorded();
 
       setTimeout(() => setSuccess(false), 3000);
@@ -111,6 +111,7 @@ export function MatchForm({ players, onMatchRecorded }: MatchFormProps) {
             onChange={(e) => setWinner(e.target.value as "A" | "B" | "")}
             disabled={loading}
           >
+            <option value="" disabled>Select Team</option>
             <option value="A">Team A</option>
             <option value="B">Team B</option>
           </select>

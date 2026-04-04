@@ -34,6 +34,7 @@ const match = (
   team_b_player_1_id: b1,
   team_b_player_2_id: b2,
   winning_team: winner,
+  season_id: null,
   created_at: "2024-01-01T00:00:00Z",
 });
 

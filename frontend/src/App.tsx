@@ -5,10 +5,15 @@ import {
   getEloHistory,
   getTeamNames,
   getAllPlayerAchievements,
+  getActiveSeason,
+  getSeasons,
+  getPlayerSeasonStats,
   Player,
   Match,
   EloHistory,
   TeamNameRow,
+  Season,
+  PlayerSeasonStats,
 } from "./lib/supabase";
 import type { PlayerAchievementRow } from "./lib/achievements";
 import { useAuth } from "./contexts/AuthContext";
@@ -22,6 +27,8 @@ import { UserManagement } from "./components/UserManagement";
 import { Teams } from "./components/Teams";
 import { TeamDetail } from "./components/TeamDetail";
 import { Achievements } from "./components/Achievements";
+import { Timeline } from "./components/Timeline";
+import { SeasonDialog } from "./components/SeasonDialog";
 import { computeTeamStats, TeamStats } from "./lib/teamUtils";
 import "./App.css";
 
@@ -34,6 +41,10 @@ function App() {
   );
   const [teamNames, setTeamNames] = useState<TeamNameRow[]>([]);
   const [allAchievementRows, setAllAchievementRows] = useState<PlayerAchievementRow[]>([]);
+  const [activeSeason, setActiveSeason] = useState<Season | null>(null);
+  const [seasons, setSeasons] = useState<Season[]>([]);
+  const [selectedSeason, setSelectedSeason] = useState<Season | null>(null);
+  const [playerSeasonStats, setPlayerSeasonStats] = useState<PlayerSeasonStats[]>([]);
   const [selectedTeam, setSelectedTeam] = useState<TeamStats | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [authOpen, setAuthOpen] = useState(false);
@@ -41,7 +52,7 @@ function App() {
   const [playerDetailInitialTab, setPlayerDetailInitialTab] = useState<"stats" | "achievements">("stats");
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<
-    "leaderboard" | "history" | "match" | "users" | "teams" | "achievements"
+    "leaderboard" | "history" | "match" | "users" | "teams" | "achievements" | "timeline"
   >("leaderboard");
 
   const canEdit = role === "user" || role === "admin";
@@ -53,25 +64,40 @@ function App() {
     loadData();
   }, []);
 
-  // Close auth modal on successful login
+  // Close auth modal on successful login; switch to timeline on first login
   useEffect(() => {
-    if (user) setAuthOpen(false);
+    if (user) {
+      setAuthOpen(false);
+      setActiveTab((prev) => prev === "leaderboard" ? "timeline" : prev);
+    } else {
+      setActiveTab((prev) => prev === "timeline" ? "leaderboard" : prev);
+    }
   }, [user]);
 
   const loadData = async () => {
     setLoading(true);
     try {
-      const [playersData, matchesData, teamNamesData, achievementRows] =
+      const [playersData, matchesData, teamNamesData, achievementRows, seasonData, seasonsData] =
         await Promise.all([
           getPlayers(),
           getMatches(),
           getTeamNames(),
           getAllPlayerAchievements(),
+          getActiveSeason(),
+          getSeasons(),
         ]);
       setPlayers(playersData);
       setMatches(matchesData);
       setTeamNames(teamNamesData);
       setAllAchievementRows(achievementRows);
+      setActiveSeason(seasonData);
+      setSeasons(seasonsData);
+      setSelectedSeason((prev) => prev ?? seasonData);
+      const targetSeason = seasonData;
+      if (targetSeason) {
+        const statsData = await getPlayerSeasonStats(targetSeason.id);
+        setPlayerSeasonStats(statsData);
+      }
       const historyMap = new Map<string, EloHistory[]>();
       for (const player of playersData) {
         const history = await getEloHistory(player.id);
@@ -86,6 +112,17 @@ function App() {
   };
 
   const allEloHistory: EloHistory[] = Array.from(eloHistory.values()).flat();
+
+  const handleSeasonSelect = async (season: Season | null) => {
+    setSelectedSeason(season);
+    const targetId = season?.id ?? activeSeason?.id;
+    if (targetId) {
+      const statsData = await getPlayerSeasonStats(targetId);
+      setPlayerSeasonStats(statsData);
+    } else {
+      setPlayerSeasonStats([]);
+    }
+  };
   const teams = useMemo(
     () => computeTeamStats(matches, players, teamNames),
     [matches, players, teamNames],
@@ -99,6 +136,11 @@ function App() {
     <div className="app">
       <header className="app-header">
         <h1>TöggElo⚽</h1>
+        <SeasonDialog
+          activeSeason={activeSeason}
+          isAdmin={isAdmin}
+          onSeasonChanged={loadData}
+        />
         <div className="header-right">
           {canEdit && (
             <button className="btn-primary" onClick={() => setModalOpen(true)}>
@@ -122,6 +164,14 @@ function App() {
         </div>
       </header>
       <nav className="tabs">
+        {user && (
+          <button
+            className={`tab ${activeTab === "timeline" ? "active" : ""}`}
+            onClick={() => setActiveTab("timeline")}
+          >
+            Timeline
+          </button>
+        )}
         <button
           className={`tab ${activeTab === "leaderboard" ? "active" : ""}`}
           onClick={() => setActiveTab("leaderboard")}
@@ -150,12 +200,14 @@ function App() {
         >
           History
         </button>
-        <button
-          className={`tab ${activeTab === "achievements" ? "active" : ""}`}
-          onClick={() => setActiveTab("achievements")}
-        >
-          🏅 Achievements
-        </button>
+        {canEdit && (
+          <button
+            className={`tab ${activeTab === "achievements" ? "active" : ""}`}
+            onClick={() => setActiveTab("achievements")}
+          >
+            🏅 Achievements
+          </button>
+        )}
         {isAdmin && (
           <button
             className={`tab ${activeTab === "users" ? "active" : ""}`}
@@ -170,6 +222,10 @@ function App() {
           <Leaderboard
             players={players}
             history={allEloHistory}
+            seasons={seasons}
+            selectedSeason={selectedSeason}
+            onSeasonSelect={handleSeasonSelect}
+            playerSeasonStats={playerSeasonStats}
             onPlayerClick={
               canEdit
                 ? (player) => {
@@ -188,17 +244,30 @@ function App() {
             matches={visibleMatches}
             players={players}
             eloHistory={eloHistory}
-            onMatchDeleted={loadData}
+            seasons={seasons}
+          />
+        )}
+        {activeTab === "timeline" && (
+          <Timeline
+            players={players}
+            matches={matches}
+            eloHistory={eloHistory}
+            allAchievementRows={allAchievementRows}
+            seasons={seasons}
           />
         )}
         {activeTab === "teams" && (
           <Teams
-            teams={teams}
+            matches={matches}
             players={players}
+            teamNames={teamNames}
+            seasons={seasons}
+            selectedSeason={selectedSeason}
+            onSeasonSelect={handleSeasonSelect}
             onTeamClick={setSelectedTeam}
           />
         )}
-        {activeTab === "achievements" && (
+        {activeTab === "achievements" && canEdit && (
           <Achievements
             players={players}
             matches={matches}
@@ -228,6 +297,10 @@ function App() {
           players={players}
           matches={matches}
           allAchievementRows={allAchievementRows}
+          seasons={seasons}
+          selectedSeason={selectedSeason}
+          onSeasonSelect={handleSeasonSelect}
+          playerSeasonStats={playerSeasonStats}
           initialTab={playerDetailInitialTab}
           onClose={() => setSelectedPlayer(null)}
           onPlayerUpdated={() => {

@@ -43,10 +43,18 @@ Copy `frontend/.env.example` to `frontend/.env.local` and fill in:
 ### Frontend Structure
 - `frontend/src/lib/supabase.ts` — all Supabase queries and mutations; single source of truth for data access
 - `frontend/src/contexts/AuthContext.tsx` — wraps the app, exposes `useAuth()` with user, role, and auth methods
-- `frontend/src/App.tsx` — main orchestrator; owns `loadData()` for refetching all state, passes data + callbacks to children
+- `frontend/src/App.tsx` — main orchestrator; owns `loadData()` for refetching all state, passes data + callbacks to children; manages `selectedSeason` shared across Leaderboard, Teams, and PlayerDetail
 - `frontend/src/lib/teamUtils.ts` — pure team stat computation (`computeTeamStats`, `teamColor`, `teamKey`); no DB calls
-- `frontend/src/components/` — tab-based UI: Leaderboard, Teams, TeamDetail, MatchForm, MatchHistory, PlayerDetail/Modal, UserManagement
+- `frontend/src/lib/achievements.ts` — `ACHIEVEMENT_DEFINITIONS` array; shared between frontend and the `_shared` edge function
+- `frontend/src/components/` — tab-based UI: Timeline, Leaderboard, Teams, TeamDetail, MatchForm, MatchHistory, PlayerDetail/Modal, Achievements, UserManagement, SeasonDialog
 - `frontend/src/test/setup.ts` — Vitest setup (jest-dom matchers, ResizeObserver mock)
+
+**Tab visibility rules:**
+
+- Timeline: logged-in users only; shown as first tab when authenticated
+- Teams, Record Match, Achievements: `user` or `admin` role only
+- Users: `admin` only
+- Leaderboard and History: always visible
 
 ### Data Flow
 1. `App.tsx` calls `loadData()` on mount and after any mutation
@@ -64,15 +72,19 @@ A `handle_new_user()` trigger auto-creates a `viewer` profile in the `profiles` 
 
 ### Database Schema (key tables)
 - `players` — name, current_elo (default 1500), matches_played, wins, losses
-- `matches` — team_a/team_b player IDs (2v2), winning_team
-- `elo_history` — per-match ELO snapshots (elo_before, elo_after, elo_change)
+- `matches` — team_a/team_b player IDs (2v2), winning_team, season_id
+- `elo_history` — per-match ELO snapshots (elo_before, elo_after, elo_change, match_id, season_id); inactivity penalty rows have match_id = null
+- `seasons` — number, name, is_active, k_factor, ended_at; only one active season at a time
+- `player_achievements` — player_id, achievement_id, unlocked_at; recomputed on every match by the shared achievements function
 - `profiles` — linked to `auth.users`, stores role
 - `team_names` — optional name + 2 aliases + color per canonical player pair (player_id_lo < player_id_hi); stats derived at runtime in `teamUtils.ts`, not stored; only teams with ≥ 2 matches are shown
 
 ### ELO Calculation (Deno function)
-- Standard ELO with K=32
+
+- Standard ELO with K configurable per season (default 32)
 - In 2v2: each player's expected score averages against both opponents
-- On match record: updates player ELOs and writes to `elo_history`
+- On match record: updates player ELOs, writes to `elo_history`, then calls `recomputeAllAchievements` from `supabase/functions/_shared/achievements.ts`
+- Shared achievements logic lives in `_shared/` so it can be imported by both the edge function and tests
 
 ### CI
 Two GitHub Actions workflows run on push/PR to main:

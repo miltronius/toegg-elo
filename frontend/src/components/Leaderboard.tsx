@@ -9,11 +9,15 @@ import {
   ReferenceLine,
   ResponsiveContainer,
 } from "recharts";
-import { Player, EloHistory } from "../lib/supabase";
+import { Player, EloHistory, Season, PlayerSeasonStats } from "../lib/supabase";
 
 interface LeaderboardProps {
   players: Player[];
   history: EloHistory[];
+  seasons?: Season[];
+  selectedSeason?: Season | null;
+  onSeasonSelect?: (season: Season | null) => void;
+  playerSeasonStats?: PlayerSeasonStats[];
   onPlayerClick?: (player: Player) => void;
 }
 
@@ -201,12 +205,40 @@ function buildEloProgressionDataByDate(
 export function Leaderboard({
   players,
   history,
+  seasons,
+  selectedSeason,
+  onSeasonSelect,
+  playerSeasonStats,
   onPlayerClick,
 }: LeaderboardProps) {
   const [view, setView] = useState<"table" | "bump" | "elo">("table");
+
+  // null selectedSeason = All-Time view
+  const isSeasonView = selectedSeason != null;
+
+  // Build a map of season ELO per player for quick lookup
+  const seasonStatsMap = new Map(
+    (playerSeasonStats ?? []).map((s) => [s.player_id, s]),
+  );
+
+  // In season view: override current_elo with the season ELO and wins/losses with season values
+  const effectivePlayers = players.map((p) => {
+    if (isSeasonView && seasonStatsMap.has(p.id)) {
+      const s = seasonStatsMap.get(p.id)!;
+      return { ...p, current_elo: s.current_season_elo, wins: s.wins, losses: s.losses, matches_played: s.wins + s.losses };
+    }
+    return p;
+  });
+
+  // In season view: filter history to the selected season only
+  const effectiveHistory =
+    isSeasonView && selectedSeason
+      ? history.filter((h) => (h as { season_id?: string }).season_id === selectedSeason.id)
+      : history;
   const [sortBy, setSortBy] = useState<"elo" | "name" | "winrate">("elo");
   const [sortAsc, setSortAsc] = useState(false);
   const [show1500Sep, setShow1500Sep] = useState(true);
+  const [showOnlyActive, setShowOnlyActive] = useState(true);
   const [eloXAxis, setEloXAxis] = useState<"date" | "game">("date");
   const [hovered, setHovered] = useState<string | null>(null);
   const [tooltip, setTooltip] = useState<{
@@ -228,8 +260,14 @@ export function Leaderboard({
     return () => ro.disconnect();
   }, [view]);
 
+  const visiblePlayers = showOnlyActive
+    ? effectivePlayers.filter((p) => p.matches_played > 0)
+    : effectivePlayers;
+
+  const anyAtStartingElo = visiblePlayers.some((p) => p.current_elo === 1500);
+
   // sortedPlayers is always ELO desc — used for charts and color assignment
-  const sortedPlayers = [...players].sort(
+  const sortedPlayers = [...visiblePlayers].sort(
     (a, b) => b.current_elo - a.current_elo,
   );
 
@@ -249,9 +287,9 @@ export function Leaderboard({
     else diff = winrateOf(b) - winrateOf(a);
     return sortAsc ? -diff : diff;
   });
-  const snapshots = buildSnapshots(players, history);
-  const eloData = buildEloProgressionData(players, history);
-  const eloDateData = buildEloProgressionDataByDate(players, history);
+  const snapshots = buildSnapshots(visiblePlayers, effectiveHistory);
+  const eloData = buildEloProgressionData(visiblePlayers, effectiveHistory);
+  const eloDateData = buildEloProgressionDataByDate(visiblePlayers, effectiveHistory);
   const matchIndices = [...new Set(snapshots.map((s) => s.match_index))].sort(
     (a, b) => a - b,
   );
@@ -307,12 +345,43 @@ export function Leaderboard({
       <div className="lb-header">
         <h2>Leaderboard</h2>
         <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+          {(seasons ?? []).length > 0 && (
+            <select
+              className="season-select"
+              value={selectedSeason?.id ?? "alltime"}
+              onChange={(e) => {
+                if (e.target.value === "alltime") {
+                  onSeasonSelect?.(null);
+                } else {
+                  const s = (seasons ?? []).find((s) => s.id === e.target.value) ?? null;
+                  onSeasonSelect?.(s);
+                }
+              }}
+            >
+              <option value="alltime">All-Time</option>
+              {(seasons ?? []).map((s) => (
+                <option key={s.id} value={s.id}>
+                  S{s.number} · {s.name}{s.is_active ? " ★" : ""}
+                </option>
+              ))}
+            </select>
+          )}
+          {!anyAtStartingElo && (
+            <div className="lb-toggle">
+              <button
+                className={`lb-toggle-btn${show1500Sep ? " active" : ""}`}
+                onClick={() => setShow1500Sep((v) => !v)}
+              >
+                Starting Elo Line
+              </button>
+            </div>
+          )}
           <div className="lb-toggle">
             <button
-              className={`lb-toggle-btn${show1500Sep ? " active" : ""}`}
-              onClick={() => setShow1500Sep((v) => !v)}
+              className={`lb-toggle-btn${showOnlyActive ? " active" : ""}`}
+              onClick={() => setShowOnlyActive((v) => !v)}
             >
-              Starting Elo Line
+              Active only
             </button>
           </div>
           <div className="lb-toggle">
@@ -361,16 +430,16 @@ export function Leaderboard({
           </thead>
           <tbody>
             {(() => {
-              const anyAt1500 = tableRows.some((p) => p.current_elo === 1500);
-              const show1500Line = show1500Sep && sortBy === "elo" && !anyAt1500;
+              const show1500Line = show1500Sep && sortBy === "elo" && !anyAtStartingElo;
               return tableRows.flatMap((player, idx) => {
                 const total = player.wins + player.losses;
                 const winrate =
                   total > 0 ? ((player.wins / total) * 100).toFixed(1) : "0";
                 const rank = sortedPlayers.findIndex((p) => p.id === player.id) + 1;
                 const playerCount = sortedPlayers.length;
+                const band = playerCount >= 10 ? 5 : playerCount >= 6 ? 2 : 1;
                 const rowClass =
-                  rank <= 5 ? "row-top" : rank > playerCount - 5 ? "row-bottom" : "";
+                  rank <= band ? "row-top" : rank > playerCount - band ? "row-bottom" : "";
                 const row = (
                   <tr
                     key={player.id}

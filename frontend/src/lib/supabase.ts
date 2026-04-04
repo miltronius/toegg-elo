@@ -61,13 +61,15 @@ export type Match = {
   team_b_player_1_id: string;
   team_b_player_2_id: string;
   winning_team: "A" | "B";
+  season_id: string | null;
   created_at: string;
 };
 
 export type EloHistory = {
   id: string;
   player_id: string;
-  match_id: string;
+  match_id: string | null;
+  season_id: string | null;
   elo_before: number;
   elo_after: number;
   elo_change: number;
@@ -232,6 +234,71 @@ export async function updatePlayerName(playerId: string, newName: string) {
     .update({ name: newName })
     .eq("id", playerId);
 
+  if (error) throw error;
+}
+
+export type Season = {
+  id: string;
+  number: number;
+  name: string;
+  k_factor: number;
+  inactivity_penalty_percent: number;
+  started_at: string;
+  ended_at: string | null;
+  is_active: boolean;
+  created_at: string;
+};
+
+export type PlayerSeasonStats = {
+  id: string;
+  player_id: string;
+  season_id: string;
+  elo_at_start: number;
+  current_season_elo: number;
+  wins: number;
+  losses: number;
+  last_match_at: string | null;
+  created_at: string;
+};
+
+export async function getActiveSeason(): Promise<Season | null> {
+  const { data, error } = await supabase
+    .from("seasons")
+    .select("*")
+    .eq("is_active", true)
+    .single();
+  if (error) return null;
+  return data as Season;
+}
+
+export async function getSeasons(): Promise<Season[]> {
+  const { data, error } = await supabase
+    .from("seasons")
+    .select("*")
+    .order("number", { ascending: false });
+  if (error) throw error;
+  return (data ?? []) as Season[];
+}
+
+export async function getPlayerSeasonStats(seasonId: string): Promise<PlayerSeasonStats[]> {
+  const { data, error } = await supabase
+    .from("player_season_stats")
+    .select("*")
+    .eq("season_id", seasonId);
+  if (error) throw error;
+  return (data ?? []) as PlayerSeasonStats[];
+}
+
+export async function endSeasonAndStartNew(
+  newSeasonName: string,
+  newKFactor: number,
+  newPenaltyPercent: number,
+): Promise<void> {
+  const { error } = await supabase.rpc("end_season_and_start_new", {
+    new_season_name: newSeasonName,
+    new_k_factor: newKFactor,
+    new_penalty_percent: newPenaltyPercent,
+  });
   if (error) throw error;
 }
 

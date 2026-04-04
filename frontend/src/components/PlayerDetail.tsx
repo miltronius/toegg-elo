@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   LineChart,
   Line,
@@ -16,6 +16,8 @@ import {
   EloHistory,
   Match,
   Player,
+  Season,
+  PlayerSeasonStats,
 } from "../lib/supabase";
 import {
   computeTeammateCounts,
@@ -61,6 +63,10 @@ interface PlayerDetailProps {
   players: Player[];
   matches: Match[];
   allAchievementRows: PlayerAchievementRow[];
+  seasons: Season[];
+  selectedSeason: Season | null;
+  onSeasonSelect: (season: Season | null) => void;
+  playerSeasonStats: PlayerSeasonStats[];
   onClose: () => void;
   onPlayerUpdated?: () => void;
   onNavigate?: (player: Player) => void;
@@ -80,6 +86,10 @@ export function PlayerDetail({
   players,
   matches,
   allAchievementRows,
+  seasons,
+  selectedSeason,
+  onSeasonSelect,
+  playerSeasonStats,
   onClose,
   onPlayerUpdated,
   onNavigate,
@@ -96,28 +106,8 @@ export function PlayerDetail({
       ? sortedPlayers[currentIndex + 1]
       : null;
 
-  const h2h = computeHeadToHead(player.id, matches);
-  const topFriends = Array.from(computeTeammateCounts(player.id, matches).entries())
-    .map(([playerId, count]) => ({ playerId, count }))
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 3);
-  const topEnemies = [...h2h]
-    .sort((a, b) => b.wins + b.losses - (a.wins + a.losses))
-    .slice(0, 3);
-  const topEnemy = [...h2h]
-    .sort((a, b) => b.wins - a.wins || b.wins + b.losses - (a.wins + a.losses))
-    .find((h) => h.wins > 0);
-  const nemesis = [...h2h]
-    .sort(
-      (a, b) => b.losses - a.losses || b.wins + b.losses - (a.wins + a.losses),
-    )
-    .find((h) => h.losses > 0);
-
   const [detailTab, setDetailTab] = useState<"stats" | "achievements">(initialTab);
-  const [chartData, setChartData] = useState<{
-    perGame: ChartData[];
-    perDate: ChartData[];
-  }>({ perGame: [], perDate: [] });
+  const [rawHistory, setRawHistory] = useState<EloHistory[]>([]);
   const [xAxisMode, setXAxisMode] = useState<"game" | "date">("date");
   const [loading, setLoading] = useState(true);
   const [isEditingName, setIsEditingName] = useState(false);
@@ -147,46 +137,8 @@ export function PlayerDetail({
     const loadPlayerData = async () => {
       setLoading(true);
       try {
-        const history: EloHistory[] = await getEloHistory(player.id);
-
-        // Build chart data from history
-        const data: ChartData[] = history
-          .sort(
-            (a, b) =>
-              new Date(a.created_at).getTime() -
-              new Date(b.created_at).getTime(),
-          )
-          .map((entry, index) => {
-            const cumulativeWins = history
-              .slice(0, index + 1)
-              .filter((h) => h.elo_change > 0).length;
-            const cumulativeLosses = history
-              .slice(0, index + 1)
-              .filter((h) => h.elo_change < 0).length;
-            const total = cumulativeWins + cumulativeLosses;
-            const winrate = total > 0 ? (cumulativeWins / total) * 100 : 0;
-
-            return {
-              date: new Date(entry.created_at).toLocaleDateString("de-CH", {
-                day: "2-digit",
-                month: "2-digit",
-                year: "numeric",
-              }),
-              elo: entry.elo_after,
-              cumWins: cumulativeWins,
-              cumLosses: cumulativeLosses,
-              winrate,
-            };
-          });
-
-        // Aggregate by date: keep last entry per day
-        const byDate = new Map<string, ChartData>();
-        for (const entry of data) {
-          byDate.set(entry.date, entry);
-        }
-        const dateData = Array.from(byDate.values());
-
-        setChartData({ perGame: data, perDate: dateData });
+        const history = await getEloHistory(player.id);
+        setRawHistory(history.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()));
       } catch (error) {
         console.error("Failed to load player data:", error);
       } finally {
@@ -195,6 +147,57 @@ export function PlayerDetail({
     };
     loadPlayerData();
   }, [player.id]);
+
+  const chartData = useMemo(() => {
+    const filtered = selectedSeason
+      ? rawHistory.filter((h) => h.season_id === selectedSeason.id)
+      : rawHistory;
+
+    const data: ChartData[] = filtered.map((entry, index) => {
+      const cumulativeWins = filtered.slice(0, index + 1).filter((h) => h.elo_change > 0).length;
+      const cumulativeLosses = filtered.slice(0, index + 1).filter((h) => h.elo_change < 0).length;
+      const total = cumulativeWins + cumulativeLosses;
+      return {
+        date: new Date(entry.created_at).toLocaleDateString("de-CH", { day: "2-digit", month: "2-digit", year: "numeric" }),
+        elo: entry.elo_after,
+        cumWins: cumulativeWins,
+        cumLosses: cumulativeLosses,
+        winrate: total > 0 ? (cumulativeWins / total) * 100 : 0,
+      };
+    });
+
+    const byDate = new Map<string, ChartData>();
+    for (const entry of data) byDate.set(entry.date, entry);
+
+    return { perGame: data, perDate: Array.from(byDate.values()) };
+  }, [rawHistory, selectedSeason]);
+
+  const effectiveMatches = useMemo(
+    () => selectedSeason ? matches.filter((m) => m.season_id === selectedSeason.id) : matches,
+    [matches, selectedSeason],
+  );
+
+  const effectiveStats = useMemo(() => {
+    if (!selectedSeason) return { elo: player.current_elo, wins: player.wins, losses: player.losses, played: player.matches_played };
+    const pss = playerSeasonStats.find((s) => s.player_id === player.id && s.season_id === selectedSeason.id);
+    if (!pss) return { elo: 1500, wins: 0, losses: 0, played: 0 };
+    return { elo: pss.current_season_elo, wins: pss.wins, losses: pss.losses, played: pss.wins + pss.losses };
+  }, [selectedSeason, player, playerSeasonStats]);
+
+  const h2h = computeHeadToHead(player.id, effectiveMatches);
+  const topFriends = Array.from(computeTeammateCounts(player.id, effectiveMatches).entries())
+    .map(([playerId, count]) => ({ playerId, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 3);
+  const topEnemies = [...h2h]
+    .sort((a, b) => b.wins + b.losses - (a.wins + a.losses))
+    .slice(0, 3);
+  const topEnemy = [...h2h]
+    .sort((a, b) => b.wins - a.wins || b.wins + b.losses - (a.wins + a.losses))
+    .find((h) => h.wins > 0);
+  const nemesis = [...h2h]
+    .sort((a, b) => b.losses - a.losses || b.wins + b.losses - (a.wins + a.losses))
+    .find((h) => h.losses > 0);
 
   const handleSaveName = async () => {
     if (newName === player.name || !newName.trim()) {
@@ -298,16 +301,35 @@ export function PlayerDetail({
           </div>
         </div>
 
+        {seasons.length > 0 && (
+          <select
+            className="season-select"
+            style={{ marginBottom: "0.75rem" }}
+            value={selectedSeason?.id ?? ""}
+            onChange={(e) => {
+              const s = seasons.find((s) => s.id === e.target.value) ?? null;
+              onSeasonSelect(s);
+            }}
+          >
+            <option value="">All-Time</option>
+            {seasons.map((s) => (
+              <option key={s.id} value={s.id}>
+                S{s.number} · {s.name}
+              </option>
+            ))}
+          </select>
+        )}
+
         <div className="player-stats-grid">
           <div className="stat-card">
-            <div className="stat-label">Current ELO</div>
-            <div className="stat-value">{player.current_elo}</div>
+            <div className="stat-label">{selectedSeason ? "Season ELO" : "Current ELO"}</div>
+            <div className="stat-value">{effectiveStats.elo}</div>
           </div>
           <div className="stat-card">
             <div className="stat-label">Winrate</div>
             <div className="stat-value">
-              {player.matches_played > 0
-                ? ((player.wins / player.matches_played) * 100).toFixed(1)
+              {effectiveStats.played > 0
+                ? ((effectiveStats.wins / effectiveStats.played) * 100).toFixed(1)
                 : "0"}
               %
             </div>
@@ -337,7 +359,7 @@ export function PlayerDetail({
         </div>
 
         {/* Tab toggle */}
-        <div className="lb-toggle" style={{ width: "fit-content", marginBottom: "1.25rem" }}>
+        <div className="lb-toggle" style={{ width: "fit-content", marginBottom: "0.75rem" }}>
           <button
             className={`lb-toggle-btn${detailTab === "stats" ? " active" : ""}`}
             onClick={() => setDetailTab("stats")}
