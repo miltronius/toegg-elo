@@ -61,6 +61,7 @@ export type Match = {
   team_b_player_1_id: string;
   team_b_player_2_id: string;
   winning_team: "A" | "B";
+  season_id: string | null;
   created_at: string;
 };
 

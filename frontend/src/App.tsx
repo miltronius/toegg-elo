@@ -186,12 +186,14 @@ function App() {
         >
           History
         </button>
-        <button
-          className={`tab ${activeTab === "achievements" ? "active" : ""}`}
-          onClick={() => setActiveTab("achievements")}
-        >
-          🏅 Achievements
-        </button>
+        {canEdit && (
+          <button
+            className={`tab ${activeTab === "achievements" ? "active" : ""}`}
+            onClick={() => setActiveTab("achievements")}
+          >
+            🏅 Achievements
+          </button>
+        )}
         {isAdmin && (
           <button
             className={`tab ${activeTab === "users" ? "active" : ""}`}
@@ -228,17 +230,21 @@ function App() {
             matches={visibleMatches}
             players={players}
             eloHistory={eloHistory}
-            onMatchDeleted={loadData}
+            seasons={seasons}
           />
         )}
         {activeTab === "teams" && (
           <Teams
-            teams={teams}
+            matches={matches}
             players={players}
+            teamNames={teamNames}
+            seasons={seasons}
+            selectedSeason={selectedSeason}
+            onSeasonSelect={handleSeasonSelect}
             onTeamClick={setSelectedTeam}
           />
         )}
-        {activeTab === "achievements" && (
+        {activeTab === "achievements" && canEdit && (
           <Achievements
             players={players}
             matches={matches}

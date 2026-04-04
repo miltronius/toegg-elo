@@ -1,11 +1,12 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { createPortal } from "react-dom";
-import { Player } from "../lib/supabase";
+import { Match, Player, Season, TeamNameRow } from "../lib/supabase";
 import {
   TeamStats,
   getTeamDisplayName,
   teamKeyParts,
   teamColor,
+  computeTeamStats,
 } from "../lib/teamUtils";
 
 function TeamTooltip({
@@ -64,8 +65,12 @@ function winRateColor(rate: number): string {
 const MEDALS = ["🥇", "🥈", "🥉"];
 
 interface TeamsProps {
-  teams: TeamStats[];
+  matches: Match[];
   players: Player[];
+  teamNames: TeamNameRow[];
+  seasons: Season[];
+  selectedSeason: Season | null;
+  onSeasonSelect: (season: Season | null) => void;
   onTeamClick: (team: TeamStats) => void;
 }
 
@@ -73,7 +78,7 @@ type SortKey = "rank" | "elo" | "winrate" | "matches" | "name";
 
 const STORAGE_KEY = "teams-view";
 
-export function Teams({ teams, players, onTeamClick }: TeamsProps) {
+export function Teams({ matches, players, teamNames, seasons, selectedSeason, onSeasonSelect, onTeamClick }: TeamsProps) {
   const [view, setView] = useState<"table" | "card">(
     () => (localStorage.getItem(STORAGE_KEY) as "table" | "card") ?? "table",
   );
@@ -95,7 +100,17 @@ export function Teams({ teams, players, onTeamClick }: TeamsProps) {
     }
   };
 
-  const eligible = teams.filter((t) => t.matchesPlayed >= 2);
+  const filteredMatches = useMemo(
+    () => selectedSeason ? matches.filter((m) => m.season_id === selectedSeason.id) : matches,
+    [matches, selectedSeason],
+  );
+
+  const teams = useMemo(
+    () => computeTeamStats(filteredMatches, players, teamNames),
+    [filteredMatches, players, teamNames],
+  );
+
+  const eligible = teams.filter((t: TeamStats) => t.matchesPlayed >= 2);
 
   const filtered = eligible.filter(
     (t) =>
@@ -150,22 +165,26 @@ export function Teams({ teams, players, onTeamClick }: TeamsProps) {
     return { name, color, rivalTeam };
   };
 
-  if (teams.length === 0) {
-    return (
-      <div className="card">
-        <div className="teams-header">
-          <h2>Teams</h2>
-        </div>
-        <div className="empty-state">No matches recorded yet.</div>
-      </div>
-    );
-  }
-
   return (
     <div className="card">
       <div className="teams-header">
         <h2>Teams</h2>
         <div className="teams-controls">
+          <select
+            className="season-select"
+            value={selectedSeason?.id ?? ""}
+            onChange={(e) => {
+              const s = seasons.find((s) => s.id === e.target.value) ?? null;
+              onSeasonSelect(s);
+            }}
+          >
+            <option value="">All-Time</option>
+            {seasons.map((s) => (
+              <option key={s.id} value={s.id}>
+                S{s.number} · {s.name}
+              </option>
+            ))}
+          </select>
           <select
             className="teams-player-filter"
             value={filterPlayerId}
@@ -200,7 +219,11 @@ export function Teams({ teams, players, onTeamClick }: TeamsProps) {
       <p className="teams-filter-note">Only teams with ≥ 2 matches are shown.</p>
 
       {sorted.length === 0 && (
-        <div className="empty-state">No teams found for this player.</div>
+        <div className="empty-state">
+          {teams.length === 0
+            ? "No matches recorded yet."
+            : "No teams found for this player."}
+        </div>
       )}
       {sorted.length > 0 && view === "table" ? (
         <table className="leaderboard-table">

@@ -1,42 +1,20 @@
-import { useState } from "react";
-import { Match, Player, EloHistory, deleteMatch } from "../lib/supabase";
-import { useAuth } from "../contexts/AuthContext";
+import { Match, Player, EloHistory, Season } from "../lib/supabase";
 
 interface MatchHistoryProps {
   matches: Match[];
   players: Player[];
   eloHistory: Map<string, EloHistory[]>;
-  onMatchDeleted?: () => void;
+  seasons?: Season[];
 }
 
 export function MatchHistory({
   matches,
   players,
   eloHistory,
-  onMatchDeleted,
+  seasons = [],
 }: MatchHistoryProps) {
-  const { role } = useAuth();
-  const canDelete = role === "user" || role === "admin";
-  const latestMatchId = matches[0]?.id;
-  const [deletingId, setDeletingId] = useState<string | null>(null);
   const playerMap = new Map(players.map((p) => [p.id, p]));
-
-  const handleDeleteMatch = async (matchId: string) => {
-    if (!confirm("Delete this match?")) return;
-
-    setDeletingId(matchId);
-    try {
-      await deleteMatch(matchId);
-      onMatchDeleted?.();
-    } catch (error) {
-      alert(
-        "Failed to delete match: " +
-          (error instanceof Error ? error.message : "Unknown error"),
-      );
-    } finally {
-      setDeletingId(null);
-    }
-  };
+  const seasonMap = new Map(seasons.map((s) => [s.id, s]));
 
   return (
     <div className="card">
@@ -57,10 +35,7 @@ export function MatchHistory({
 
             const getEloChange = (playerId: string) => {
               const playerHistory = eloHistory.get(playerId) || [];
-              const matchHistory = playerHistory.find(
-                (h) => h.match_id === match.id,
-              );
-              return matchHistory;
+              return playerHistory.find((h) => h.match_id === match.id);
             };
 
             const renderPlayerEloDetails = (
@@ -95,6 +70,8 @@ export function MatchHistory({
                 </div>
               );
             };
+
+            const season = match.season_id ? seasonMap.get(match.season_id) : undefined;
 
             return (
               <div key={match.id} className="match-card">
@@ -133,14 +110,10 @@ export function MatchHistory({
                   <div className="match-time">
                     {new Date(match.created_at).toLocaleString("de-CH", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}
                   </div>
-                  {canDelete && match.id === latestMatchId && (
-                    <button
-                      className="btn-delete"
-                      onClick={() => handleDeleteMatch(match.id)}
-                      disabled={deletingId === match.id}
-                    >
-                      {deletingId === match.id ? "Deleting..." : "Delete"}
-                    </button>
+                  {season && (
+                    <div className="match-season-badge">
+                      S{season.number}
+                    </div>
                   )}
                 </div>
               </div>
