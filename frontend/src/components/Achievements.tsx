@@ -90,10 +90,11 @@ function AchievementRow({
 }: AchievementRowProps) {
   const pct = total > 0 ? (unlockedCount / total) * 100 : 0;
 
-  // Show up to 3 unlocked badge icons as highlights
+  // Show up to 5 unlocked badge icons as highlights, rarest first
   const highlights = statuses
     .filter((s) => s.unlocked)
-    .slice(0, 3);
+    .sort((a, b) => (a.rarityPercent ?? Infinity) - (b.rarityPercent ?? Infinity))
+    .slice(0, 5);
 
   return (
     <tr onClick={onClick} style={{ cursor: "pointer" }}>

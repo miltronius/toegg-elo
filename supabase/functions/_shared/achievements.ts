@@ -8,13 +8,29 @@ import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 // ---------------------------------------------------------------------------
 
 export type AchievementId =
+  | "win_1"
   | "win_5"
+  | "win_10"
+  | "win_20"
+  | "win_50"
+  | "lose_1"
   | "lose_5"
+  | "lose_10"
+  | "lose_20"
+  | "lose_50"
+  | "play_10"
   | "play_20"
+  | "play_50"
+  | "play_100"
+  | "play_200"
   | "all_weekdays"
   | "triple_day"
+  | "triple_win_day"
   | "best_friend"
-  | "sworn_enemies";
+  | "bff"
+  | "sworn_enemies"
+  | "arch_nemesis"
+  | "achievement_hunter";
 
 interface Player {
   id: string;
@@ -105,15 +121,25 @@ function computeAchievementsForPlayer(
       m.team_b_player_2_id === playerId,
   );
 
-  if (player.wins >= 5) {
-    unlocked.push({ achievementId: "win_5", unlockedAt: now });
-  }
-  if (player.losses >= 5) {
-    unlocked.push({ achievementId: "lose_5", unlockedAt: now });
-  }
-  if (player.matches_played >= 20) {
-    unlocked.push({ achievementId: "play_20", unlockedAt: now });
-  }
+  // win milestones
+  if (player.wins >= 1) unlocked.push({ achievementId: "win_1", unlockedAt: now });
+  if (player.wins >= 5) unlocked.push({ achievementId: "win_5", unlockedAt: now });
+  if (player.wins >= 10) unlocked.push({ achievementId: "win_10", unlockedAt: now });
+  if (player.wins >= 20) unlocked.push({ achievementId: "win_20", unlockedAt: now });
+  if (player.wins >= 50) unlocked.push({ achievementId: "win_50", unlockedAt: now });
+
+  // lose milestones
+  if (player.losses >= 1) unlocked.push({ achievementId: "lose_1", unlockedAt: now });
+  if (player.losses >= 5) unlocked.push({ achievementId: "lose_5", unlockedAt: now });
+  if (player.losses >= 10) unlocked.push({ achievementId: "lose_10", unlockedAt: now });
+  if (player.losses >= 20) unlocked.push({ achievementId: "lose_20", unlockedAt: now });
+  if (player.losses >= 50) unlocked.push({ achievementId: "lose_50", unlockedAt: now });
+  // play milestones
+  if (player.matches_played >= 10) unlocked.push({ achievementId: "play_10", unlockedAt: now });
+  if (player.matches_played >= 20) unlocked.push({ achievementId: "play_20", unlockedAt: now });
+  if (player.matches_played >= 50) unlocked.push({ achievementId: "play_50", unlockedAt: now });
+  if (player.matches_played >= 100) unlocked.push({ achievementId: "play_100", unlockedAt: now });
+  if (player.matches_played >= 200) unlocked.push({ achievementId: "play_200", unlockedAt: now });
 
   const weekdays = new Set(
     playerMatches.map((m) => new Date(m.created_at).getUTCDay()),
@@ -131,6 +157,20 @@ function computeAchievementsForPlayer(
     unlocked.push({ achievementId: "triple_day", unlockedAt: now });
   }
 
+  // triple_win_day: 3+ wins on any single UTC calendar day
+  const dayWinBuckets = new Map<string, number>();
+  for (const m of playerMatches) {
+    const playerInA = m.team_a_player_1_id === playerId || m.team_a_player_2_id === playerId;
+    const won = (playerInA && m.winning_team === "A") || (!playerInA && m.winning_team === "B");
+    if (won) {
+      const day = m.created_at.slice(0, 10);
+      dayWinBuckets.set(day, (dayWinBuckets.get(day) ?? 0) + 1);
+    }
+  }
+  if ([...dayWinBuckets.values()].some((count) => count >= 3)) {
+    unlocked.push({ achievementId: "triple_win_day", unlockedAt: now });
+  }
+
   const teammateCounts = computeTeammateCounts(playerId, matches);
   let bestPartnerId: string | null = null;
   let bestPartnerCount = 0;
@@ -143,6 +183,13 @@ function computeAchievementsForPlayer(
   if (bestPartnerId && bestPartnerCount >= 10) {
     unlocked.push({
       achievementId: "best_friend",
+      unlockedAt: now,
+      meta: { partnerId: bestPartnerId, count: bestPartnerCount },
+    });
+  }
+  if (bestPartnerId && bestPartnerCount >= 20) {
+    unlocked.push({
+      achievementId: "bff",
       unlockedAt: now,
       meta: { partnerId: bestPartnerId, count: bestPartnerCount },
     });
@@ -163,6 +210,18 @@ function computeAchievementsForPlayer(
       unlockedAt: now,
       meta: { opponentId: topEnemyId, count: topEnemyCount },
     });
+  }
+  if (topEnemyId && topEnemyCount >= 20) {
+    unlocked.push({
+      achievementId: "arch_nemesis",
+      unlockedAt: now,
+      meta: { opponentId: topEnemyId, count: topEnemyCount },
+    });
+  }
+
+  // achievement_hunter: must be last — counts all other unlocked achievements
+  if (unlocked.length >= 10) {
+    unlocked.push({ achievementId: "achievement_hunter", unlockedAt: now });
   }
 
   return unlocked;
@@ -200,7 +259,7 @@ export async function recomputeAllAchievements(
 
   const { error } = await supabase.from("player_achievements").upsert(rows, {
     onConflict: "player_id,achievement_id",
-    ignoreDuplicates: false,
+    ignoreDuplicates: true,
   });
 
   if (error) throw error;
