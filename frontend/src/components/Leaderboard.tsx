@@ -104,12 +104,30 @@ function buildPath(
 function buildEloProgressionData(
   players: Player[],
   history: EloHistory[],
+  isSeasonView = false,
 ): Record<string, number | string>[] {
   if (!history.length) return [];
   const sorted = [...history].sort(
     (a, b) =>
       new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
   );
+
+  // Season view: normalize ELO so each player starts at 1500.
+  // elo_history always stores all-time values; season ELO = 1500 + (alltime - season_start).
+  const seasonStartElo: Record<string, number> = {};
+  if (isSeasonView) {
+    for (const h of sorted) {
+      if (seasonStartElo[h.player_id] === undefined) {
+        seasonStartElo[h.player_id] = h.elo_before;
+      }
+    }
+  }
+  const normalize = (playerId: string, allTimeElo: number) => {
+    if (!isSeasonView) return allTimeElo;
+    const start = seasonStartElo[playerId];
+    return start !== undefined ? 1500 + (allTimeElo - start) : allTimeElo;
+  };
+
   const matchOrder: string[] = [];
   const byMatch: Record<string, EloHistory[]> = {};
   for (const h of sorted) {
@@ -133,7 +151,7 @@ function buildEloProgressionData(
 
   const startPoint: Record<string, number | string> = { label: "Start" };
   players.forEach((p) => {
-    startPoint[p.name] = currentElo[p.id] ?? p.current_elo;
+    startPoint[p.name] = normalize(p.id, currentElo[p.id] ?? p.current_elo);
   });
   const data: Record<string, number | string>[] = [startPoint];
 
@@ -141,7 +159,7 @@ function buildEloProgressionData(
     for (const h of byMatch[matchId]) currentElo[h.player_id] = h.elo_after;
     const point: Record<string, number | string> = { label: `M${idx + 1}` };
     players.forEach((p) => {
-      point[p.name] = currentElo[p.id] ?? p.current_elo;
+      point[p.name] = normalize(p.id, currentElo[p.id] ?? p.current_elo);
     });
     data.push(point);
   });
@@ -151,12 +169,29 @@ function buildEloProgressionData(
 function buildEloProgressionDataByDate(
   players: Player[],
   history: EloHistory[],
+  isSeasonView = false,
 ): Record<string, number | string>[] {
   if (!history.length) return [];
   const sorted = [...history].sort(
     (a, b) =>
       new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
   );
+
+  // Season view: normalize ELO so each player starts at 1500.
+  const seasonStartElo: Record<string, number> = {};
+  if (isSeasonView) {
+    for (const h of sorted) {
+      if (seasonStartElo[h.player_id] === undefined) {
+        seasonStartElo[h.player_id] = h.elo_before;
+      }
+    }
+  }
+  const normalize = (playerId: string, allTimeElo: number) => {
+    if (!isSeasonView) return allTimeElo;
+    const start = seasonStartElo[playerId];
+    return start !== undefined ? 1500 + (allTimeElo - start) : allTimeElo;
+  };
+
   const currentElo: Record<string, number> = {};
   const firstSeen: Record<string, boolean> = {};
   for (const h of sorted) {
@@ -171,7 +206,7 @@ function buildEloProgressionDataByDate(
 
   const startPoint: Record<string, number | string> = { label: "Start" };
   players.forEach((p) => {
-    startPoint[p.name] = currentElo[p.id] ?? p.current_elo;
+    startPoint[p.name] = normalize(p.id, currentElo[p.id] ?? p.current_elo);
   });
   const data: Record<string, number | string>[] = [startPoint];
 
@@ -195,7 +230,7 @@ function buildEloProgressionDataByDate(
     for (const h of byDate[date]) currentElo[h.player_id] = h.elo_after;
     const point: Record<string, number | string> = { label: date };
     players.forEach((p) => {
-      point[p.name] = currentElo[p.id] ?? p.current_elo;
+      point[p.name] = normalize(p.id, currentElo[p.id] ?? p.current_elo);
     });
     data.push(point);
   });
@@ -288,8 +323,8 @@ export function Leaderboard({
     return sortAsc ? -diff : diff;
   });
   const snapshots = buildSnapshots(visiblePlayers, effectiveHistory);
-  const eloData = buildEloProgressionData(visiblePlayers, effectiveHistory);
-  const eloDateData = buildEloProgressionDataByDate(visiblePlayers, effectiveHistory);
+  const eloData = buildEloProgressionData(visiblePlayers, effectiveHistory, isSeasonView);
+  const eloDateData = buildEloProgressionDataByDate(visiblePlayers, effectiveHistory, isSeasonView);
   const matchIndices = [...new Set(snapshots.map((s) => s.match_index))].sort(
     (a, b) => a - b,
   );
