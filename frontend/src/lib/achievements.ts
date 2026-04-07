@@ -553,6 +553,118 @@ export function computeAchievementsForPlayer(
 }
 
 // ---------------------------------------------------------------------------
+// Next-achievement progress
+// ---------------------------------------------------------------------------
+
+export interface AchievementProgress {
+  achievementId: AchievementId;
+  current: number;
+  target: number;
+}
+
+export function computeAchievementProgress(
+  playerId: string,
+  matches: Match[],
+  unlockedIds: Set<AchievementId>,
+): AchievementProgress[] {
+  const progress: AchievementProgress[] = [];
+
+  const playerMatches = matches.filter(
+    (m) =>
+      m.team_a_player_1_id === playerId ||
+      m.team_a_player_2_id === playerId ||
+      m.team_b_player_1_id === playerId ||
+      m.team_b_player_2_id === playerId,
+  );
+
+  let wins = 0;
+  for (const m of playerMatches) {
+    const inA = m.team_a_player_1_id === playerId || m.team_a_player_2_id === playerId;
+    if ((inA && m.winning_team === "A") || (!inA && m.winning_team === "B")) wins++;
+  }
+  const losses = playerMatches.length - wins;
+
+  // Win chain — show only next unmet milestone
+  for (const [id, target] of [
+    ["win_1", 1], ["win_5", 5], ["win_10", 10], ["win_20", 20], ["win_50", 50],
+  ] as [AchievementId, number][]) {
+    if (!unlockedIds.has(id)) { progress.push({ achievementId: id, current: wins, target }); break; }
+  }
+
+  // Loss chain
+  for (const [id, target] of [
+    ["lose_1", 1], ["lose_5", 5], ["lose_10", 10], ["lose_20", 20], ["lose_50", 50],
+  ] as [AchievementId, number][]) {
+    if (!unlockedIds.has(id)) { progress.push({ achievementId: id, current: losses, target }); break; }
+  }
+
+  // Play chain
+  for (const [id, target] of [
+    ["play_10", 10], ["play_20", 20], ["play_50", 50], ["play_100", 100], ["play_200", 200],
+  ] as [AchievementId, number][]) {
+    if (!unlockedIds.has(id)) { progress.push({ achievementId: id, current: playerMatches.length, target }); break; }
+  }
+
+  // all_weekdays
+  if (!unlockedIds.has("all_weekdays")) {
+    const workdays = new Set(
+      playerMatches.map((m) => new Date(m.created_at).getUTCDay()).filter((d) => d >= 1 && d <= 5),
+    );
+    progress.push({ achievementId: "all_weekdays", current: workdays.size, target: 5 });
+  }
+
+  // triple_day
+  if (!unlockedIds.has("triple_day")) {
+    const dayCounts = new Map<string, number>();
+    for (const m of playerMatches) {
+      const d = m.created_at.slice(0, 10);
+      dayCounts.set(d, (dayCounts.get(d) ?? 0) + 1);
+    }
+    const max = dayCounts.size > 0 ? Math.max(...dayCounts.values()) : 0;
+    progress.push({ achievementId: "triple_day", current: max, target: 3 });
+  }
+
+  // triple_win_day
+  if (!unlockedIds.has("triple_win_day")) {
+    const dayWins = new Map<string, number>();
+    for (const m of playerMatches) {
+      const inA = m.team_a_player_1_id === playerId || m.team_a_player_2_id === playerId;
+      if ((inA && m.winning_team === "A") || (!inA && m.winning_team === "B")) {
+        const d = m.created_at.slice(0, 10);
+        dayWins.set(d, (dayWins.get(d) ?? 0) + 1);
+      }
+    }
+    const max = dayWins.size > 0 ? Math.max(...dayWins.values()) : 0;
+    progress.push({ achievementId: "triple_win_day", current: max, target: 3 });
+  }
+
+  // best_friend / bff
+  const teammateCounts = computeTeammateCounts(playerId, matches);
+  const maxTeammate = teammateCounts.size > 0 ? Math.max(...teammateCounts.values()) : 0;
+  if (!unlockedIds.has("best_friend")) {
+    progress.push({ achievementId: "best_friend", current: maxTeammate, target: 10 });
+  } else if (!unlockedIds.has("bff")) {
+    progress.push({ achievementId: "bff", current: maxTeammate, target: 20 });
+  }
+
+  // sworn_enemies / arch_nemesis
+  const opponentCounts = computeOpponentCounts(playerId, matches);
+  const maxOpponent = opponentCounts.size > 0 ? Math.max(...opponentCounts.values()) : 0;
+  if (!unlockedIds.has("sworn_enemies")) {
+    progress.push({ achievementId: "sworn_enemies", current: maxOpponent, target: 10 });
+  } else if (!unlockedIds.has("arch_nemesis")) {
+    progress.push({ achievementId: "arch_nemesis", current: maxOpponent, target: 20 });
+  }
+
+  // achievement_hunter
+  if (!unlockedIds.has("achievement_hunter")) {
+    progress.push({ achievementId: "achievement_hunter", current: unlockedIds.size, target: 10 });
+  }
+
+  return progress.sort((a, b) => b.current / b.target - a.current / a.target);
+}
+
+// ---------------------------------------------------------------------------
 // Rarity helpers
 // ---------------------------------------------------------------------------
 

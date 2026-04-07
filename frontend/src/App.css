@@ -611,6 +611,8 @@ td.winrate {
 /* Player Detail Modal */
 .player-detail-modal {
   max-width: 900px;
+  max-height: 90vh;
+  overflow-y: auto;
   padding: 1.25rem 1.5rem;
 }
 
@@ -1955,6 +1957,50 @@ td.winrate {
   font-size: 0.8rem;
   font-weight: 600;
   text-align: right;
+  white-space: nowrap;
+}
+
+/* Next Up */
+.achievement-nextup-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.achievement-nextup-row {
+  display: grid;
+  grid-template-columns: 2rem 1fr;
+  gap: 0.6rem;
+  align-items: center;
+}
+
+.achievement-nextup-icon {
+  font-size: 1.3rem;
+  text-align: center;
+  line-height: 1;
+}
+
+.achievement-nextup-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.achievement-nextup-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.achievement-nextup-name {
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.achievement-nextup-count {
+  font-size: 0.75rem;
+  font-weight: 600;
   white-space: nowrap;
 }
 
