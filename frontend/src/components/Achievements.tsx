@@ -3,7 +3,10 @@ import type { CSSProperties } from "react";
 import {
   ACHIEVEMENT_DEFINITIONS,
   buildAchievementStatuses,
+  computeRarityMap,
+  computeClientSideRarityMap,
   rarityColorForTier,
+  rarityTierForPercent,
   RARITY_TIERS,
   type PlayerAchievementRow,
   type AchievementStatus,
@@ -23,6 +26,7 @@ export function Achievements({
   allAchievementRows,
   onSelectPlayer,
 }: AchievementsProps) {
+  const [view, setView] = useState<"overview" | "players">("overview");
   const total = ACHIEVEMENT_DEFINITIONS.length;
 
   // Build per-player row data sorted by badge count desc
@@ -42,31 +46,56 @@ export function Achievements({
 
   return (
     <div className="card">
-      <h2>🏅 Achievements</h2>
-      <table className="leaderboard-table achievements-table">
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>Player</th>
-            <th>Badges</th>
-            <th className="achievements-progress">Progress</th>
-            <th>Highlights</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map(({ player, statuses, unlockedCount }, index) => (
-            <AchievementRow
-              key={player.id}
-              rank={index + 1}
-              player={player}
-              statuses={statuses}
-              unlockedCount={unlockedCount}
-              total={total}
-              onClick={() => onSelectPlayer(player)}
-            />
-          ))}
-        </tbody>
-      </table>
+      <div className="achievements-header">
+        <h2>🏅 Achievements</h2>
+        <div className="lb-toggle">
+          <button
+            className={`lb-toggle-btn${view === "overview" ? " active" : ""}`}
+            onClick={() => setView("overview")}
+          >
+            Overview
+          </button>
+          <button
+            className={`lb-toggle-btn${view === "players" ? " active" : ""}`}
+            onClick={() => setView("players")}
+          >
+            Players
+          </button>
+        </div>
+      </div>
+
+      {view === "overview" ? (
+        <AchievementsOverview
+          players={players}
+          matches={matches}
+          allAchievementRows={allAchievementRows}
+        />
+      ) : (
+        <table className="leaderboard-table achievements-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Player</th>
+              <th>Badges</th>
+              <th className="achievements-progress">Progress</th>
+              <th>Highlights</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map(({ player, statuses, unlockedCount }, index) => (
+              <AchievementRow
+                key={player.id}
+                rank={index + 1}
+                player={player}
+                statuses={statuses}
+                unlockedCount={unlockedCount}
+                total={total}
+                onClick={() => onSelectPlayer(player)}
+              />
+            ))}
+          </tbody>
+        </table>
+      )}
     </div>
   );
 }
@@ -140,6 +169,122 @@ function AchievementRow({
         </div>
       </td>
     </tr>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// AchievementsOverview — global Steam-style achievement list
+// ---------------------------------------------------------------------------
+
+const RARITY_ORDER: Array<ReturnType<typeof rarityTierForPercent> | "none"> = [
+  "common",
+  "uncommon",
+  "rare",
+  "epic",
+  "legendary",
+  "none",
+];
+
+interface AchievementsOverviewProps {
+  players: Player[];
+  matches: Match[];
+  allAchievementRows: PlayerAchievementRow[];
+}
+
+function AchievementsOverview({
+  players,
+  matches,
+  allAchievementRows,
+}: AchievementsOverviewProps) {
+  const rarityMap =
+    allAchievementRows.length > 0
+      ? computeRarityMap(allAchievementRows, players.length)
+      : computeClientSideRarityMap(players, matches);
+
+  type Item = {
+    def: (typeof ACHIEVEMENT_DEFINITIONS)[number];
+    percent: number | undefined;
+    tier: ReturnType<typeof rarityTierForPercent> | "none";
+  };
+
+  const items: Item[] = ACHIEVEMENT_DEFINITIONS.map((def) => {
+    const percent = rarityMap.get(def.id);
+    const tier =
+      percent !== undefined && percent > 0
+        ? rarityTierForPercent(percent)
+        : "none";
+    return { def, percent, tier };
+  });
+
+  // Group by rarity order
+  const groups = RARITY_ORDER.map((tier) => ({
+    tier,
+    items: items
+      .filter((i) => i.tier === tier)
+      .sort((a, b) => (b.percent ?? 0) - (a.percent ?? 0)),
+  })).filter((g) => g.items.length > 0);
+
+  return (
+    <div className="achievements-overview">
+      {groups.map(({ tier, items: groupItems }) => {
+        const isNone = tier === "none";
+        const tierInfo = isNone
+          ? null
+          : RARITY_TIERS.find((r) => r.tier === tier);
+        const groupColor = tierInfo?.color ?? "var(--text-light)";
+        const groupLabel = tierInfo?.label ?? "Not Yet Unlocked";
+
+        return (
+          <div key={tier} className="achievements-overview-group">
+            <div
+              className="achievements-overview-group-header"
+              style={{ color: isNone ? "var(--text-light)" : groupColor }}
+            >
+              {groupLabel}
+            </div>
+            {groupItems.map(({ def, percent }) => {
+              const barColor = isNone ? "var(--border)" : groupColor;
+              return (
+                <div
+                  key={def.id}
+                  className="achievements-overview-row"
+                  style={
+                    !isNone
+                      ? ({ "--ach-color": groupColor } as CSSProperties)
+                      : undefined
+                  }
+                >
+                  <div className="achievements-overview-icon">{isNone ? "🔒" : def.icon}</div>
+                  <div className="achievements-overview-info">
+                    <div className="achievements-overview-name">{def.name}</div>
+                    <div className="achievements-overview-desc">{def.description}</div>
+                  </div>
+                  <div className="achievements-overview-bar-wrap">
+                    <div className="achievements-progress-bar achievements-overview-bar">
+                      <div
+                        className="achievements-progress-fill"
+                        style={{
+                          width: `${percent ?? 0}%`,
+                          background: barColor,
+                        }}
+                      />
+                    </div>
+                  </div>
+                  <div
+                    className="achievements-overview-pct"
+                    style={{ color: isNone ? "var(--text-light)" : groupColor }}
+                  >
+                    {percent !== undefined && percent > 0
+                      ? `${percent.toFixed(0)}%`
+                      : "—"}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        );
+      })}
+    </div>
   );
 }
 

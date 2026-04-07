@@ -30,7 +30,7 @@ export type AchievementId =
   | "arch_nemesis"
   | "achievement_hunter";
 
-export type RarityTier = "legendary" | "rare" | "uncommon" | "common";
+export type RarityTier = "legendary" | "epic" | "rare" | "uncommon" | "common";
 
 export interface AchievementDefinition {
   id: AchievementId;
@@ -213,9 +213,10 @@ export const RARITY_TIERS: {
   color: string;
   label: string;
 }[] = [
-  { tier: "legendary", maxPercent: 10, color: "#f97316", label: "Legendary" },
-  { tier: "rare", maxPercent: 25, color: "#a855f7", label: "Rare" },
-  { tier: "uncommon", maxPercent: 50, color: "#22c55e", label: "Uncommon" },
+  { tier: "legendary", maxPercent: 12, color: "#f97316", label: "Legendary" },
+  { tier: "epic", maxPercent: 24, color: "#a855f7", label: "Epic" },
+  { tier: "rare", maxPercent: 36, color: "#3b82f6", label: "Rare" },
+  { tier: "uncommon", maxPercent: 60, color: "#22c55e", label: "Uncommon" },
   { tier: "common", maxPercent: 100, color: "#6b7280", label: "Common" },
 ];
 
@@ -289,38 +290,102 @@ export function computeAchievementsForPlayer(
 
   // Sort ascending so we can find the exact match that crossed each threshold
   const sorted = [...playerMatches].sort(
-    (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+    (a, b) =>
+      new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
   );
 
   // Separate wins and losses in chronological order
   const winMatches: Match[] = [];
   const lossMatches: Match[] = [];
   for (const m of sorted) {
-    const inA = m.team_a_player_1_id === playerId || m.team_a_player_2_id === playerId;
-    const won = (inA && m.winning_team === "A") || (!inA && m.winning_team === "B");
-    if (won) winMatches.push(m); else lossMatches.push(m);
+    const inA =
+      m.team_a_player_1_id === playerId || m.team_a_player_2_id === playerId;
+    const won =
+      (inA && m.winning_team === "A") || (!inA && m.winning_team === "B");
+    if (won) winMatches.push(m);
+    else lossMatches.push(m);
   }
 
   // win milestones — unlockedAt = date of the Nth win
-  if (winMatches.length >= 1) unlocked.push({ achievementId: "win_1", unlockedAt: new Date(winMatches[0].created_at) });
-  if (winMatches.length >= 5) unlocked.push({ achievementId: "win_5", unlockedAt: new Date(winMatches[4].created_at) });
-  if (winMatches.length >= 10) unlocked.push({ achievementId: "win_10", unlockedAt: new Date(winMatches[9].created_at) });
-  if (winMatches.length >= 20) unlocked.push({ achievementId: "win_20", unlockedAt: new Date(winMatches[19].created_at) });
-  if (winMatches.length >= 50) unlocked.push({ achievementId: "win_50", unlockedAt: new Date(winMatches[49].created_at) });
+  if (winMatches.length >= 1)
+    unlocked.push({
+      achievementId: "win_1",
+      unlockedAt: new Date(winMatches[0].created_at),
+    });
+  if (winMatches.length >= 5)
+    unlocked.push({
+      achievementId: "win_5",
+      unlockedAt: new Date(winMatches[4].created_at),
+    });
+  if (winMatches.length >= 10)
+    unlocked.push({
+      achievementId: "win_10",
+      unlockedAt: new Date(winMatches[9].created_at),
+    });
+  if (winMatches.length >= 20)
+    unlocked.push({
+      achievementId: "win_20",
+      unlockedAt: new Date(winMatches[19].created_at),
+    });
+  if (winMatches.length >= 50)
+    unlocked.push({
+      achievementId: "win_50",
+      unlockedAt: new Date(winMatches[49].created_at),
+    });
 
   // lose milestones — unlockedAt = date of the Nth loss
-  if (lossMatches.length >= 1) unlocked.push({ achievementId: "lose_1", unlockedAt: new Date(lossMatches[0].created_at) });
-  if (lossMatches.length >= 5) unlocked.push({ achievementId: "lose_5", unlockedAt: new Date(lossMatches[4].created_at) });
-  if (lossMatches.length >= 10) unlocked.push({ achievementId: "lose_10", unlockedAt: new Date(lossMatches[9].created_at) });
-  if (lossMatches.length >= 20) unlocked.push({ achievementId: "lose_20", unlockedAt: new Date(lossMatches[19].created_at) });
-  if (lossMatches.length >= 50) unlocked.push({ achievementId: "lose_50", unlockedAt: new Date(lossMatches[49].created_at) });
+  if (lossMatches.length >= 1)
+    unlocked.push({
+      achievementId: "lose_1",
+      unlockedAt: new Date(lossMatches[0].created_at),
+    });
+  if (lossMatches.length >= 5)
+    unlocked.push({
+      achievementId: "lose_5",
+      unlockedAt: new Date(lossMatches[4].created_at),
+    });
+  if (lossMatches.length >= 10)
+    unlocked.push({
+      achievementId: "lose_10",
+      unlockedAt: new Date(lossMatches[9].created_at),
+    });
+  if (lossMatches.length >= 20)
+    unlocked.push({
+      achievementId: "lose_20",
+      unlockedAt: new Date(lossMatches[19].created_at),
+    });
+  if (lossMatches.length >= 50)
+    unlocked.push({
+      achievementId: "lose_50",
+      unlockedAt: new Date(lossMatches[49].created_at),
+    });
 
   // play milestones — unlockedAt = date of the Nth match
-  if (sorted.length >= 10) unlocked.push({ achievementId: "play_10", unlockedAt: new Date(sorted[9].created_at) });
-  if (sorted.length >= 20) unlocked.push({ achievementId: "play_20", unlockedAt: new Date(sorted[19].created_at) });
-  if (sorted.length >= 50) unlocked.push({ achievementId: "play_50", unlockedAt: new Date(sorted[49].created_at) });
-  if (sorted.length >= 100) unlocked.push({ achievementId: "play_100", unlockedAt: new Date(sorted[99].created_at) });
-  if (sorted.length >= 200) unlocked.push({ achievementId: "play_200", unlockedAt: new Date(sorted[199].created_at) });
+  if (sorted.length >= 10)
+    unlocked.push({
+      achievementId: "play_10",
+      unlockedAt: new Date(sorted[9].created_at),
+    });
+  if (sorted.length >= 20)
+    unlocked.push({
+      achievementId: "play_20",
+      unlockedAt: new Date(sorted[19].created_at),
+    });
+  if (sorted.length >= 50)
+    unlocked.push({
+      achievementId: "play_50",
+      unlockedAt: new Date(sorted[49].created_at),
+    });
+  if (sorted.length >= 100)
+    unlocked.push({
+      achievementId: "play_100",
+      unlockedAt: new Date(sorted[99].created_at),
+    });
+  if (sorted.length >= 200)
+    unlocked.push({
+      achievementId: "play_200",
+      unlockedAt: new Date(sorted[199].created_at),
+    });
 
   // all_weekdays — unlockedAt = date of the match that completed all 5 workdays (Mon–Fri)
   // getUTCDay(): 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat
@@ -330,7 +395,10 @@ export function computeAchievementsForPlayer(
     if (day >= 1 && day <= 5) {
       seenWorkdays.add(day);
       if (seenWorkdays.size === 5) {
-        unlocked.push({ achievementId: "all_weekdays", unlockedAt: new Date(m.created_at) });
+        unlocked.push({
+          achievementId: "all_weekdays",
+          unlockedAt: new Date(m.created_at),
+        });
         break;
       }
     }
@@ -343,7 +411,10 @@ export function computeAchievementsForPlayer(
     const count = (dayCounts.get(day) ?? 0) + 1;
     dayCounts.set(day, count);
     if (count === 3) {
-      unlocked.push({ achievementId: "triple_day", unlockedAt: new Date(m.created_at) });
+      unlocked.push({
+        achievementId: "triple_day",
+        unlockedAt: new Date(m.created_at),
+      });
       break;
     }
   }
@@ -351,14 +422,19 @@ export function computeAchievementsForPlayer(
   // triple_win_day — unlockedAt = date of the 3rd win on the qualifying day
   const dayWinCounts = new Map<string, number>();
   for (const m of sorted) {
-    const inA = m.team_a_player_1_id === playerId || m.team_a_player_2_id === playerId;
-    const won = (inA && m.winning_team === "A") || (!inA && m.winning_team === "B");
+    const inA =
+      m.team_a_player_1_id === playerId || m.team_a_player_2_id === playerId;
+    const won =
+      (inA && m.winning_team === "A") || (!inA && m.winning_team === "B");
     if (won) {
       const day = m.created_at.slice(0, 10);
       const count = (dayWinCounts.get(day) ?? 0) + 1;
       dayWinCounts.set(day, count);
       if (count === 3) {
-        unlocked.push({ achievementId: "triple_win_day", unlockedAt: new Date(m.created_at) });
+        unlocked.push({
+          achievementId: "triple_win_day",
+          unlockedAt: new Date(m.created_at),
+        });
         break;
       }
     }
@@ -369,17 +445,25 @@ export function computeAchievementsForPlayer(
   let bestPartnerId: string | null = null;
   let bestPartnerCount = 0;
   for (const [pid, count] of teammateCounts) {
-    if (count > bestPartnerCount) { bestPartnerCount = count; bestPartnerId = pid; }
+    if (count > bestPartnerCount) {
+      bestPartnerCount = count;
+      bestPartnerId = pid;
+    }
   }
   if (bestPartnerId && bestPartnerCount >= 10) {
     let c = 0;
     for (const m of sorted) {
-      const inA = m.team_a_player_1_id === playerId || m.team_a_player_2_id === playerId;
+      const inA =
+        m.team_a_player_1_id === playerId || m.team_a_player_2_id === playerId;
       const t1 = inA ? m.team_a_player_1_id : m.team_b_player_1_id;
       const t2 = inA ? m.team_a_player_2_id : m.team_b_player_2_id;
       if (t1 === bestPartnerId || t2 === bestPartnerId) {
         if (++c === 10) {
-          unlocked.push({ achievementId: "best_friend", unlockedAt: new Date(m.created_at), meta: { partnerId: bestPartnerId, count: bestPartnerCount } });
+          unlocked.push({
+            achievementId: "best_friend",
+            unlockedAt: new Date(m.created_at),
+            meta: { partnerId: bestPartnerId, count: bestPartnerCount },
+          });
           break;
         }
       }
@@ -388,12 +472,17 @@ export function computeAchievementsForPlayer(
   if (bestPartnerId && bestPartnerCount >= 20) {
     let c = 0;
     for (const m of sorted) {
-      const inA = m.team_a_player_1_id === playerId || m.team_a_player_2_id === playerId;
+      const inA =
+        m.team_a_player_1_id === playerId || m.team_a_player_2_id === playerId;
       const t1 = inA ? m.team_a_player_1_id : m.team_b_player_1_id;
       const t2 = inA ? m.team_a_player_2_id : m.team_b_player_2_id;
       if (t1 === bestPartnerId || t2 === bestPartnerId) {
         if (++c === 20) {
-          unlocked.push({ achievementId: "bff", unlockedAt: new Date(m.created_at), meta: { partnerId: bestPartnerId, count: bestPartnerCount } });
+          unlocked.push({
+            achievementId: "bff",
+            unlockedAt: new Date(m.created_at),
+            meta: { partnerId: bestPartnerId, count: bestPartnerCount },
+          });
           break;
         }
       }
@@ -405,17 +494,25 @@ export function computeAchievementsForPlayer(
   let topEnemyId: string | null = null;
   let topEnemyCount = 0;
   for (const [pid, count] of opponentCounts) {
-    if (count > topEnemyCount) { topEnemyCount = count; topEnemyId = pid; }
+    if (count > topEnemyCount) {
+      topEnemyCount = count;
+      topEnemyId = pid;
+    }
   }
   if (topEnemyId && topEnemyCount >= 10) {
     let c = 0;
     for (const m of sorted) {
-      const inA = m.team_a_player_1_id === playerId || m.team_a_player_2_id === playerId;
+      const inA =
+        m.team_a_player_1_id === playerId || m.team_a_player_2_id === playerId;
       const o1 = inA ? m.team_b_player_1_id : m.team_a_player_1_id;
       const o2 = inA ? m.team_b_player_2_id : m.team_a_player_2_id;
       if (o1 === topEnemyId || o2 === topEnemyId) {
         if (++c === 10) {
-          unlocked.push({ achievementId: "sworn_enemies", unlockedAt: new Date(m.created_at), meta: { opponentId: topEnemyId, count: topEnemyCount } });
+          unlocked.push({
+            achievementId: "sworn_enemies",
+            unlockedAt: new Date(m.created_at),
+            meta: { opponentId: topEnemyId, count: topEnemyCount },
+          });
           break;
         }
       }
@@ -424,12 +521,17 @@ export function computeAchievementsForPlayer(
   if (topEnemyId && topEnemyCount >= 20) {
     let c = 0;
     for (const m of sorted) {
-      const inA = m.team_a_player_1_id === playerId || m.team_a_player_2_id === playerId;
+      const inA =
+        m.team_a_player_1_id === playerId || m.team_a_player_2_id === playerId;
       const o1 = inA ? m.team_b_player_1_id : m.team_a_player_1_id;
       const o2 = inA ? m.team_b_player_2_id : m.team_a_player_2_id;
       if (o1 === topEnemyId || o2 === topEnemyId) {
         if (++c === 20) {
-          unlocked.push({ achievementId: "arch_nemesis", unlockedAt: new Date(m.created_at), meta: { opponentId: topEnemyId, count: topEnemyCount } });
+          unlocked.push({
+            achievementId: "arch_nemesis",
+            unlockedAt: new Date(m.created_at),
+            meta: { opponentId: topEnemyId, count: topEnemyCount },
+          });
           break;
         }
       }
@@ -438,8 +540,13 @@ export function computeAchievementsForPlayer(
 
   // achievement_hunter — unlockedAt = date the 10th achievement was earned
   if (unlocked.length >= 10) {
-    const tenth = [...unlocked].sort((a, b) => a.unlockedAt.getTime() - b.unlockedAt.getTime())[9];
-    unlocked.push({ achievementId: "achievement_hunter", unlockedAt: tenth.unlockedAt });
+    const tenth = [...unlocked].sort(
+      (a, b) => a.unlockedAt.getTime() - b.unlockedAt.getTime(),
+    )[9];
+    unlocked.push({
+      achievementId: "achievement_hunter",
+      unlockedAt: tenth.unlockedAt,
+    });
   }
 
   return unlocked;

@@ -1,4 +1,8 @@
 /* Global Styles */
+::selection {
+  background: #000;
+  color: #fff;
+}
 :root {
   --primary: #3b82f6;
   --primary-dark: #2563eb;
@@ -1856,6 +1860,102 @@ td.winrate {
 .achievements-none {
   font-size: 0.75rem;
   color: var(--text-light);
+}
+
+.achievements-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.achievements-header h2 {
+  margin: 0;
+}
+
+/* Overview (Steam-style) */
+.achievements-overview {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.achievements-overview-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.achievements-overview-group-header {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding-bottom: 0.25rem;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 0.25rem;
+}
+
+.achievements-overview-row {
+  display: grid;
+  grid-template-columns: 2rem 1fr 30% 2.5rem;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.4rem 0.5rem;
+  border-radius: 6px;
+  transition: background 0.15s, box-shadow 0.15s;
+}
+
+.achievements-overview-row[style]:hover {
+  background: color-mix(in srgb, var(--ach-color) 15%, transparent);
+  box-shadow: inset 3px 0 0 var(--ach-color);
+}
+
+.achievements-overview-row:not([style]):hover {
+  background: #fff;
+  filter: invert(1);
+}
+
+.achievements-overview-icon {
+  font-size: 1.3rem;
+  text-align: center;
+  line-height: 1;
+}
+
+.achievements-overview-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.achievements-overview-name {
+  font-weight: 600;
+  font-size: 0.9rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.achievements-overview-desc {
+  font-size: 0.75rem;
+  color: var(--text-light);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.achievements-overview-bar {
+  height: 6px;
+}
+
+.achievements-overview-pct {
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-align: right;
+  white-space: nowrap;
 }
 
 /* PlayerDetail gallery */
