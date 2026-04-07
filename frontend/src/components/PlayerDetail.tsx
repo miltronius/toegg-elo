@@ -513,6 +513,8 @@ export function PlayerDetail({
           <AchievementGallery
             statuses={achievementStatuses}
             players={players}
+            playerId={player.id}
+            matches={matches}
           />
         )}
       </div>
