@@ -132,6 +132,28 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Fetch season ELO for each player — use this for ELO math so all players
+    // start at 1500 at the beginning of a season (not their all-time ELO).
+    const { data: seasonStats } = await supabase
+      .from("player_season_stats")
+      .select("player_id, current_season_elo")
+      .eq("season_id", seasonId)
+      .in("player_id", [
+        teamAPlayer1Id,
+        teamAPlayer2Id,
+        teamBPlayer1Id,
+        teamBPlayer2Id,
+      ]);
+
+    const seasonEloMap = new Map<string, number>();
+    (seasonStats ?? []).forEach((s) =>
+      seasonEloMap.set(s.player_id, s.current_season_elo)
+    );
+
+    // Returns season ELO; falls back to all-time ELO if no season stats yet.
+    const getSeasonElo = (playerId: string, currentElo: number): number =>
+      seasonEloMap.get(playerId) ?? currentElo;
+
     // Group players by team
     const playerMap = new Map<string, PlayerElo>();
     players.forEach((p) => playerMap.set(p.id, p));
@@ -148,72 +170,34 @@ Deno.serve(async (req) => {
     // Calculate new ELO for each player
     const eloChanges: EloChange[] = [];
 
+    // Season ELOs used for calculation so ratings are comparable within a season.
+    // The resulting delta is then applied to all-time current_elo for storage.
+    const seasonEloA0 = getSeasonElo(teamA[0].id, teamA[0].current_elo);
+    const seasonEloA1 = getSeasonElo(teamA[1].id, teamA[1].current_elo);
+    const seasonEloB0 = getSeasonElo(teamB[0].id, teamB[0].current_elo);
+    const seasonEloB1 = getSeasonElo(teamB[1].id, teamB[1].current_elo);
+
+    const applyChange = (player: PlayerElo, seasonElo: number, opp1SeasonElo: number, opp2SeasonElo: number, won: boolean) => {
+      const newSeasonElo = calculateNewElo(seasonElo, opp1SeasonElo, opp2SeasonElo, won, kFactor);
+      const delta = newSeasonElo - seasonElo;
+      eloChanges.push({
+        playerId: player.id,
+        eloBefore: player.current_elo,
+        eloAfter: player.current_elo + delta,
+        eloChange: delta,
+      });
+    };
+
     if (winningTeam === "A") {
-      // Team A won
-      teamA.forEach((player) => {
-        const newElo = calculateNewElo(
-          player.current_elo,
-          teamB[0].current_elo,
-          teamB[1].current_elo,
-          true,
-          kFactor,
-        );
-        eloChanges.push({
-          playerId: player.id,
-          eloBefore: player.current_elo,
-          eloAfter: newElo,
-          eloChange: newElo - player.current_elo,
-        });
-      });
-
-      teamB.forEach((player) => {
-        const newElo = calculateNewElo(
-          player.current_elo,
-          teamA[0].current_elo,
-          teamA[1].current_elo,
-          false,
-          kFactor,
-        );
-        eloChanges.push({
-          playerId: player.id,
-          eloBefore: player.current_elo,
-          eloAfter: newElo,
-          eloChange: newElo - player.current_elo,
-        });
-      });
+      applyChange(teamA[0], seasonEloA0, seasonEloB0, seasonEloB1, true);
+      applyChange(teamA[1], seasonEloA1, seasonEloB0, seasonEloB1, true);
+      applyChange(teamB[0], seasonEloB0, seasonEloA0, seasonEloA1, false);
+      applyChange(teamB[1], seasonEloB1, seasonEloA0, seasonEloA1, false);
     } else {
-      // Team B won
-      teamA.forEach((player) => {
-        const newElo = calculateNewElo(
-          player.current_elo,
-          teamB[0].current_elo,
-          teamB[1].current_elo,
-          false,
-          kFactor,
-        );
-        eloChanges.push({
-          playerId: player.id,
-          eloBefore: player.current_elo,
-          eloAfter: newElo,
-          eloChange: newElo - player.current_elo,
-        });
-      });
-
-      teamB.forEach((player) => {
-        const newElo = calculateNewElo(
-          player.current_elo,
-          teamA[0].current_elo,
-          teamA[1].current_elo,
-          true,
-          kFactor,
-        );
-        eloChanges.push({
-          playerId: player.id,
-          eloBefore: player.current_elo,
-          eloAfter: newElo,
-          eloChange: newElo - player.current_elo,
-        });
-      });
+      applyChange(teamA[0], seasonEloA0, seasonEloB0, seasonEloB1, false);
+      applyChange(teamA[1], seasonEloA1, seasonEloB0, seasonEloB1, false);
+      applyChange(teamB[0], seasonEloB0, seasonEloA0, seasonEloA1, true);
+      applyChange(teamB[1], seasonEloB1, seasonEloA0, seasonEloA1, true);
     }
 
     // Create match record

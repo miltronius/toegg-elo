@@ -85,3 +85,55 @@ Deno.test("calculateNewElo: K=0 means no ELO change", () => {
   assertEquals(calculateNewElo(1500, 1500, 1500, true, 0), 1500);
   assertEquals(calculateNewElo(1600, 1400, 1400, false, 0), 1600);
 });
+
+// ── Season ELO delta logic ────────────────────────────────────────────────────
+// Mirrors the applyChange logic in index.ts: use seasonElo for math, apply
+// the delta to the all-time currentElo for storage in elo_history.
+
+function applyChange(
+  currentElo: number,
+  seasonElo: number,
+  opp1SeasonElo: number,
+  opp2SeasonElo: number,
+  won: boolean,
+  kFactor = 32,
+): { eloBefore: number; eloAfter: number; eloChange: number } {
+  const newSeasonElo = calculateNewElo(seasonElo, opp1SeasonElo, opp2SeasonElo, won, kFactor);
+  const delta = newSeasonElo - seasonElo;
+  return { eloBefore: currentElo, eloAfter: currentElo + delta, eloChange: delta };
+}
+
+Deno.test("season ELO: all players at 1500 season ELO → winner and loser change is symmetric", () => {
+  const winner = applyChange(1600, 1500, 1500, 1500, true);
+  const loser = applyChange(1400, 1500, 1500, 1500, false);
+  assertEquals(winner.eloChange, -loser.eloChange);
+});
+
+Deno.test("season ELO: all players at 1500 season ELO → all winners gain same amount", () => {
+  const w1 = applyChange(1800, 1500, 1500, 1500, true);
+  const w2 = applyChange(1300, 1500, 1500, 1500, true);
+  assertEquals(w1.eloChange, w2.eloChange);
+});
+
+Deno.test("season ELO: all players at 1500 season ELO → all losers lose same amount", () => {
+  const l1 = applyChange(1800, 1500, 1500, 1500, false);
+  const l2 = applyChange(1300, 1500, 1500, 1500, false);
+  assertEquals(l1.eloChange, l2.eloChange);
+});
+
+Deno.test("season ELO: delta applied to all-time ELO, not season ELO", () => {
+  // Player has all-time ELO of 1700 but season ELO of 1500 (new season).
+  // Opponents also at season ELO 1500. Win delta should equal a plain 1500 vs 1500 win.
+  const result = applyChange(1700, 1500, 1500, 1500, true);
+  const plain = applyChange(1500, 1500, 1500, 1500, true);
+  assertEquals(result.eloChange, plain.eloChange);
+  assertEquals(result.eloBefore, 1700);
+  assertEquals(result.eloAfter, 1700 + plain.eloChange);
+});
+
+Deno.test("season ELO: season ELO differences still affect delta size", () => {
+  // Within a season, player with higher season ELO gains less from beating lower-rated opponents
+  const highSeedWin = applyChange(1700, 1700, 1300, 1300, true);
+  const evenWin = applyChange(1500, 1500, 1500, 1500, true);
+  assertEquals(highSeedWin.eloChange < evenWin.eloChange, true);
+});

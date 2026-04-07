@@ -495,6 +495,24 @@ td.winrate {
   background-color: rgba(239, 68, 68, 0.15);
 }
 
+.season-elo-delta {
+  font-size: 0.75rem;
+  padding: 0.2rem 0.4rem;
+  border-radius: 0.25rem;
+  font-weight: 500;
+  opacity: 0.75;
+}
+
+.season-elo-delta.positive {
+  color: var(--success);
+  background-color: rgba(16, 185, 129, 0.1);
+}
+
+.season-elo-delta.negative {
+  color: var(--error);
+  background-color: rgba(239, 68, 68, 0.1);
+}
+
 .match-divider {
   display: flex;
   align-items: center;
@@ -1367,6 +1385,30 @@ td.winrate {
 
 .btn-secondary:hover {
   background: var(--bg-light);
+}
+
+.btn-danger {
+  background: transparent;
+  border: 1px solid #ef4444;
+  color: #ef4444;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  padding: 0.4rem 0.9rem;
+}
+
+.btn-danger:hover {
+  background: #fee2e2;
+}
+
+.btn-danger:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-small {
+  padding: 0.2rem 0.6rem;
+  font-size: 0.75rem;
 }
 
 /* User management table */

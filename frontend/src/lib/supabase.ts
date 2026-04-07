@@ -140,11 +140,11 @@ export async function getEloHistory(playerId: string): Promise<EloHistory[]> {
 }
 
 export async function deleteMatch(matchId: string) {
-  // First, get the match to know which players were involved
+  // First, get the match to know which players and season were involved
   const { data: matchData } = await supabase
     .from("matches")
     .select(
-      "team_a_player_1_id, team_a_player_2_id, team_b_player_1_id, team_b_player_2_id",
+      "team_a_player_1_id, team_a_player_2_id, team_b_player_1_id, team_b_player_2_id, season_id",
     )
     .eq("id", matchId)
     .single();
@@ -157,6 +157,7 @@ export async function deleteMatch(matchId: string) {
     matchData.team_b_player_1_id,
     matchData.team_b_player_2_id,
   ];
+  const seasonId: string | null = matchData.season_id;
 
   // Delete elo_history records for this match
   const { error: historyError } = await supabase
@@ -177,16 +178,18 @@ export async function deleteMatch(matchId: string) {
   // Recalculate stats for each affected player
   for (const playerId of affectedPlayerIds) {
     const playerHistory = await getEloHistory(playerId);
+    // Only real matches (not inactivity penalties) count for wins/losses/matches_played
+    const matchOnlyHistory = playerHistory.filter((h) => h.match_id !== null);
 
     if (playerHistory.length > 0) {
-      const lastEntry = playerHistory[0];
+      const lastEntry = playerHistory[0]; // most recent entry (may be a penalty)
       await supabase
         .from("players")
         .update({
           current_elo: lastEntry.elo_after,
-          matches_played: playerHistory.length,
-          wins: playerHistory.filter((h) => h.elo_change > 0).length,
-          losses: playerHistory.filter((h) => h.elo_change < 0).length,
+          matches_played: matchOnlyHistory.length,
+          wins: matchOnlyHistory.filter((h) => h.elo_change > 0).length,
+          losses: matchOnlyHistory.filter((h) => h.elo_change < 0).length,
         })
         .eq("id", playerId);
     } else {
@@ -200,6 +203,39 @@ export async function deleteMatch(matchId: string) {
           losses: 0,
         })
         .eq("id", playerId);
+    }
+
+    // Update player_season_stats for the affected season
+    if (seasonId) {
+      const seasonHistory = playerHistory.filter((h) => h.season_id === seasonId);
+      const seasonMatchHistory = seasonHistory.filter((h) => h.match_id !== null);
+      // Most recent season entry (including any inactivity penalties) drives current_season_elo
+      const lastSeasonEntry = seasonHistory[0];
+
+      const { data: existingStats } = await supabase
+        .from("player_season_stats")
+        .select("elo_at_start")
+        .eq("player_id", playerId)
+        .eq("season_id", seasonId)
+        .single();
+
+      if (existingStats) {
+        // current_season_elo is normalized to 1500 at season start, so convert
+        // from all-time elo_after using: 1500 + (alltime_elo - elo_at_start)
+        const currentSeasonElo = lastSeasonEntry
+          ? 1500 + (lastSeasonEntry.elo_after - existingStats.elo_at_start)
+          : 1500;
+        await supabase
+          .from("player_season_stats")
+          .update({
+            current_season_elo: currentSeasonElo,
+            wins: seasonMatchHistory.filter((h) => h.elo_change > 0).length,
+            losses: seasonMatchHistory.filter((h) => h.elo_change < 0).length,
+            last_match_at: seasonMatchHistory[0]?.created_at ?? null,
+          })
+          .eq("player_id", playerId)
+          .eq("season_id", seasonId);
+      }
     }
   }
 }
@@ -285,6 +321,14 @@ export async function getPlayerSeasonStats(seasonId: string): Promise<PlayerSeas
     .from("player_season_stats")
     .select("*")
     .eq("season_id", seasonId);
+  if (error) throw error;
+  return (data ?? []) as PlayerSeasonStats[];
+}
+
+export async function getAllPlayerSeasonStats(): Promise<PlayerSeasonStats[]> {
+  const { data, error } = await supabase
+    .from("player_season_stats")
+    .select("*");
   if (error) throw error;
   return (data ?? []) as PlayerSeasonStats[];
 }
