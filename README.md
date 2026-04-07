@@ -46,17 +46,61 @@ K-factor is configurable per season (default 32).
 ## Setup
 
 1. Create a [Supabase](https://supabase.com) project and run the migrations in `supabase/migrations/` in order.
-2. Deploy the edge function in `supabase/functions/calculate-elo/`.
-3. Copy `frontend/.env.example` to `frontend/.env.local` and fill in your Supabase URL and anon key.
-4. Install dependencies and start the dev server:
 
-```bash
-cd frontend
-pnpm install
-pnpm dev
-```
+2. Install the [Supabase CLI](https://supabase.com/docs/guides/cli/getting-started) (e.g. via npm):
+
+   ```bash
+   npm install -g supabase
+   ```
+
+3. Log in to the Supabase CLI and link your project:
+
+   ```bash
+   supabase login
+   supabase link --project-ref <your-project-ref>
+   ```
+
+4. Deploy the edge function:
+
+   ```bash
+   supabase functions deploy calculate-elo --project-ref <your-project-ref>
+   ```
+
+5. Copy `frontend/.env.example` to `frontend/.env.local` and fill in your Supabase URL and anon key.
+
+6. Install dependencies and start the dev server:
+
+   ```bash
+   cd frontend
+   pnpm install
+   pnpm dev
+   ```
 
 The app runs at `http://localhost:5173`.
+
+## Deployment
+
+Frontend is on Vercel (one project, auto-deployed). Edge function must be deployed manually to the matching Supabase project after each change.
+
+### Preview / staging
+
+1. Open a pull request — Vercel preview deployment is created automatically.
+
+2. Deploy the edge function to the **staging** Supabase project:
+
+   ```bash
+   supabase functions deploy calculate-elo --project-ref <staging-project-ref>
+   ```
+
+### Production
+
+1. Merge the pull request — Vercel deploys to production automatically.
+
+2. Deploy the edge function to the **production** Supabase project:
+
+   ```bash
+   supabase functions deploy calculate-elo --project-ref <prod-project-ref>
+   ```
 
 ## Scripts
 
