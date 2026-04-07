@@ -8,6 +8,7 @@ import {
   getActiveSeason,
   getSeasons,
   getPlayerSeasonStats,
+  deleteMatch,
   Player,
   Match,
   EloHistory,
@@ -245,6 +246,11 @@ function App() {
             players={players}
             eloHistory={eloHistory}
             seasons={seasons}
+            isAdmin={isAdmin}
+            onDeleteMatch={async (matchId) => {
+              await deleteMatch(matchId);
+              await loadData();
+            }}
           />
         )}
         {activeTab === "timeline" && (

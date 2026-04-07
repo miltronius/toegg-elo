@@ -274,13 +274,11 @@ export function computeOpponentCounts(
 
 export function computeAchievementsForPlayer(
   playerId: string,
-  player: Player,
+  _player: Player,
   matches: Match[],
 ): UnlockedAchievement[] {
-  const now = new Date();
   const unlocked: UnlockedAchievement[] = [];
 
-  // Filter matches involving this player
   const playerMatches = matches.filter(
     (m) =>
       m.team_a_player_1_id === playerId ||
@@ -289,130 +287,155 @@ export function computeAchievementsForPlayer(
       m.team_b_player_2_id === playerId,
   );
 
-  // win milestones
-  if (player.wins >= 1)
-    unlocked.push({ achievementId: "win_1", unlockedAt: now });
-  if (player.wins >= 5)
-    unlocked.push({ achievementId: "win_5", unlockedAt: now });
-  if (player.wins >= 10)
-    unlocked.push({ achievementId: "win_10", unlockedAt: now });
-  if (player.wins >= 20)
-    unlocked.push({ achievementId: "win_20", unlockedAt: now });
-  if (player.wins >= 50)
-    unlocked.push({ achievementId: "win_50", unlockedAt: now });
-
-  // lose milestones
-  if (player.losses >= 1)
-    unlocked.push({ achievementId: "lose_1", unlockedAt: now });
-  if (player.losses >= 5)
-    unlocked.push({ achievementId: "lose_5", unlockedAt: now });
-  if (player.losses >= 10)
-    unlocked.push({ achievementId: "lose_10", unlockedAt: now });
-  if (player.losses >= 20)
-    unlocked.push({ achievementId: "lose_20", unlockedAt: now });
-  if (player.losses >= 50)
-    unlocked.push({ achievementId: "lose_50", unlockedAt: now });
-
-  // play milestones
-  if (player.matches_played >= 10)
-    unlocked.push({ achievementId: "play_10", unlockedAt: now });
-  if (player.matches_played >= 20)
-    unlocked.push({ achievementId: "play_20", unlockedAt: now });
-  if (player.matches_played >= 50)
-    unlocked.push({ achievementId: "play_50", unlockedAt: now });
-  if (player.matches_played >= 100)
-    unlocked.push({ achievementId: "play_100", unlockedAt: now });
-  if (player.matches_played >= 200)
-    unlocked.push({ achievementId: "play_200", unlockedAt: now });
-
-  // all_weekdays: played on all 7 days of the week (UTC)
-  const weekdays = new Set(
-    playerMatches.map((m) => new Date(m.created_at).getUTCDay()),
+  // Sort ascending so we can find the exact match that crossed each threshold
+  const sorted = [...playerMatches].sort(
+    (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
   );
-  if (weekdays.size === 7) {
-    unlocked.push({ achievementId: "all_weekdays", unlockedAt: now });
+
+  // Separate wins and losses in chronological order
+  const winMatches: Match[] = [];
+  const lossMatches: Match[] = [];
+  for (const m of sorted) {
+    const inA = m.team_a_player_1_id === playerId || m.team_a_player_2_id === playerId;
+    const won = (inA && m.winning_team === "A") || (!inA && m.winning_team === "B");
+    if (won) winMatches.push(m); else lossMatches.push(m);
   }
 
-  // triple_day: 3+ matches on any single UTC calendar day
-  const dayBuckets = new Map<string, number>();
-  for (const m of playerMatches) {
-    const day = m.created_at.slice(0, 10); // "YYYY-MM-DD" UTC
-    dayBuckets.set(day, (dayBuckets.get(day) ?? 0) + 1);
-  }
-  if ([...dayBuckets.values()].some((count) => count >= 3)) {
-    unlocked.push({ achievementId: "triple_day", unlockedAt: now });
-  }
+  // win milestones — unlockedAt = date of the Nth win
+  if (winMatches.length >= 1) unlocked.push({ achievementId: "win_1", unlockedAt: new Date(winMatches[0].created_at) });
+  if (winMatches.length >= 5) unlocked.push({ achievementId: "win_5", unlockedAt: new Date(winMatches[4].created_at) });
+  if (winMatches.length >= 10) unlocked.push({ achievementId: "win_10", unlockedAt: new Date(winMatches[9].created_at) });
+  if (winMatches.length >= 20) unlocked.push({ achievementId: "win_20", unlockedAt: new Date(winMatches[19].created_at) });
+  if (winMatches.length >= 50) unlocked.push({ achievementId: "win_50", unlockedAt: new Date(winMatches[49].created_at) });
 
-  // triple_win_day: 3+ wins on any single UTC calendar day
-  const dayWinBuckets = new Map<string, number>();
-  for (const m of playerMatches) {
-    const playerInA =
-      m.team_a_player_1_id === playerId || m.team_a_player_2_id === playerId;
-    const won =
-      (playerInA && m.winning_team === "A") ||
-      (!playerInA && m.winning_team === "B");
-    if (won) {
-      const day = m.created_at.slice(0, 10);
-      dayWinBuckets.set(day, (dayWinBuckets.get(day) ?? 0) + 1);
+  // lose milestones — unlockedAt = date of the Nth loss
+  if (lossMatches.length >= 1) unlocked.push({ achievementId: "lose_1", unlockedAt: new Date(lossMatches[0].created_at) });
+  if (lossMatches.length >= 5) unlocked.push({ achievementId: "lose_5", unlockedAt: new Date(lossMatches[4].created_at) });
+  if (lossMatches.length >= 10) unlocked.push({ achievementId: "lose_10", unlockedAt: new Date(lossMatches[9].created_at) });
+  if (lossMatches.length >= 20) unlocked.push({ achievementId: "lose_20", unlockedAt: new Date(lossMatches[19].created_at) });
+  if (lossMatches.length >= 50) unlocked.push({ achievementId: "lose_50", unlockedAt: new Date(lossMatches[49].created_at) });
+
+  // play milestones — unlockedAt = date of the Nth match
+  if (sorted.length >= 10) unlocked.push({ achievementId: "play_10", unlockedAt: new Date(sorted[9].created_at) });
+  if (sorted.length >= 20) unlocked.push({ achievementId: "play_20", unlockedAt: new Date(sorted[19].created_at) });
+  if (sorted.length >= 50) unlocked.push({ achievementId: "play_50", unlockedAt: new Date(sorted[49].created_at) });
+  if (sorted.length >= 100) unlocked.push({ achievementId: "play_100", unlockedAt: new Date(sorted[99].created_at) });
+  if (sorted.length >= 200) unlocked.push({ achievementId: "play_200", unlockedAt: new Date(sorted[199].created_at) });
+
+  // all_weekdays — unlockedAt = date of the match that completed all 7 days
+  const seenDays = new Set<number>();
+  for (const m of sorted) {
+    seenDays.add(new Date(m.created_at).getUTCDay());
+    if (seenDays.size === 7) {
+      unlocked.push({ achievementId: "all_weekdays", unlockedAt: new Date(m.created_at) });
+      break;
     }
   }
-  if ([...dayWinBuckets.values()].some((count) => count >= 3)) {
-    unlocked.push({ achievementId: "triple_win_day", unlockedAt: now });
+
+  // triple_day — unlockedAt = date of the 3rd match on the qualifying day
+  const dayCounts = new Map<string, number>();
+  for (const m of sorted) {
+    const day = m.created_at.slice(0, 10);
+    const count = (dayCounts.get(day) ?? 0) + 1;
+    dayCounts.set(day, count);
+    if (count === 3) {
+      unlocked.push({ achievementId: "triple_day", unlockedAt: new Date(m.created_at) });
+      break;
+    }
   }
 
-  // best_friend: 10+ matches with one specific teammate
+  // triple_win_day — unlockedAt = date of the 3rd win on the qualifying day
+  const dayWinCounts = new Map<string, number>();
+  for (const m of sorted) {
+    const inA = m.team_a_player_1_id === playerId || m.team_a_player_2_id === playerId;
+    const won = (inA && m.winning_team === "A") || (!inA && m.winning_team === "B");
+    if (won) {
+      const day = m.created_at.slice(0, 10);
+      const count = (dayWinCounts.get(day) ?? 0) + 1;
+      dayWinCounts.set(day, count);
+      if (count === 3) {
+        unlocked.push({ achievementId: "triple_win_day", unlockedAt: new Date(m.created_at) });
+        break;
+      }
+    }
+  }
+
+  // best_friend / bff — unlockedAt = date of the 10th/20th match with that partner
   const teammateCounts = computeTeammateCounts(playerId, matches);
   let bestPartnerId: string | null = null;
   let bestPartnerCount = 0;
   for (const [pid, count] of teammateCounts) {
-    if (count > bestPartnerCount) {
-      bestPartnerCount = count;
-      bestPartnerId = pid;
-    }
+    if (count > bestPartnerCount) { bestPartnerCount = count; bestPartnerId = pid; }
   }
   if (bestPartnerId && bestPartnerCount >= 10) {
-    unlocked.push({
-      achievementId: "best_friend",
-      unlockedAt: now,
-      meta: { partnerId: bestPartnerId, count: bestPartnerCount },
-    });
+    let c = 0;
+    for (const m of sorted) {
+      const inA = m.team_a_player_1_id === playerId || m.team_a_player_2_id === playerId;
+      const t1 = inA ? m.team_a_player_1_id : m.team_b_player_1_id;
+      const t2 = inA ? m.team_a_player_2_id : m.team_b_player_2_id;
+      if (t1 === bestPartnerId || t2 === bestPartnerId) {
+        if (++c === 10) {
+          unlocked.push({ achievementId: "best_friend", unlockedAt: new Date(m.created_at), meta: { partnerId: bestPartnerId, count: bestPartnerCount } });
+          break;
+        }
+      }
+    }
   }
   if (bestPartnerId && bestPartnerCount >= 20) {
-    unlocked.push({
-      achievementId: "bff",
-      unlockedAt: now,
-      meta: { partnerId: bestPartnerId, count: bestPartnerCount },
-    });
+    let c = 0;
+    for (const m of sorted) {
+      const inA = m.team_a_player_1_id === playerId || m.team_a_player_2_id === playerId;
+      const t1 = inA ? m.team_a_player_1_id : m.team_b_player_1_id;
+      const t2 = inA ? m.team_a_player_2_id : m.team_b_player_2_id;
+      if (t1 === bestPartnerId || t2 === bestPartnerId) {
+        if (++c === 20) {
+          unlocked.push({ achievementId: "bff", unlockedAt: new Date(m.created_at), meta: { partnerId: bestPartnerId, count: bestPartnerCount } });
+          break;
+        }
+      }
+    }
   }
 
-  // sworn_enemies / arch_nemesis: 10+/20+ matches against one specific opponent
+  // sworn_enemies / arch_nemesis — unlockedAt = date of the 10th/20th match vs that opponent
   const opponentCounts = computeOpponentCounts(playerId, matches);
   let topEnemyId: string | null = null;
   let topEnemyCount = 0;
   for (const [pid, count] of opponentCounts) {
-    if (count > topEnemyCount) {
-      topEnemyCount = count;
-      topEnemyId = pid;
-    }
+    if (count > topEnemyCount) { topEnemyCount = count; topEnemyId = pid; }
   }
   if (topEnemyId && topEnemyCount >= 10) {
-    unlocked.push({
-      achievementId: "sworn_enemies",
-      unlockedAt: now,
-      meta: { opponentId: topEnemyId, count: topEnemyCount },
-    });
+    let c = 0;
+    for (const m of sorted) {
+      const inA = m.team_a_player_1_id === playerId || m.team_a_player_2_id === playerId;
+      const o1 = inA ? m.team_b_player_1_id : m.team_a_player_1_id;
+      const o2 = inA ? m.team_b_player_2_id : m.team_a_player_2_id;
+      if (o1 === topEnemyId || o2 === topEnemyId) {
+        if (++c === 10) {
+          unlocked.push({ achievementId: "sworn_enemies", unlockedAt: new Date(m.created_at), meta: { opponentId: topEnemyId, count: topEnemyCount } });
+          break;
+        }
+      }
+    }
   }
   if (topEnemyId && topEnemyCount >= 20) {
-    unlocked.push({
-      achievementId: "arch_nemesis",
-      unlockedAt: now,
-      meta: { opponentId: topEnemyId, count: topEnemyCount },
-    });
+    let c = 0;
+    for (const m of sorted) {
+      const inA = m.team_a_player_1_id === playerId || m.team_a_player_2_id === playerId;
+      const o1 = inA ? m.team_b_player_1_id : m.team_a_player_1_id;
+      const o2 = inA ? m.team_b_player_2_id : m.team_a_player_2_id;
+      if (o1 === topEnemyId || o2 === topEnemyId) {
+        if (++c === 20) {
+          unlocked.push({ achievementId: "arch_nemesis", unlockedAt: new Date(m.created_at), meta: { opponentId: topEnemyId, count: topEnemyCount } });
+          break;
+        }
+      }
+    }
   }
 
-  // achievement_hunter: must be last — counts all other unlocked achievements
+  // achievement_hunter — unlockedAt = date the 10th achievement was earned
   if (unlocked.length >= 10) {
-    unlocked.push({ achievementId: "achievement_hunter", unlockedAt: now });
+    const tenth = [...unlocked].sort((a, b) => a.unlockedAt.getTime() - b.unlockedAt.getTime())[9];
+    unlocked.push({ achievementId: "achievement_hunter", unlockedAt: tenth.unlockedAt });
   }
 
   return unlocked;
