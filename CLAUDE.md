@@ -83,6 +83,8 @@ A `handle_new_user()` trigger auto-creates a `viewer` profile in the `profiles` 
 
 - Standard ELO with K configurable per season (default 32)
 - In 2v2: each player's expected score averages against both opponents
+- **Season ELO used for math**: the function fetches `player_season_stats.current_season_elo` for the 4 players and uses those values for `calculateNewElo()`. The resulting delta is then applied to `players.current_elo` (all-time). This ensures all players start equal (1500) at the beginning of each season.
+- `elo_history` always stores all-time ELO values (`elo_before`/`elo_after`); season-normalized display is derived in the frontend using `1500 + (alltime - elo_at_start)`
 - On match record: updates player ELOs, writes to `elo_history`, then calls `recomputeAllAchievements` from `supabase/functions/_shared/achievements.ts`
 - Shared achievements logic lives in `_shared/` so it can be imported by both the edge function and tests
 

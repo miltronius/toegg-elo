@@ -70,6 +70,7 @@ interface PlayerDropdownProps {
   onChange: (id: string) => void;
   disabled?: boolean;
   excludeIds?: string[];
+  seasonEloMap?: Map<string, number>;
 }
 
 export function PlayerDropdown({
@@ -79,6 +80,7 @@ export function PlayerDropdown({
   onChange,
   disabled,
   excludeIds = [],
+  seasonEloMap,
 }: PlayerDropdownProps) {
   const filteredPlayers = players.filter((p) => !excludeIds.includes(p.id));
 
@@ -91,11 +93,14 @@ export function PlayerDropdown({
         disabled={disabled}
       >
         <option value="">-- Select player --</option>
-        {filteredPlayers.map((player) => (
-          <option key={player.id} value={player.id}>
-            {player.name} ({player.current_elo})
-          </option>
-        ))}
+        {filteredPlayers.map((player) => {
+          const elo = seasonEloMap?.get(player.id) ?? player.current_elo;
+          return (
+            <option key={player.id} value={player.id}>
+              {player.name} ({elo})
+            </option>
+          );
+        })}
       </select>
     </div>
   );

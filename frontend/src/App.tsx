@@ -8,6 +8,7 @@ import {
   getActiveSeason,
   getSeasons,
   getPlayerSeasonStats,
+  getAllPlayerSeasonStats,
   deleteMatch,
   Player,
   Match,
@@ -46,6 +47,7 @@ function App() {
   const [seasons, setSeasons] = useState<Season[]>([]);
   const [selectedSeason, setSelectedSeason] = useState<Season | null>(null);
   const [playerSeasonStats, setPlayerSeasonStats] = useState<PlayerSeasonStats[]>([]);
+  const [allPlayerSeasonStats, setAllPlayerSeasonStats] = useState<PlayerSeasonStats[]>([]);
   const [selectedTeam, setSelectedTeam] = useState<TeamStats | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [authOpen, setAuthOpen] = useState(false);
@@ -78,7 +80,7 @@ function App() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [playersData, matchesData, teamNamesData, achievementRows, seasonData, seasonsData] =
+      const [playersData, matchesData, teamNamesData, achievementRows, seasonData, seasonsData, allSeasonStats] =
         await Promise.all([
           getPlayers(),
           getMatches(),
@@ -86,7 +88,9 @@ function App() {
           getAllPlayerAchievements(),
           getActiveSeason(),
           getSeasons(),
+          getAllPlayerSeasonStats(),
         ]);
+      setAllPlayerSeasonStats(allSeasonStats);
       setPlayers(playersData);
       setMatches(matchesData);
       setTeamNames(teamNamesData);
@@ -238,7 +242,7 @@ function App() {
           />
         )}
         {activeTab === "match" && canEdit && (
-          <MatchForm players={players} onMatchRecorded={loadData} />
+          <MatchForm players={players} onMatchRecorded={loadData} playerSeasonStats={playerSeasonStats} />
         )}
         {activeTab === "history" && (
           <MatchHistory
@@ -246,6 +250,7 @@ function App() {
             players={players}
             eloHistory={eloHistory}
             seasons={seasons}
+            playerSeasonStats={allPlayerSeasonStats}
             isAdmin={isAdmin}
             onDeleteMatch={async (matchId) => {
               await deleteMatch(matchId);

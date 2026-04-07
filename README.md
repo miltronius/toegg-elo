@@ -47,11 +47,22 @@ K-factor is configurable per season (default 32).
 
 1. Create a [Supabase](https://supabase.com) project and run the migrations in `supabase/migrations/` in order.
 
-2. Install the [Supabase CLI](https://supabase.com/docs/guides/cli/getting-started) (e.g. via npm):
+2. Install the [Supabase CLI](https://supabase.com/docs/guides/cli/getting-started).
+
+   **Windows (Scoop — recommended):**
+
+   ```powershell
+   scoop bucket add supabase https://github.com/supabase/scoop-bucket.git
+   scoop install supabase
+   ```
+
+   **macOS/Linux (Homebrew):**
 
    ```bash
-   npm install -g supabase
+   brew install supabase/tap/supabase
    ```
+
+   > Note: `npm install -g supabase` is not supported by the Supabase CLI.
 
 3. Log in to the Supabase CLI and link your project:
 

@@ -220,12 +220,15 @@ export async function deleteMatch(matchId: string) {
         .single();
 
       if (existingStats) {
+        // current_season_elo is normalized to 1500 at season start, so convert
+        // from all-time elo_after using: 1500 + (alltime_elo - elo_at_start)
+        const currentSeasonElo = lastSeasonEntry
+          ? 1500 + (lastSeasonEntry.elo_after - existingStats.elo_at_start)
+          : 1500;
         await supabase
           .from("player_season_stats")
           .update({
-            current_season_elo: lastSeasonEntry
-              ? lastSeasonEntry.elo_after
-              : existingStats.elo_at_start,
+            current_season_elo: currentSeasonElo,
             wins: seasonMatchHistory.filter((h) => h.elo_change > 0).length,
             losses: seasonMatchHistory.filter((h) => h.elo_change < 0).length,
             last_match_at: seasonMatchHistory[0]?.created_at ?? null,
@@ -318,6 +321,14 @@ export async function getPlayerSeasonStats(seasonId: string): Promise<PlayerSeas
     .from("player_season_stats")
     .select("*")
     .eq("season_id", seasonId);
+  if (error) throw error;
+  return (data ?? []) as PlayerSeasonStats[];
+}
+
+export async function getAllPlayerSeasonStats(): Promise<PlayerSeasonStats[]> {
+  const { data, error } = await supabase
+    .from("player_season_stats")
+    .select("*");
   if (error) throw error;
   return (data ?? []) as PlayerSeasonStats[];
 }

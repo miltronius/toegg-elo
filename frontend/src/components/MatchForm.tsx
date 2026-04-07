@@ -1,13 +1,27 @@
-import { useState } from "react";
-import { recordMatch, Player } from "../lib/supabase";
+import { useState, useMemo } from "react";
+import { recordMatch, Player, PlayerSeasonStats } from "../lib/supabase";
 import { PlayerDropdown } from "./PlayerModal";
 
 interface MatchFormProps {
   players: Player[];
   onMatchRecorded: () => void;
+  playerSeasonStats?: PlayerSeasonStats[];
 }
 
-export function MatchForm({ players, onMatchRecorded }: MatchFormProps) {
+export function MatchForm({ players, onMatchRecorded, playerSeasonStats = [] }: MatchFormProps) {
+  const seasonEloMap = useMemo(
+    () => new Map(playerSeasonStats.map((s) => [s.player_id, s.current_season_elo])),
+    [playerSeasonStats],
+  );
+
+  const sortedPlayers = useMemo(
+    () => [...players].sort((a, b) => {
+      const eloA = seasonEloMap.get(a.id) ?? a.current_elo;
+      const eloB = seasonEloMap.get(b.id) ?? b.current_elo;
+      return eloB - eloA;
+    }),
+    [players, seasonEloMap],
+  );
   const [teamA1, setTeamA1] = useState("");
   const [teamA2, setTeamA2] = useState("");
   const [teamB1, setTeamB1] = useState("");
@@ -71,37 +85,41 @@ export function MatchForm({ players, onMatchRecorded }: MatchFormProps) {
         <h3>Team A</h3>
         <PlayerDropdown
           label="Player 1"
-          players={players}
+          players={sortedPlayers}
           value={teamA1}
           onChange={setTeamA1}
           disabled={loading}
           excludeIds={selectedPlayers.filter((p) => p !== teamA1)}
+          seasonEloMap={seasonEloMap}
         />
         <PlayerDropdown
           label="Player 2"
-          players={players}
+          players={sortedPlayers}
           value={teamA2}
           onChange={setTeamA2}
           disabled={loading}
           excludeIds={selectedPlayers.filter((p) => p !== teamA2)}
+          seasonEloMap={seasonEloMap}
         />
 
         <h3>Team B</h3>
         <PlayerDropdown
           label="Player 1"
-          players={players}
+          players={sortedPlayers}
           value={teamB1}
           onChange={setTeamB1}
           disabled={loading}
           excludeIds={selectedPlayers.filter((p) => p !== teamB1)}
+          seasonEloMap={seasonEloMap}
         />
         <PlayerDropdown
           label="Player 2"
-          players={players}
+          players={sortedPlayers}
           value={teamB2}
           onChange={setTeamB2}
           disabled={loading}
           excludeIds={selectedPlayers.filter((p) => p !== teamB2)}
+          seasonEloMap={seasonEloMap}
         />
 
         <div className="form-group">
