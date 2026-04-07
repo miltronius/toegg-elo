@@ -1960,6 +1960,24 @@ td.winrate {
   white-space: nowrap;
 }
 
+.achievements-suggest {
+  display: block;
+  margin-top: 1.5rem;
+  padding: 0.6rem 1rem;
+  border: 1px dashed var(--border);
+  border-radius: 6px;
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--text-light);
+  text-decoration: none;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.achievements-suggest:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
 /* Next Up */
 .achievement-nextup-list {
   display: flex;

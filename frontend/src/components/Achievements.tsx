@@ -285,6 +285,15 @@ function AchievementsOverview({
           </div>
         );
       })}
+
+      <a
+        className="achievements-suggest"
+        href="https://github.com/miltronius/toegg-elo/issues/new?labels=Achievements+%F0%9F%8E%96%EF%B8%8F"
+        target="_blank"
+        rel="noreferrer"
+      >
+        💡 Want a new achievement? Open a GitHub issue
+      </a>
     </div>
   );
 }
