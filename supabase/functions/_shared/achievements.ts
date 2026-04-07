@@ -155,13 +155,17 @@ function computeAchievementsForPlayer(
   if (sorted.length >= 100) unlocked.push({ achievementId: "play_100", unlockedAt: new Date(sorted[99].created_at) });
   if (sorted.length >= 200) unlocked.push({ achievementId: "play_200", unlockedAt: new Date(sorted[199].created_at) });
 
-  // all_weekdays — unlockedAt = date of the match that completed all 7 days
-  const seenDays = new Set<number>();
+  // all_weekdays — unlockedAt = date of the match that completed all 5 workdays (Mon–Fri)
+  // getUTCDay(): 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat
+  const seenWorkdays = new Set<number>();
   for (const m of sorted) {
-    seenDays.add(new Date(m.created_at).getUTCDay());
-    if (seenDays.size === 7) {
-      unlocked.push({ achievementId: "all_weekdays", unlockedAt: new Date(m.created_at) });
-      break;
+    const day = new Date(m.created_at).getUTCDay();
+    if (day >= 1 && day <= 5) {
+      seenWorkdays.add(day);
+      if (seenWorkdays.size === 5) {
+        unlocked.push({ achievementId: "all_weekdays", unlockedAt: new Date(m.created_at) });
+        break;
+      }
     }
   }
 
