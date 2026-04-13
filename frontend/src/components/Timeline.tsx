@@ -31,6 +31,12 @@ type RankChangeEvent = {
   toRank: number;
 };
 
+type FirstGameEvent = {
+  type: "first_game";
+  playerId: string;
+  rank: number;
+};
+
 type SeasonTransitionEvent = {
   type: "season_transition";
   endedSeason: Season;
@@ -41,7 +47,7 @@ type EventGroup =
   | { kind: "season"; event: SeasonTransitionEvent }
   | { kind: "matches"; events: MatchEvent[] }
   | { kind: "achievements"; events: AchievementEvent[] }
-  | { kind: "rankings"; events: RankChangeEvent[] };
+  | { kind: "rankings"; events: (RankChangeEvent | FirstGameEvent)[] };
 
 type DaySection = {
   date: string;
@@ -123,7 +129,7 @@ function buildTimeline(
   };
 
   const activeDates = [...matchesByDate.keys()].sort();
-  const rankChangesForDay = new Map<string, RankChangeEvent[]>();
+  const rankChangesForDay = new Map<string, (RankChangeEvent | FirstGameEvent)[]>();
   // Track which players have played at least once per season
   const activePlayers = new Map<string, Set<string>>();
 
@@ -163,20 +169,25 @@ function buildTimeline(
       .sort((a, b) => b[1] - a[1])
       .forEach(([id], i) => rankAfter.set(id, i + 1));
 
-    // Players entering the ranking today start just outside the previous ranked list
-    const newEntrantRank = rankBefore.size + 1;
-
-    const changes: RankChangeEvent[] = [];
+    const events: (RankChangeEvent | FirstGameEvent)[] = [];
     for (const player of players) {
-      const before = rankBefore.get(player.id) ?? (rankAfter.has(player.id) ? newEntrantRank : undefined);
       const after = rankAfter.get(player.id);
-      if (before !== undefined && after !== undefined && before !== after) {
-        changes.push({ type: "rank_change", playerId: player.id, fromRank: before, toRank: after });
+      const before = rankBefore.get(player.id);
+      if (after === undefined) continue;
+      if (before === undefined) {
+        // First game this season
+        events.push({ type: "first_game", playerId: player.id, rank: after });
+      } else if (before !== after) {
+        events.push({ type: "rank_change", playerId: player.id, fromRank: before, toRank: after });
       }
     }
-    // Sort: best ranks (lowest number) first, then losers
-    changes.sort((a, b) => a.toRank - b.toRank);
-    if (changes.length > 0) rankChangesForDay.set(date, changes);
+    // Sort: best ranks (lowest number) first
+    events.sort((a, b) => {
+      const rankA = a.type === "first_game" ? a.rank : a.toRank;
+      const rankB = b.type === "first_game" ? b.rank : b.toRank;
+      return rankA - rankB;
+    });
+    if (events.length > 0) rankChangesForDay.set(date, events);
   }
 
   // Collect all dates: match days + season transition days
@@ -376,6 +387,19 @@ export function Timeline({
                     {group.kind === "rankings" &&
                       group.events.map((event, i) => {
                         const playerName = playerMap.get(event.playerId)?.name ?? "?";
+                        if (event.type === "first_game") {
+                          return (
+                            <div key={i} className="dashboard-event">
+                              <span className="dashboard-event-icon">⭐</span>
+                              <span className="dashboard-event-time" />
+                              <span className="dashboard-event-body">
+                                <span className="dashboard-match-winner">{playerName}</span>
+                                {" had their first game this season! Ranked "}
+                                <span className="dashboard-rank">#{event.rank}</span>
+                              </span>
+                            </div>
+                          );
+                        }
                         const movedUp = event.fromRank > event.toRank;
                         return (
                           <div key={i} className="dashboard-event">
@@ -383,7 +407,9 @@ export function Timeline({
                             <span className="dashboard-event-time" />
                             <span className="dashboard-event-body">
                               <span className="dashboard-match-winner">{playerName}</span>
-                              {movedUp ? " moved up to " : " dropped to "}
+                              {movedUp ? " moved up from " : " dropped from "}
+                              <span className="dashboard-rank">#{event.fromRank}</span>
+                              {" to "}
                               <span className="dashboard-rank">#{event.toRank}</span>
                             </span>
                           </div>
