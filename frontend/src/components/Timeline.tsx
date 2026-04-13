@@ -124,6 +124,13 @@ function buildTimeline(
 
   const activeDates = [...matchesByDate.keys()].sort();
   const rankChangesForDay = new Map<string, RankChangeEvent[]>();
+  // Track which players have played at least once per season
+  const activePlayers = new Map<string, Set<string>>();
+
+  const getActivePlayers = (seasonId: string): Set<string> => {
+    if (!activePlayers.has(seasonId)) activePlayers.set(seasonId, new Set());
+    return activePlayers.get(seasonId)!;
+  };
 
   for (const date of activeDates) {
     // Determine the season for this day from the first match
@@ -131,28 +138,37 @@ function buildTimeline(
     if (!seasonId) continue;
 
     const elosForSeason = getSeasonElos(seasonId);
+    const seasonActivePlayers = getActivePlayers(seasonId);
 
-    // Rank before applying today's changes
+    // Rank before applying today's changes (active players only)
     const rankBefore = new Map<string, number>();
     [...elosForSeason.entries()]
+      .filter(([id]) => seasonActivePlayers.has(id))
       .sort((a, b) => b[1] - a[1])
       .forEach(([id], i) => rankBefore.set(id, i + 1));
 
     // Apply all elo changes for this day (season-filtered entries only)
     for (const entry of entriesByDate.get(date) ?? []) {
       if (entry.season_id !== seasonId) continue;
-      elosForSeason.set(entry.player_id, entry.elo_after);
+      const current = elosForSeason.get(entry.player_id) ?? 1500;
+      const delta = entry.elo_after - entry.elo_before;
+      elosForSeason.set(entry.player_id, current + delta);
+      seasonActivePlayers.add(entry.player_id);
     }
 
-    // Rank after
+    // Rank after (active players only)
     const rankAfter = new Map<string, number>();
     [...elosForSeason.entries()]
+      .filter(([id]) => seasonActivePlayers.has(id))
       .sort((a, b) => b[1] - a[1])
       .forEach(([id], i) => rankAfter.set(id, i + 1));
 
+    // Players entering the ranking today start just outside the previous ranked list
+    const newEntrantRank = rankBefore.size + 1;
+
     const changes: RankChangeEvent[] = [];
     for (const player of players) {
-      const before = rankBefore.get(player.id);
+      const before = rankBefore.get(player.id) ?? (rankAfter.has(player.id) ? newEntrantRank : undefined);
       const after = rankAfter.get(player.id);
       if (before !== undefined && after !== undefined && before !== after) {
         changes.push({ type: "rank_change", playerId: player.id, fromRank: before, toRank: after });
