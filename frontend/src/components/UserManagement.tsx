@@ -32,41 +32,41 @@ export function UserManagement() {
     }
   };
 
-  if (loading) return <div className="loading-state">Loading users...</div>;
-  if (error) return <div className="error-message">{error}</div>;
+  if (loading) return <div className="text-center p-8 text-text-light">Loading users...</div>;
+  if (error) return <div className="bg-error-light text-error px-4 py-3 rounded-md text-sm border-l-4 border-error">{error}</div>;
 
   return (
     <div className="card">
       <h2>User Management</h2>
-      <table className="user-table">
+      <table className="w-full border-collapse mt-4 text-[0.9rem]">
         <thead>
           <tr>
-            <th>Email</th>
-            <th>Role</th>
-            <th>Joined</th>
+            <th className="text-left px-3 py-2.5 border-b-2 border-border text-text-light font-semibold">Email</th>
+            <th className="text-left px-3 py-2.5 border-b-2 border-border text-text-light font-semibold">Role</th>
+            <th className="text-left px-3 py-2.5 border-b-2 border-border text-text-light font-semibold">Joined</th>
           </tr>
         </thead>
         <tbody>
           {profiles.map((profile) => (
-            <tr key={profile.id} className={profile.id === user?.id ? "current-user-row" : ""}>
-              <td>
+            <tr key={profile.id} className={profile.id === user?.id ? "bg-bg-light" : ""}>
+              <td className="px-3 py-2.5 border-b border-border-light">
                 {profile.email}
-                {profile.id === user?.id && <span className="badge-you"> (you)</span>}
+                {profile.id === user?.id && <span className="text-text-light text-[0.8rem]"> (you)</span>}
               </td>
-              <td>
+              <td className="px-3 py-2.5 border-b border-border-light">
                 <select
                   value={profile.role}
                   onChange={(e) => handleRoleChange(profile.id, e.target.value as Role)}
                   disabled={saving === profile.id || profile.id === user?.id}
-                  className="role-select"
+                  className="px-2 py-1.5 border border-border rounded-md text-[0.875rem] bg-white cursor-pointer disabled:opacity-60 disabled:cursor-default font-[inherit]"
                 >
                   {ROLES.map((r) => (
                     <option key={r} value={r}>{r}</option>
                   ))}
                 </select>
-                {saving === profile.id && <span className="saving-indicator"> saving...</span>}
+                {saving === profile.id && <span className="text-text-light text-[0.8rem] ml-2">saving...</span>}
               </td>
-              <td className="text-light">
+              <td className="px-3 py-2.5 border-b border-border-light text-text-light">
                 {new Date(profile.created_at).toLocaleDateString("de-CH", { day: "2-digit", month: "2-digit", year: "numeric" })}
               </td>
             </tr>

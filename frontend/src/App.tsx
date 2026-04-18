@@ -134,28 +134,35 @@ function App() {
   );
 
   if (authLoading || loading) {
-    return <div className="loading">Loading...</div>;
+    return <div className="flex items-center justify-center h-screen text-lg text-text-light">Loading...</div>;
   }
 
+  const tabCls = (tab: typeof activeTab) =>
+    `px-6 py-4 border-none bg-transparent cursor-pointer text-[0.95rem] font-medium border-b-[3px] transition-all whitespace-nowrap ${
+      activeTab === tab
+        ? "text-primary border-b-primary"
+        : "text-text-light border-b-transparent hover:text-text hover:border-b-primary"
+    }`;
+
   return (
-    <div className="app">
-      <header className="app-header">
-        <h1>TöggElo⚽</h1>
+    <div className="min-h-screen flex flex-col">
+      <header className="bg-white border-b border-border px-8 py-6 flex justify-between items-center shadow-sm flex-wrap gap-3">
+        <h1 className="text-[1.875rem] font-bold">TöggElo⚽</h1>
         <SeasonDialog
           activeSeason={activeSeason}
           isAdmin={isAdmin}
           onSeasonChanged={loadData}
         />
-        <div className="header-right">
+        <div className="flex items-center gap-3">
           {canEdit && (
             <button className="btn-primary" onClick={() => setModalOpen(true)}>
               + New Player
             </button>
           )}
-          <div className="user-menu">
+          <div className="flex items-center gap-2">
             {user ? (
               <>
-                <span className="user-role-badge">{role}</span>
+                <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-bg-light border border-border text-text-light uppercase tracking-wide">{role}</span>
                 <button className="btn-secondary" onClick={signOut}>
                   Sign out
                 </button>
@@ -168,61 +175,40 @@ function App() {
           </div>
         </div>
       </header>
-      <nav className="tabs">
+      <nav className="flex gap-1 bg-white border-b border-border px-6 overflow-x-auto">
         {user && (
-          <button
-            className={`tab ${activeTab === "timeline" ? "active" : ""}`}
-            onClick={() => setActiveTab("timeline")}
-          >
+          <button className={tabCls("timeline")} onClick={() => setActiveTab("timeline")}>
             Timeline
           </button>
         )}
-        <button
-          className={`tab ${activeTab === "leaderboard" ? "active" : ""}`}
-          onClick={() => setActiveTab("leaderboard")}
-        >
+        <button className={tabCls("leaderboard")} onClick={() => setActiveTab("leaderboard")}>
           Leaderboard
         </button>
         {user && (
-          <button
-            className={`tab ${activeTab === "teams" ? "active" : ""}`}
-            onClick={() => setActiveTab("teams")}
-          >
+          <button className={tabCls("teams")} onClick={() => setActiveTab("teams")}>
             Teams
           </button>
         )}
         {canEdit && (
-          <button
-            className={`tab ${activeTab === "match" ? "active" : ""}`}
-            onClick={() => setActiveTab("match")}
-          >
+          <button className={tabCls("match")} onClick={() => setActiveTab("match")}>
             Record Match
           </button>
         )}
-        <button
-          className={`tab ${activeTab === "history" ? "active" : ""}`}
-          onClick={() => setActiveTab("history")}
-        >
+        <button className={tabCls("history")} onClick={() => setActiveTab("history")}>
           History
         </button>
         {canEdit && (
-          <button
-            className={`tab ${activeTab === "achievements" ? "active" : ""}`}
-            onClick={() => setActiveTab("achievements")}
-          >
+          <button className={tabCls("achievements")} onClick={() => setActiveTab("achievements")}>
             🏅 Achievements
           </button>
         )}
         {isAdmin && (
-          <button
-            className={`tab ${activeTab === "users" ? "active" : ""}`}
-            onClick={() => setActiveTab("users")}
-          >
+          <button className={tabCls("users")} onClick={() => setActiveTab("users")}>
             Users
           </button>
         )}
       </nav>
-      <main className="app-content">
+      <main className="flex-1 p-8 max-w-300 mx-auto w-full">
         {activeTab === "leaderboard" && (
           <Leaderboard
             players={players}

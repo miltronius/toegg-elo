@@ -288,7 +288,7 @@ export function Timeline({
     return (
       <div className="card">
         <h2>Timeline</h2>
-        <p className="empty-state">No matches recorded yet. Record a match to get started!</p>
+        <p className="text-center text-text-light py-8">No matches recorded yet. Record a match to get started!</p>
       </div>
     );
   }
@@ -302,7 +302,7 @@ export function Timeline({
             <div className="dashboard-day-header">{formatDay(day.date)}</div>
             <div className="dashboard-groups">
               {day.groups.map((group) => (
-                <div key={group.kind} className="dashboard-group">
+                <div key={group.kind}>
                   <div className="dashboard-group-label">{GROUP_LABELS[group.kind]}</div>
                   <div className="dashboard-events">
                     {group.kind === "matches" &&

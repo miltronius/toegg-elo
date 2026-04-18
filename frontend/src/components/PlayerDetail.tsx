@@ -106,7 +106,9 @@ export function PlayerDetail({
       ? sortedPlayers[currentIndex + 1]
       : null;
 
-  const [detailTab, setDetailTab] = useState<"stats" | "achievements">(initialTab);
+  const [detailTab, setDetailTab] = useState<"stats" | "achievements">(
+    initialTab,
+  );
   const [rawHistory, setRawHistory] = useState<EloHistory[]>([]);
   const [xAxisMode, setXAxisMode] = useState<"game" | "date">("date");
   const [loading, setLoading] = useState(true);
@@ -138,7 +140,13 @@ export function PlayerDetail({
       setLoading(true);
       try {
         const history = await getEloHistory(player.id);
-        setRawHistory(history.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()));
+        setRawHistory(
+          history.sort(
+            (a, b) =>
+              new Date(a.created_at).getTime() -
+              new Date(b.created_at).getTime(),
+          ),
+        );
       } catch (error) {
         console.error("Failed to load player data:", error);
       } finally {
@@ -154,19 +162,30 @@ export function PlayerDetail({
       : rawHistory;
 
     const seasonStats = selectedSeason
-      ? playerSeasonStats.find((s) => s.player_id === player.id && s.season_id === selectedSeason.id)
+      ? playerSeasonStats.find(
+          (s) => s.player_id === player.id && s.season_id === selectedSeason.id,
+        )
       : null;
     const eloAtStart = seasonStats?.elo_at_start;
 
     const data: ChartData[] = filtered.map((entry, index) => {
-      const cumulativeWins = filtered.slice(0, index + 1).filter((h) => h.elo_change > 0).length;
-      const cumulativeLosses = filtered.slice(0, index + 1).filter((h) => h.elo_change < 0).length;
+      const cumulativeWins = filtered
+        .slice(0, index + 1)
+        .filter((h) => h.elo_change > 0).length;
+      const cumulativeLosses = filtered
+        .slice(0, index + 1)
+        .filter((h) => h.elo_change < 0).length;
       const total = cumulativeWins + cumulativeLosses;
-      const elo = eloAtStart !== undefined
-        ? 1500 + (entry.elo_after - eloAtStart)
-        : entry.elo_after;
+      const elo =
+        eloAtStart !== undefined
+          ? 1500 + (entry.elo_after - eloAtStart)
+          : entry.elo_after;
       return {
-        date: new Date(entry.created_at).toLocaleDateString("de-CH", { day: "2-digit", month: "2-digit", year: "numeric" }),
+        date: new Date(entry.created_at).toLocaleDateString("de-CH", {
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+        }),
         elo,
         cumWins: cumulativeWins,
         cumLosses: cumulativeLosses,
@@ -178,22 +197,40 @@ export function PlayerDetail({
     for (const entry of data) byDate.set(entry.date, entry);
 
     return { perGame: data, perDate: Array.from(byDate.values()) };
-  }, [rawHistory, selectedSeason]);
+  }, [player.id, playerSeasonStats, rawHistory, selectedSeason]);
 
   const effectiveMatches = useMemo(
-    () => selectedSeason ? matches.filter((m) => m.season_id === selectedSeason.id) : matches,
+    () =>
+      selectedSeason
+        ? matches.filter((m) => m.season_id === selectedSeason.id)
+        : matches,
     [matches, selectedSeason],
   );
 
   const effectiveStats = useMemo(() => {
-    if (!selectedSeason) return { elo: player.current_elo, wins: player.wins, losses: player.losses, played: player.matches_played };
-    const pss = playerSeasonStats.find((s) => s.player_id === player.id && s.season_id === selectedSeason.id);
+    if (!selectedSeason)
+      return {
+        elo: player.current_elo,
+        wins: player.wins,
+        losses: player.losses,
+        played: player.matches_played,
+      };
+    const pss = playerSeasonStats.find(
+      (s) => s.player_id === player.id && s.season_id === selectedSeason.id,
+    );
     if (!pss) return { elo: 1500, wins: 0, losses: 0, played: 0 };
-    return { elo: pss.current_season_elo, wins: pss.wins, losses: pss.losses, played: pss.wins + pss.losses };
+    return {
+      elo: pss.current_season_elo,
+      wins: pss.wins,
+      losses: pss.losses,
+      played: pss.wins + pss.losses,
+    };
   }, [selectedSeason, player, playerSeasonStats]);
 
   const h2h = computeHeadToHead(player.id, effectiveMatches);
-  const topFriends = Array.from(computeTeammateCounts(player.id, effectiveMatches).entries())
+  const topFriends = Array.from(
+    computeTeammateCounts(player.id, effectiveMatches).entries(),
+  )
     .map(([playerId, count]) => ({ playerId, count }))
     .sort((a, b) => b.count - a.count)
     .slice(0, 3);
@@ -204,7 +241,9 @@ export function PlayerDetail({
     .sort((a, b) => b.wins - a.wins || b.wins + b.losses - (a.wins + a.losses))
     .find((h) => h.wins > 0);
   const nemesis = [...h2h]
-    .sort((a, b) => b.losses - a.losses || b.wins + b.losses - (a.wins + a.losses))
+    .sort(
+      (a, b) => b.losses - a.losses || b.wins + b.losses - (a.wins + a.losses),
+    )
     .find((h) => h.losses > 0);
 
   const handleSaveName = async () => {
@@ -238,14 +277,17 @@ export function PlayerDetail({
   );
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div
+      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+      onClick={onClose}
+    >
       <div
-        className="modal-content player-detail-modal"
+        className="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto p-6"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="player-detail-header">
+        <div className="flex items-center justify-between mb-4 gap-3">
           {isEditingName ? (
-            <div className="name-edit-form">
+            <div className="flex items-center gap-2 flex-1">
               <input
                 type="text"
                 value={newName}
@@ -255,6 +297,7 @@ export function PlayerDetail({
                 }}
                 disabled={isSaving}
                 autoFocus
+                className="flex-1 px-3 py-1.5 border border-border rounded-md text-base font-semibold focus:outline-none focus:border-primary"
               />
               <button
                 onClick={handleSaveName}
@@ -277,12 +320,12 @@ export function PlayerDetail({
           ) : (
             <h2
               onClick={() => setIsEditingName(true)}
-              className="clickable-name"
+              className="text-2xl font-bold cursor-pointer hover:text-primary transition-colors m-0"
             >
               {player.name}
             </h2>
           )}
-          <div className="header-buttons">
+          <div className="flex items-center gap-2 shrink-0">
             {onNavigate && (
               <>
                 <button
@@ -330,14 +373,18 @@ export function PlayerDetail({
 
         <div className="player-stats-grid">
           <div className="stat-card">
-            <div className="stat-label">{selectedSeason ? "Season ELO" : "Current ELO"}</div>
+            <div className="stat-label">
+              {selectedSeason ? "Season ELO" : "Current ELO"}
+            </div>
             <div className="stat-value">{effectiveStats.elo}</div>
           </div>
           <div className="stat-card">
             <div className="stat-label">Winrate</div>
             <div className="stat-value">
               {effectiveStats.played > 0
-                ? ((effectiveStats.wins / effectiveStats.played) * 100).toFixed(1)
+                ? ((effectiveStats.wins / effectiveStats.played) * 100).toFixed(
+                    1,
+                  )
                 : "0"}
               %
             </div>
@@ -367,7 +414,10 @@ export function PlayerDetail({
         </div>
 
         {/* Tab toggle */}
-        <div className="lb-toggle" style={{ width: "fit-content", marginBottom: "0.75rem" }}>
+        <div
+          className="lb-toggle"
+          style={{ width: "fit-content", marginBottom: "0.75rem" }}
+        >
           <button
             className={`lb-toggle-btn${detailTab === "stats" ? " active" : ""}`}
             onClick={() => setDetailTab("stats")}
@@ -386,12 +436,14 @@ export function PlayerDetail({
           <>
             {loading ? (
               <>
-                <div className="chart-skeleton chart-skeleton--toggle" />
-                <div className="chart-skeleton chart-skeleton--chart" />
-                <div className="chart-skeleton chart-skeleton--chart" />
+                <div className="chart-skeleton h-8 mb-4 rounded-md" />
+                <div className="chart-skeleton h-75 mb-4 rounded-md" />
+                <div className="chart-skeleton h-75 mb-4 rounded-md" />
               </>
             ) : chartData.perGame.length === 0 ? (
-              <div className="empty-state">No match history yet</div>
+              <div className="text-center text-text-light py-8">
+                No match history yet
+              </div>
             ) : (
               <>
                 <div className="lb-toggle" style={{ width: "fit-content" }}>
@@ -409,7 +461,7 @@ export function PlayerDetail({
                   </button>
                 </div>
 
-                <div className="chart-container">
+                <div className="mb-6">
                   <h3>ELO Progression</h3>
                   <ResponsiveContainer width="100%" height={300}>
                     <LineChart
@@ -449,7 +501,7 @@ export function PlayerDetail({
                   </ResponsiveContainer>
                 </div>
 
-                <div className="chart-container">
+                <div className="mb-6">
                   <h3>Winrate Over Time</h3>
                   <ResponsiveContainer width="100%" height={300}>
                     <LineChart
@@ -479,32 +531,34 @@ export function PlayerDetail({
             )}
 
             {(topFriends.length > 0 || topEnemies.length > 0) && (
-              <div className="friends-enemies">
+              <div className="grid grid-cols-2 gap-4 mt-4">
                 {topFriends.length > 0 && (
-                  <div className="friends-enemies-col">
+                  <div>
                     <h3>Top Friends</h3>
                     <ol className="fe-list">
                       {topFriends.map((f) => (
                         <li key={f.playerId}>
-                          <span className="fe-name">
+                          <span className="flex-1">
                             {playerMap.get(f.playerId)?.name ?? "?"}
                           </span>
-                          <span className="fe-count">{f.count}×</span>
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded-full bg-bg-light border border-border text-xs font-semibold text-text-light">
+                            {f.count}×
+                          </span>
                         </li>
                       ))}
                     </ol>
                   </div>
                 )}
                 {topEnemies.length > 0 && (
-                  <div className="friends-enemies-col">
+                  <div>
                     <h3>Top Enemies</h3>
                     <ol className="fe-list">
                       {topEnemies.map((e) => (
                         <li key={e.playerId}>
-                          <span className="fe-name">
+                          <span className="flex-1">
                             {playerMap.get(e.playerId)?.name ?? "?"}
                           </span>
-                          <span className="fe-count">
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded-full bg-bg-light border border-border text-xs font-semibold text-text-light">
                             {e.wins + e.losses}×
                           </span>
                         </li>

@@ -47,8 +47,8 @@ export function Achievements({
 
   return (
     <div className="card">
-      <div className="achievements-header">
-        <h2>🏅 Achievements</h2>
+      <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+        <h2 className="m-0">🏅 Achievements</h2>
         <div className="lb-toggle">
           <button
             className={`lb-toggle-btn${view === "overview" ? " active" : ""}`}
@@ -130,7 +130,7 @@ function AchievementRow({
     <tr onClick={onClick} style={{ cursor: "pointer" }}>
       <td className="rank">{rank}</td>
       <td>
-        <span className="player-name">{player.name}</span>
+        <span className="font-medium">{player.name}</span>
       </td>
       <td>
         <span className="achievements-count">
@@ -226,7 +226,7 @@ function AchievementsOverview({
   })).filter((g) => g.items.length > 0);
 
   return (
-    <div className="achievements-overview">
+    <div className="flex flex-col gap-4">
       {groups.map(({ tier, items: groupItems }) => {
         const isNone = tier === "none";
         const tierInfo = isNone
@@ -236,10 +236,10 @@ function AchievementsOverview({
         const groupLabel = tierInfo?.label ?? "Not Yet Unlocked";
 
         return (
-          <div key={tier} className="achievements-overview-group">
+          <div key={tier} className="mb-2">
             <div
-              className="achievements-overview-group-header"
-              style={{ color: isNone ? "var(--text-light)" : groupColor }}
+              className="text-xs font-bold uppercase tracking-wide mb-2 opacity-80"
+              style={{ color: isNone ? "var(--color-text-light)" : groupColor }}
             >
               {groupLabel}
             </div>
@@ -260,7 +260,7 @@ function AchievementsOverview({
                     <div className="achievements-overview-name">{def.name}</div>
                     <div className="achievements-overview-desc">{def.description}</div>
                   </div>
-                  <div className="achievements-overview-bar-wrap">
+                  <div>
                     <div className="achievements-progress-bar achievements-overview-bar">
                       <div
                         className="achievements-progress-fill"
@@ -287,7 +287,7 @@ function AchievementsOverview({
       })}
 
       <a
-        className="achievements-suggest"
+        className="block text-center text-[0.8rem] text-text-light mt-6 hover:text-primary transition-colors"
         href="https://github.com/miltronius/toegg-elo/issues/new?labels=Achievements+%F0%9F%8E%96%EF%B8%8F"
         target="_blank"
         rel="noreferrer"
@@ -337,10 +337,10 @@ export function AchievementGallery({
   const locked = statuses.filter((s) => !s.unlocked);
 
   const unlockedIds = new Set(unlocked.map((s) => s.definition.id));
-  const nextUp = computeAchievementProgress(playerId, matches, unlockedIds).slice(0, 1);
+  const nextUp = computeAchievementProgress(playerId, matches, unlockedIds).slice(0, 2);
 
   return (
-    <div className="achievement-gallery">
+    <div className="flex flex-col gap-6">
       {nextUp.length > 0 && (
         <section>
           <div className="achievement-section-heading">Next Up</div>
@@ -348,9 +348,7 @@ export function AchievementGallery({
             {nextUp.map((p) => {
               const def = ACHIEVEMENT_DEFINITIONS.find((d) => d.id === p.achievementId)!;
               const status = statuses.find((s) => s.definition.id === p.achievementId);
-              const color = status?.rarityTier
-                ? rarityColorForTier(status.rarityTier)
-                : "var(--text-light)";
+              const color = rarityColorForTier(status?.rarityTier ?? "legendary");
               const pct = Math.min(100, (p.current / p.target) * 100);
               return (
                 <div key={p.achievementId} className="achievement-nextup-row">
@@ -377,7 +375,7 @@ export function AchievementGallery({
       )}
       {unlocked.length > 0 && (
         <section>
-          <div className="achievement-gallery-header">
+          <div className="flex items-center justify-between mb-3">
             <div className="achievement-section-heading">
               Unlocked ({unlocked.length})
             </div>

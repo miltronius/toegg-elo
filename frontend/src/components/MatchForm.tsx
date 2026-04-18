@@ -135,12 +135,18 @@ export function MatchForm({ players, onMatchRecorded, playerSeasonStats = [] }: 
           </select>
         </div>
 
-        {error && <div className="error-message">{error}</div>}
+        {error && (
+          <div className="bg-error-light text-error px-4 py-3 rounded-md text-sm border-l-4 border-error mb-3">
+            {error}
+          </div>
+        )}
         {success && (
-          <div className="success-message">Match recorded successfully!</div>
+          <div className="bg-success-light text-success px-4 py-3 rounded-md text-sm border-l-4 border-success mb-3">
+            Match recorded successfully!
+          </div>
         )}
 
-        <button type="submit" disabled={loading}>
+        <button type="submit" className="btn-primary w-full mt-2" disabled={loading}>
           {loading ? "Recording..." : "Record Match"}
         </button>
       </form>
