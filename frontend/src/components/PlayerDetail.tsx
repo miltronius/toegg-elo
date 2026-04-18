@@ -153,13 +153,21 @@ export function PlayerDetail({
       ? rawHistory.filter((h) => h.season_id === selectedSeason.id)
       : rawHistory;
 
+    const seasonStats = selectedSeason
+      ? playerSeasonStats.find((s) => s.player_id === player.id && s.season_id === selectedSeason.id)
+      : null;
+    const eloAtStart = seasonStats?.elo_at_start;
+
     const data: ChartData[] = filtered.map((entry, index) => {
       const cumulativeWins = filtered.slice(0, index + 1).filter((h) => h.elo_change > 0).length;
       const cumulativeLosses = filtered.slice(0, index + 1).filter((h) => h.elo_change < 0).length;
       const total = cumulativeWins + cumulativeLosses;
+      const elo = eloAtStart !== undefined
+        ? 1500 + (entry.elo_after - eloAtStart)
+        : entry.elo_after;
       return {
         date: new Date(entry.created_at).toLocaleDateString("de-CH", { day: "2-digit", month: "2-digit", year: "numeric" }),
-        elo: entry.elo_after,
+        elo,
         cumWins: cumulativeWins,
         cumLosses: cumulativeLosses,
         winrate: total > 0 ? (cumulativeWins / total) * 100 : 0,

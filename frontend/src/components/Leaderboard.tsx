@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import {
   LineChart,
   Line,
@@ -7,6 +7,7 @@ import {
   CartesianGrid,
   Tooltip,
   ReferenceLine,
+  ReferenceArea,
   ResponsiveContainer,
 } from "recharts";
 import { Player, EloHistory, Season, PlayerSeasonStats } from "../lib/supabase";
@@ -31,7 +32,7 @@ interface Snapshot {
 const playerColor = (i: number, total: number) =>
   `hsl(${Math.round((i / Math.max(total, 1)) * 360)}, 85%, 60%)`;
 
-function buildSnapshots(players: Player[], history: EloHistory[]): Snapshot[] {
+function buildSnapshots(players: Player[], history: EloHistory[], isSeasonView = false): Snapshot[] {
   if (!history.length) return [];
   const sorted = [...history].sort(
     (a, b) =>
@@ -46,6 +47,24 @@ function buildSnapshots(players: Player[], history: EloHistory[]): Snapshot[] {
     }
     byMatch[h.match_id].push(h);
   }
+
+  // In season view: only rank players who actually appear in this season's history,
+  // and normalize their ELOs so everyone starts at 1500.
+  const seenPlayerIds = new Set(sorted.map((h) => h.player_id));
+  const seasonStartElo: Record<string, number> = {};
+  if (isSeasonView) {
+    for (const h of sorted) {
+      if (seasonStartElo[h.player_id] === undefined) {
+        seasonStartElo[h.player_id] = h.elo_before;
+      }
+    }
+  }
+  const normalize = (playerId: string, allTimeElo: number) => {
+    if (!isSeasonView) return allTimeElo;
+    const start = seasonStartElo[playerId];
+    return start !== undefined ? 1500 + (allTimeElo - start) : allTimeElo;
+  };
+
   const currentElo: Record<string, number> = {};
   const firstSeen: Record<string, boolean> = {};
   for (const h of sorted) {
@@ -58,11 +77,15 @@ function buildSnapshots(players: Player[], history: EloHistory[]): Snapshot[] {
     if (currentElo[p.id] === undefined) currentElo[p.id] = p.current_elo;
   });
 
+  const rankablePlayers = isSeasonView
+    ? players.filter((p) => seenPlayerIds.has(p.id))
+    : players;
+
   const snapshots: Snapshot[] = [];
   matchOrder.forEach((matchId, matchIdx) => {
     for (const h of byMatch[matchId]) currentElo[h.player_id] = h.elo_after;
-    const ranked = [...players]
-      .map((p) => ({ id: p.id, elo: currentElo[p.id] ?? p.current_elo }))
+    const ranked = [...rankablePlayers]
+      .map((p) => ({ id: p.id, elo: normalize(p.id, currentElo[p.id] ?? p.current_elo) }))
       .sort((a, b) => b.elo - a.elo);
     ranked.forEach(({ id, elo }, i) =>
       snapshots.push({
@@ -322,13 +345,80 @@ export function Leaderboard({
     else diff = winrateOf(b) - winrateOf(a);
     return sortAsc ? -diff : diff;
   });
-  const snapshots = buildSnapshots(visiblePlayers, effectiveHistory);
+  const snapshots = buildSnapshots(visiblePlayers, effectiveHistory, isSeasonView);
   const eloData = buildEloProgressionData(visiblePlayers, effectiveHistory, isSeasonView);
   const eloDateData = buildEloProgressionDataByDate(visiblePlayers, effectiveHistory, isSeasonView);
+
+  // Season background ranges for the all-time ELO chart
+  const seasonGameRanges = useMemo(() => {
+    if (isSeasonView || (seasons ?? []).length <= 1) return [];
+    const sorted = [...history]
+      .filter((h) => h.match_id)
+      .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+    const matchOrder: string[] = [];
+    const seen = new Set<string>();
+    const matchSeason: Record<string, string> = {};
+    for (const h of sorted) {
+      if (h.match_id && !seen.has(h.match_id)) {
+        seen.add(h.match_id);
+        matchOrder.push(h.match_id);
+        matchSeason[h.match_id] = h.season_id ?? "";
+      }
+    }
+    const ranges: { seasonId: string; x1: string; x2: string }[] = [];
+    let cur: { seasonId: string; x1: string; x2: string } | null = null;
+    matchOrder.forEach((matchId, idx) => {
+      const sid = matchSeason[matchId];
+      const label = `M${idx + 1}`;
+      if (!cur || cur.seasonId !== sid) {
+        if (cur) ranges.push(cur);
+        cur = { seasonId: sid, x1: label, x2: label };
+      } else {
+        cur.x2 = label;
+      }
+    });
+    if (cur) ranges.push(cur);
+    return ranges;
+  }, [history, seasons, isSeasonView]);
+
+  const seasonDateRanges = useMemo(() => {
+    if (isSeasonView || (seasons ?? []).length <= 1) return [];
+    const sorted = [...history]
+      .filter((h) => h.match_id)
+      .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+    const dateOrder: string[] = [];
+    const seenDates = new Set<string>();
+    const dateSeason: Record<string, string> = {};
+    for (const h of sorted) {
+      const date = new Date(h.created_at).toLocaleDateString("de-CH", {
+        day: "2-digit", month: "2-digit", year: "numeric",
+      });
+      if (!seenDates.has(date)) {
+        seenDates.add(date);
+        dateOrder.push(date);
+      }
+      dateSeason[date] = h.season_id ?? "";
+    }
+    const ranges: { seasonId: string; x1: string; x2: string }[] = [];
+    let cur: { seasonId: string; x1: string; x2: string } | null = null;
+    dateOrder.forEach((date) => {
+      const sid = dateSeason[date];
+      if (!cur || cur.seasonId !== sid) {
+        if (cur) ranges.push(cur);
+        cur = { seasonId: sid, x1: date, x2: date };
+      } else {
+        cur.x2 = date;
+      }
+    });
+    if (cur) ranges.push(cur);
+    return ranges;
+  }, [history, seasons, isSeasonView]);
   const matchIndices = [...new Set(snapshots.map((s) => s.match_index))].sort(
     (a, b) => a - b,
   );
-  const nPlayers = players.length;
+  const nPlayers = snapshots.length > 0
+    ? Math.max(...snapshots.map((s) => s.rank))
+    : visiblePlayers.length;
 
   // Responsive padding: smaller right pad on mobile (no name labels, just dots)
   const isMobile = svgWidth > 0 && svgWidth < 480;
@@ -831,6 +921,24 @@ export function Leaderboard({
                   contentStyle={{ fontSize: 12 }}
                   itemSorter={(item) => -(item.value as number)}
                 />
+                {(eloXAxis === "date" ? seasonDateRanges : seasonGameRanges).map((range, i) => {
+                  const season = (seasons ?? []).find((s) => s.id === range.seasonId);
+                  return (
+                    <ReferenceArea
+                      key={range.seasonId}
+                      x1={range.x1}
+                      x2={range.x2}
+                      fill={`hsl(${(i * 137) % 360}, 55%, 55%)`}
+                      fillOpacity={0.08}
+                      label={season ? {
+                        value: `S${season.number} · ${season.name}`,
+                        position: "insideTopLeft",
+                        fontSize: 10,
+                        fill: `hsl(${(i * 137) % 360}, 45%, 65%)`,
+                      } : undefined}
+                    />
+                  );
+                })}
                 <ReferenceLine
                   y={1500}
                   stroke="#aaa"

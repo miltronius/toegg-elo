@@ -276,6 +276,7 @@ function App() {
             selectedSeason={selectedSeason}
             onSeasonSelect={handleSeasonSelect}
             onTeamClick={setSelectedTeam}
+            playerSeasonStats={playerSeasonStats}
           />
         )}
         {activeTab === "achievements" && canEdit && (

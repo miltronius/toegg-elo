@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { createPortal } from "react-dom";
-import { Match, Player, Season, TeamNameRow } from "../lib/supabase";
+import { Match, Player, PlayerSeasonStats, Season, TeamNameRow } from "../lib/supabase";
 import {
   TeamStats,
   getTeamDisplayName,
@@ -72,13 +72,14 @@ interface TeamsProps {
   selectedSeason: Season | null;
   onSeasonSelect: (season: Season | null) => void;
   onTeamClick: (team: TeamStats) => void;
+  playerSeasonStats?: PlayerSeasonStats[];
 }
 
 type SortKey = "rank" | "elo" | "winrate" | "matches" | "name";
 
 const STORAGE_KEY = "teams-view";
 
-export function Teams({ matches, players, teamNames, seasons, selectedSeason, onSeasonSelect, onTeamClick }: TeamsProps) {
+export function Teams({ matches, players, teamNames, seasons, selectedSeason, onSeasonSelect, onTeamClick, playerSeasonStats }: TeamsProps) {
   const [view, setView] = useState<"table" | "card">(
     () => (localStorage.getItem(STORAGE_KEY) as "table" | "card") ?? "table",
   );
@@ -100,14 +101,27 @@ export function Teams({ matches, players, teamNames, seasons, selectedSeason, on
     }
   };
 
+  const effectivePlayers = useMemo(() => {
+    if (!selectedSeason || !playerSeasonStats?.length) return players;
+    const statsMap = new Map(
+      playerSeasonStats
+        .filter((s) => s.season_id === selectedSeason.id)
+        .map((s) => [s.player_id, s]),
+    );
+    return players.map((p) => {
+      const s = statsMap.get(p.id);
+      return s ? { ...p, current_elo: s.current_season_elo } : p;
+    });
+  }, [players, selectedSeason, playerSeasonStats]);
+
   const filteredMatches = useMemo(
     () => selectedSeason ? matches.filter((m) => m.season_id === selectedSeason.id) : matches,
     [matches, selectedSeason],
   );
 
   const teams = useMemo(
-    () => computeTeamStats(filteredMatches, players, teamNames),
-    [filteredMatches, players, teamNames],
+    () => computeTeamStats(filteredMatches, effectivePlayers, teamNames),
+    [filteredMatches, effectivePlayers, teamNames],
   );
 
   const eligible = teams.filter((t: TeamStats) => t.matchesPlayed >= 2);
@@ -141,7 +155,10 @@ export function Teams({ matches, players, teamNames, seasons, selectedSeason, on
     return sortAsc ? -diff : diff;
   });
 
-  const playerMap = new Map(players.map((p) => [p.id, p]));
+  const playerMap = useMemo(
+    () => new Map(effectivePlayers.map((p) => [p.id, p])),
+    [effectivePlayers],
+  );
 
   const teamPlayers = (
     t: TeamStats,
