@@ -58,37 +58,43 @@ export function SeasonDialog({ activeSeason, isAdmin, onSeasonChanged }: SeasonD
 
   return (
     <>
-      <button className="season-badge" onClick={openDialog} title="View season info">
+      <button
+        className="inline-flex items-center gap-1.5 px-3 py-1 bg-primary text-white border-none rounded-full text-[0.8rem] font-semibold cursor-pointer transition-colors hover:bg-primary-dark whitespace-nowrap"
+        onClick={openDialog}
+        title="View season info"
+      >
         S{activeSeason?.number ?? "?"}
-        <span className="season-badge-name">{activeSeason?.name ?? "No season"}</span>
+        <span className="font-normal opacity-85 max-sm:hidden">{activeSeason?.name ?? "No season"}</span>
       </button>
 
       {open && (
-        <div className="modal-overlay" onClick={close}>
-          <div className="modal-content season-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[1000]" onClick={close}>
+          <div className="bg-white rounded-lg p-8 max-w-[440px] w-[90%] shadow-[0_20px_25px_-5px_rgba(0,0,0,0.1)]" onClick={(e) => e.stopPropagation()}>
             {view === "info" && (
               <>
-                <h2>
+                <h2 className="text-2xl font-semibold mb-5 flex items-center gap-2.5">
                   {activeSeason?.name ?? "Season"}
-                  <span className="season-number-tag">Season {activeSeason?.number}</span>
+                  <span className="text-[0.75rem] font-medium text-text-light bg-bg border border-border rounded-full px-2.5 py-0.5">
+                    Season {activeSeason?.number}
+                  </span>
                 </h2>
 
-                <dl className="season-info-grid">
-                  <dt>K-Factor</dt>
-                  <dd>{activeSeason?.k_factor ?? "—"}</dd>
+                <dl className="grid grid-cols-[auto_1fr] gap-x-5 gap-y-2 mb-6 text-[0.9rem]">
+                  <dt className="font-semibold text-text-light whitespace-nowrap">K-Factor</dt>
+                  <dd className="m-0">{activeSeason?.k_factor ?? "—"}</dd>
 
-                  <dt>Inactivity Penalty</dt>
-                  <dd>
+                  <dt className="font-semibold text-text-light whitespace-nowrap">Inactivity Penalty</dt>
+                  <dd className="m-0">
                     {activeSeason?.inactivity_penalty_percent
                       ? `${activeSeason.inactivity_penalty_percent}% per week`
                       : "None"}
                   </dd>
 
-                  <dt>Started</dt>
-                  <dd>{activeSeason ? formatDate(activeSeason.started_at) : "—"}</dd>
+                  <dt className="font-semibold text-text-light whitespace-nowrap">Started</dt>
+                  <dd className="m-0">{activeSeason ? formatDate(activeSeason.started_at) : "—"}</dd>
                 </dl>
 
-                <div className="modal-buttons">
+                <div className="flex gap-4 justify-end">
                   <button className="btn-secondary" onClick={close}>
                     Close
                   </button>
@@ -106,9 +112,9 @@ export function SeasonDialog({ activeSeason, isAdmin, onSeasonChanged }: SeasonD
 
             {view === "new-season" && (
               <>
-                <h2>Start New Season</h2>
+                <h2 className="text-2xl font-semibold mb-5">Start New Season</h2>
 
-                <div className="season-warning">
+                <div className="bg-[#fef3c7] border border-warning rounded-md p-3 text-[0.875rem] text-[#92400e] mb-5">
                   All players will reset to <strong>1500 ELO</strong> when the new season begins.
                 </div>
 
@@ -152,14 +158,18 @@ export function SeasonDialog({ activeSeason, isAdmin, onSeasonChanged }: SeasonD
                     onChange={(e) => setNewPenalty(Number(e.target.value))}
                     disabled={loading}
                   />
-                  <span className="form-hint">
+                  <span className="block text-[0.78rem] text-text-light mt-1">
                     Applied every Monday to players inactive for 7+ days. 0 = disabled.
                   </span>
                 </div>
 
-                {error && <p className="error-message">{error}</p>}
+                {error && (
+                  <p className="bg-error-light text-error px-4 py-3 rounded-md text-sm border-l-4 border-error mb-3">
+                    {error}
+                  </p>
+                )}
 
-                <div className="modal-buttons">
+                <div className="flex gap-4 justify-end">
                   <button
                     className="btn-secondary"
                     onClick={() => { setView("info"); setError(null); }}

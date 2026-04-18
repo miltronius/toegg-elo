@@ -455,7 +455,7 @@ export function Leaderboard({
     return (
       <div className="card">
         <h2>Leaderboard</h2>
-        <p className="empty-state">
+        <p className="text-center text-text-light py-8">
           No players yet. Create a player to get started!
         </p>
       </div>
@@ -467,8 +467,8 @@ export function Leaderboard({
       className={`card leaderboard-card${view !== "table" ? " lb-expanded" : ""}`}
     >
       {/* ── Header ── */}
-      <div className="lb-header">
-        <h2>Leaderboard</h2>
+      <div className="flex items-center justify-between mb-6 flex-wrap gap-2">
+        <h2 className="m-0">Leaderboard</h2>
         <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
           {(seasons ?? []).length > 0 && (
             <select

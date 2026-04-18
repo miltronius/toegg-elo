@@ -238,14 +238,17 @@ export function PlayerDetail({
   );
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div
+      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+      onClick={onClose}
+    >
       <div
-        className="modal-content player-detail-modal"
+        className="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto p-6"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="player-detail-header">
+        <div className="flex items-center justify-between mb-4 gap-3">
           {isEditingName ? (
-            <div className="name-edit-form">
+            <div className="flex items-center gap-2 flex-1">
               <input
                 type="text"
                 value={newName}
@@ -255,6 +258,7 @@ export function PlayerDetail({
                 }}
                 disabled={isSaving}
                 autoFocus
+                className="flex-1 px-3 py-1.5 border border-border rounded-md text-base font-semibold focus:outline-none focus:border-primary"
               />
               <button
                 onClick={handleSaveName}
@@ -277,12 +281,12 @@ export function PlayerDetail({
           ) : (
             <h2
               onClick={() => setIsEditingName(true)}
-              className="clickable-name"
+              className="text-2xl font-bold cursor-pointer hover:text-primary transition-colors m-0"
             >
               {player.name}
             </h2>
           )}
-          <div className="header-buttons">
+          <div className="flex items-center gap-2 shrink-0">
             {onNavigate && (
               <>
                 <button
@@ -386,12 +390,12 @@ export function PlayerDetail({
           <>
             {loading ? (
               <>
-                <div className="chart-skeleton chart-skeleton--toggle" />
-                <div className="chart-skeleton chart-skeleton--chart" />
-                <div className="chart-skeleton chart-skeleton--chart" />
+                <div className="chart-skeleton h-8 mb-4 rounded-md" />
+                <div className="chart-skeleton h-75 mb-4 rounded-md" />
+                <div className="chart-skeleton h-75 mb-4 rounded-md" />
               </>
             ) : chartData.perGame.length === 0 ? (
-              <div className="empty-state">No match history yet</div>
+              <div className="text-center text-text-light py-8">No match history yet</div>
             ) : (
               <>
                 <div className="lb-toggle" style={{ width: "fit-content" }}>
@@ -409,7 +413,7 @@ export function PlayerDetail({
                   </button>
                 </div>
 
-                <div className="chart-container">
+                <div className="mb-6">
                   <h3>ELO Progression</h3>
                   <ResponsiveContainer width="100%" height={300}>
                     <LineChart
@@ -449,7 +453,7 @@ export function PlayerDetail({
                   </ResponsiveContainer>
                 </div>
 
-                <div className="chart-container">
+                <div className="mb-6">
                   <h3>Winrate Over Time</h3>
                   <ResponsiveContainer width="100%" height={300}>
                     <LineChart
@@ -479,34 +483,32 @@ export function PlayerDetail({
             )}
 
             {(topFriends.length > 0 || topEnemies.length > 0) && (
-              <div className="friends-enemies">
+              <div className="grid grid-cols-2 gap-4 mt-4">
                 {topFriends.length > 0 && (
-                  <div className="friends-enemies-col">
+                  <div>
                     <h3>Top Friends</h3>
                     <ol className="fe-list">
                       {topFriends.map((f) => (
                         <li key={f.playerId}>
-                          <span className="fe-name">
+                          <span className="flex-1">
                             {playerMap.get(f.playerId)?.name ?? "?"}
                           </span>
-                          <span className="fe-count">{f.count}×</span>
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded-full bg-bg-light border border-border text-xs font-semibold text-text-light">{f.count}×</span>
                         </li>
                       ))}
                     </ol>
                   </div>
                 )}
                 {topEnemies.length > 0 && (
-                  <div className="friends-enemies-col">
+                  <div>
                     <h3>Top Enemies</h3>
                     <ol className="fe-list">
                       {topEnemies.map((e) => (
                         <li key={e.playerId}>
-                          <span className="fe-name">
+                          <span className="flex-1">
                             {playerMap.get(e.playerId)?.name ?? "?"}
                           </span>
-                          <span className="fe-count">
-                            {e.wins + e.losses}×
-                          </span>
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded-full bg-bg-light border border-border text-xs font-semibold text-text-light">{e.wins + e.losses}×</span>
                         </li>
                       ))}
                     </ol>

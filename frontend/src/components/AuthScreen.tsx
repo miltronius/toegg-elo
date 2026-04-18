@@ -37,11 +37,11 @@ export function AuthScreen({ onClose }: { onClose?: () => void }) {
   if (magicLinkSent) {
     return (
       <div className="auth-screen">
-        <div className="auth-card">
-          <h1>TöggElo⚽</h1>
-          <div className="auth-success">
+        <div className="relative bg-white border border-border rounded-xl p-10 w-full max-w-[400px] shadow-[0_8px_40px_rgba(0,0,0,0.35)]">
+          <h1 className="text-[2rem] font-bold mb-2">TöggElo⚽</h1>
+          <div className="flex flex-col gap-4 text-center text-text-light">
             <p>Magic link sent! Check your email and click the link to sign in.</p>
-            <button className="btn-primary" onClick={() => { setMagicLinkSent(false); setError(null); }}>
+            <button className="btn-primary btn-full" onClick={() => { setMagicLinkSent(false); setError(null); }}>
               Back to login
             </button>
           </div>
@@ -53,11 +53,11 @@ export function AuthScreen({ onClose }: { onClose?: () => void }) {
   if (signedUp) {
     return (
       <div className="auth-screen">
-        <div className="auth-card">
-          <h1>TöggElo⚽</h1>
-          <div className="auth-success">
+        <div className="relative bg-white border border-border rounded-xl p-10 w-full max-w-[400px] shadow-[0_8px_40px_rgba(0,0,0,0.35)]">
+          <h1 className="text-[2rem] font-bold mb-2">TöggElo⚽</h1>
+          <div className="flex flex-col gap-4 text-center text-text-light">
             <p>Account created! Check your email to confirm your address, then log in.</p>
-            <button className="btn-primary" onClick={() => { setMode("login"); setSignedUp(false); }}>
+            <button className="btn-primary btn-full" onClick={() => { setMode("login"); setSignedUp(false); }}>
               Back to login
             </button>
           </div>
@@ -68,12 +68,19 @@ export function AuthScreen({ onClose }: { onClose?: () => void }) {
 
   return (
     <div className="auth-screen">
-      <div className="auth-card">
+      <div className="relative bg-white border border-border rounded-xl p-10 w-full max-w-[400px] shadow-[0_8px_40px_rgba(0,0,0,0.35)]">
         {onClose && (
-          <button className="auth-close-btn" onClick={onClose}>✕</button>
+          <button
+            className="absolute top-4 right-4 bg-transparent border-none text-[1.1rem] cursor-pointer text-text-light leading-none hover:text-text p-0"
+            onClick={onClose}
+          >
+            ✕
+          </button>
         )}
-        <h1>TöggElo⚽</h1>
-        <h2>{mode === "login" ? "Sign in" : "Create account"}</h2>
+        <h1 className="text-[2rem] font-bold mb-2">TöggElo⚽</h1>
+        <h2 className="text-[1.25rem] font-semibold text-text-light mb-6">
+          {mode === "login" ? "Sign in" : "Create account"}
+        </h2>
         {mode === "login" && (
           <div className="auth-method-toggle lb-toggle" data-method={loginMethod}>
             <button
@@ -92,7 +99,7 @@ export function AuthScreen({ onClose }: { onClose?: () => void }) {
             </button>
           </div>
         )}
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="form-group">
             <label>Email</label>
             <input
@@ -117,12 +124,16 @@ export function AuthScreen({ onClose }: { onClose?: () => void }) {
               />
             </div>
           </div>
-          {error && <div className="error-message">{error}</div>}
+          {error && (
+            <div className="bg-error-light text-error px-4 py-3 rounded-md text-sm border-l-4 border-error">
+              {error}
+            </div>
+          )}
           <button type="submit" className="btn-primary btn-full" disabled={loading}>
             {loading ? "..." : mode === "login" && loginMethod === "magic" ? "Send magic link" : mode === "login" ? "Sign in" : "Sign up"}
           </button>
         </form>
-        <p className="auth-switch">
+        <p className="mt-5 text-center text-text-light text-sm">
           {mode === "login" ? "No account yet?" : "Already have an account?"}{" "}
           <button
             className="btn-link"
@@ -132,7 +143,9 @@ export function AuthScreen({ onClose }: { onClose?: () => void }) {
           </button>
         </p>
         {mode === "signup" && (
-          <p className="auth-note">New accounts start as viewers. An admin needs to grant you access.</p>
+          <p className="mt-4 text-[0.8rem] text-text-light text-center">
+            New accounts start as viewers. An admin needs to grant you access.
+          </p>
         )}
       </div>
     </div>

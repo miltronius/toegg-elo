@@ -36,10 +36,10 @@ export function CreatePlayerModal({
   if (!isOpen) return null;
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-        <h2>Create New Player</h2>
-        <form onSubmit={handleSubmit}>
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[1000]" onClick={onClose}>
+      <div className="bg-white rounded-lg p-8 max-w-[400px] w-[90%] shadow-[0_20px_25px_-5px_rgba(0,0,0,0.1)]" onClick={(e) => e.stopPropagation()}>
+        <h2 className="text-2xl font-semibold mb-6 text-text">Create New Player</h2>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <input
             type="text"
             placeholder="Player name"
@@ -47,13 +47,18 @@ export function CreatePlayerModal({
             onChange={(e) => setName(e.target.value)}
             required
             disabled={loading}
+            className="w-full px-3 py-2.5 border border-border rounded-md text-[0.95rem] focus:outline-none focus:border-primary focus:ring-[3px] focus:ring-primary/10 disabled:bg-bg-light disabled:cursor-not-allowed disabled:opacity-60"
           />
-          {error && <div className="error-message">{error}</div>}
-          <div className="modal-buttons">
-            <button type="button" onClick={onClose} disabled={loading}>
+          {error && (
+            <div className="bg-error-light text-error px-4 py-3 rounded-md text-sm border-l-4 border-error">
+              {error}
+            </div>
+          )}
+          <div className="flex gap-4 justify-end mt-2">
+            <button type="button" className="btn-secondary" onClick={onClose} disabled={loading}>
               Cancel
             </button>
-            <button type="submit" disabled={loading}>
+            <button type="submit" className="btn-primary" disabled={loading}>
               {loading ? "Creating..." : "Create"}
             </button>
           </div>

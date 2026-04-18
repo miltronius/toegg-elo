@@ -44,7 +44,6 @@ export function TeamDetail({
   const handleSave = async () => {
     setError(null);
 
-    // Collect all names in use by other teams (name + both aliases)
     const takenNames = new Set<string>();
     for (const t of allTeams) {
       if (t.key === team.key) continue;
@@ -78,32 +77,35 @@ export function TeamDetail({
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div
+      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+      onClick={onClose}
+    >
       <div
-        className="modal-content team-detail-modal"
+        className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6"
         onClick={(e) => e.stopPropagation()}
       >
         <div
-          className="team-detail-header"
+          className="flex items-center justify-between mb-4"
           style={{ borderLeft: `4px solid ${teamColor(team)}`, paddingLeft: "0.75rem" }}
         >
-          <h2>{getTeamDisplayName(team, players)}</h2>
+          <h2 className="text-2xl font-bold text-text m-0">{getTeamDisplayName(team, players)}</h2>
           <button className="close-btn" onClick={onClose}>
             ×
           </button>
         </div>
 
-        <div className="team-detail-players">
-          {[team.player_id_lo, team.player_id_hi].map((id) => {
-            const p = playerMap.get(id);
-            if (!p) return null;
-            return (
-              <div key={id} className="team-detail-player">
-                <span className="team-detail-player-name">{p.name}</span>
-                <span className="team-detail-player-elo">{p.current_elo}</span>
+        <div className="flex gap-3 mb-4">
+          {[team.player_id_lo, team.player_id_hi]
+            .map((id) => playerMap.get(id))
+            .filter((p): p is NonNullable<typeof p> => p != null)
+            .sort((a, b) => b.current_elo - a.current_elo)
+            .map((p) => (
+              <div key={p.id} className="flex items-center justify-between p-3 bg-bg rounded-md border border-border flex-1">
+                <span className="font-semibold text-text">{p.name}</span>
+                <span className="text-primary font-bold text-lg">{p.current_elo}</span>
               </div>
-            );
-          })}
+            ))}
         </div>
 
         <div className="player-stats-grid">
@@ -130,19 +132,20 @@ export function TeamDetail({
         </div>
 
         {canEdit && (
-          <div className="team-names-form">
-            <div className="team-color-row">
-              <label>Team Color</label>
-              <div className="team-color-picker-wrap">
+          <div className="flex flex-col gap-3 mt-4 pt-4 border-t border-border">
+            <div className="flex items-center justify-between">
+              <div className="stat-label mb-0">Team Color</div>
+              <div className="flex items-center gap-2">
                 <input
                   type="color"
                   value={color}
                   onChange={(e) => setColor(e.target.value)}
                   disabled={saving}
-                  className="team-color-input"
+                  className="w-10 h-8 rounded border border-border cursor-pointer p-0.5"
                 />
                 <button
                   type="button"
+                  className="btn-secondary"
                   onClick={() => setColor(teamColor({ ...team, nameRow: null }))}
                   disabled={saving}
                 >
@@ -150,8 +153,8 @@ export function TeamDetail({
                 </button>
               </div>
             </div>
-            <div>
-              <label>Team Name</label>
+            <div className="form-group">
+              <div className="stat-label">Team Name</div>
               <input
                 type="text"
                 value={name}
@@ -160,8 +163,8 @@ export function TeamDetail({
                 disabled={saving}
               />
             </div>
-            <div>
-              <label>Alias 1</label>
+            <div className="form-group">
+              <div className="stat-label">Alias 1</div>
               <input
                 type="text"
                 value={alias1}
@@ -170,8 +173,8 @@ export function TeamDetail({
                 disabled={saving}
               />
             </div>
-            <div>
-              <label>Alias 2</label>
+            <div className="form-group">
+              <div className="stat-label">Alias 2</div>
               <input
                 type="text"
                 value={alias2}
@@ -180,7 +183,11 @@ export function TeamDetail({
                 disabled={saving}
               />
             </div>
-            {error && <div className="error-message">{error}</div>}
+            {error && (
+              <div className="bg-error-light text-error px-4 py-3 rounded-md text-sm border-l-4 border-error">
+                {error}
+              </div>
+            )}
             <button
               className="btn-primary"
               onClick={handleSave}
@@ -192,19 +199,21 @@ export function TeamDetail({
         )}
 
         {team.rivals.length > 0 && (
-          <div className="team-rivals-list">
-            <h3>Top Rivals</h3>
-            {team.rivals.map((rival) => (
-              <div key={rival.key} className="rival-item">
-                <span>{rivalTeamName(rival.key)}</span>
-                <span className="rival-record">
-                  <span className="rival-record-w">{rival.wins}W</span>
-                  {" – "}
-                  <span className="rival-record-l">{rival.losses}L</span>
-                  <span className="rival-count">{rival.matchesPlayed}×</span>
-                </span>
-              </div>
-            ))}
+          <div className="mt-4 pt-4 border-t border-border">
+            <h3 className="text-base font-semibold text-text mb-3">Top Rivals</h3>
+            <div className="flex flex-col">
+              {team.rivals.map((rival) => (
+                <div key={rival.key} className="flex items-center justify-between py-2 border-b border-border-light last:border-b-0">
+                  <span className="text-sm text-text">{rivalTeamName(rival.key)}</span>
+                  <span className="flex items-center gap-2 text-sm">
+                    <span className="text-success font-semibold">{rival.wins}W</span>
+                    {" – "}
+                    <span className="text-error font-semibold">{rival.losses}L</span>
+                    <span className="text-text-light">{rival.matchesPlayed}×</span>
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </div>

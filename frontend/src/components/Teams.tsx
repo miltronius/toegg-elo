@@ -8,6 +8,7 @@ import {
   teamColor,
   computeTeamStats,
 } from "../lib/teamUtils";
+import { colors } from "../lib/colors";
 
 function TeamTooltip({
   children,
@@ -57,9 +58,9 @@ function TeamTooltip({
 }
 
 function winRateColor(rate: number): string {
-  if (rate >= 0.6) return "var(--success)";
-  if (rate >= 0.4) return "var(--warning)";
-  return "var(--error)";
+  if (rate >= 0.6) return colors.success;
+  if (rate >= 0.4) return colors.warning;
+  return colors.error;
 }
 
 const MEDALS = ["🥇", "🥈", "🥉"];
@@ -133,7 +134,6 @@ export function Teams({ matches, players, teamNames, seasons, selectedSeason, on
       t.player_id_hi === filterPlayerId,
   );
 
-  // globalRankMap uses all eligible teams (before player filter) for stable rank/medal assignment
   const globalRankMap = new Map(
     [...eligible]
       .sort((a, b) => b.wins - a.wins || b.winRate - a.winRate)
@@ -184,9 +184,9 @@ export function Teams({ matches, players, teamNames, seasons, selectedSeason, on
 
   return (
     <div className="card">
-      <div className="teams-header">
-        <h2>Teams</h2>
-        <div className="teams-controls">
+      <div className="flex items-center justify-between flex-wrap gap-2.5 mb-4">
+        <h2 className="m-0">Teams</h2>
+        <div className="flex items-center gap-3 flex-wrap">
           <select
             className="season-select"
             value={selectedSeason?.id ?? ""}
@@ -203,7 +203,7 @@ export function Teams({ matches, players, teamNames, seasons, selectedSeason, on
             ))}
           </select>
           <select
-            className="teams-player-filter"
+            className="px-2.5 py-1.5 border border-border rounded-lg bg-bg-light text-[0.8rem] font-semibold text-text cursor-pointer font-[inherit]"
             value={filterPlayerId}
             onChange={(e) => setFilterPlayerId(e.target.value)}
           >
@@ -233,10 +233,10 @@ export function Teams({ matches, players, teamNames, seasons, selectedSeason, on
         </div>
       </div>
 
-      <p className="teams-filter-note">Only teams with ≥ 2 matches are shown.</p>
+      <p className="text-[0.78rem] text-text-light -mt-2 mb-3">Only teams with ≥ 2 matches are shown.</p>
 
       {sorted.length === 0 && (
-        <div className="empty-state">
+        <div className="text-center py-12 px-4 text-text-light text-[0.95rem]">
           {teams.length === 0
             ? "No matches recorded yet."
             : "No teams found for this player."}
@@ -249,31 +249,16 @@ export function Teams({ matches, players, teamNames, seasons, selectedSeason, on
               <th className="rank" style={{ cursor: "pointer" }} onClick={() => handleSort("rank")}>
                 # {sortBy === "rank" && (sortAsc ? "▴" : "▾")}
               </th>
-              <th
-                style={{ cursor: "pointer" }}
-                onClick={() => handleSort("name")}
-              >
+              <th style={{ cursor: "pointer" }} onClick={() => handleSort("name")}>
                 Team {sortBy === "name" && (sortAsc ? "▴" : "▾")}
               </th>
-              <th
-                className="elo"
-                style={{ cursor: "pointer" }}
-                onClick={() => handleSort("elo")}
-              >
+              <th className="elo" style={{ cursor: "pointer" }} onClick={() => handleSort("elo")}>
                 Combined ELO {sortBy === "elo" && (sortAsc ? "▴" : "▾")}
               </th>
-              <th
-                className="record"
-                style={{ cursor: "pointer" }}
-                onClick={() => handleSort("matches")}
-              >
+              <th className="record" style={{ cursor: "pointer" }} onClick={() => handleSort("matches")}>
                 W – L {sortBy === "matches" && (sortAsc ? "▴" : "▾")}
               </th>
-              <th
-                className="winrate"
-                style={{ cursor: "pointer" }}
-                onClick={() => handleSort("winrate")}
-              >
+              <th className="winrate" style={{ cursor: "pointer" }} onClick={() => handleSort("winrate")}>
                 Win Rate {sortBy === "winrate" && (sortAsc ? "▴" : "▾")}
               </th>
               <th>Top Rival</th>
@@ -306,7 +291,7 @@ export function Teams({ matches, players, teamNames, seasons, selectedSeason, on
                     <div style={{ padding: "1rem" }}>
                       <div>{getTeamDisplayName(team, players)}</div>
                       {(team.nameRow?.alias_1 || team.nameRow?.alias_2) && (
-                        <div className="team-aliases-inline">
+                        <div className="text-[0.75rem] text-text-light mt-0.5">
                           {[team.nameRow.alias_1, team.nameRow.alias_2]
                             .filter(Boolean)
                             .join(" · ")}
@@ -319,34 +304,19 @@ export function Teams({ matches, players, teamNames, seasons, selectedSeason, on
                 <td className="record">
                   {team.wins} – {team.losses}
                 </td>
-                <td
-                  className="winrate"
-                  style={{ color: winRateColor(team.winRate) }}
-                >
+                <td className="winrate" style={{ color: winRateColor(team.winRate) }}>
                   {(team.winRate * 100).toFixed(0)}%
                 </td>
                 <td style={{ fontSize: "0.85rem", padding: 0 }}>
                   {team.rivals[0] ? (
                     (() => {
-                      const { name, color, rivalTeam } = rivalDisplay(
-                        team.rivals[0].key,
-                      );
+                      const { name, color, rivalTeam } = rivalDisplay(team.rivals[0].key);
                       const rPlayers = rivalTeam ? teamPlayers(rivalTeam) : [];
                       return (
                         <TeamTooltip tooltipPlayers={rPlayers} color={color}>
-                          <span
-                            style={{
-                              display: "flex",
-                              alignItems: "center",
-                              gap: "0.4rem",
-                              padding: "1rem",
-                            }}
-                          >
-                            <span
-                              className="team-color-dot"
-                              style={{ background: color }}
-                            />
-                            <span className="text-light">
+                          <span style={{ display: "flex", alignItems: "center", gap: "0.4rem", padding: "1rem" }}>
+                            <span className="inline-block w-2 h-2 rounded-full shrink-0" style={{ background: color }} />
+                            <span className="text-text-light">
                               {name} ({team.rivals[0].matchesPlayed}×)
                             </span>
                           </span>
@@ -354,12 +324,7 @@ export function Teams({ matches, players, teamNames, seasons, selectedSeason, on
                       );
                     })()
                   ) : (
-                    <span
-                      style={{ padding: "1rem", display: "block" }}
-                      className="text-light"
-                    >
-                      —
-                    </span>
+                    <span style={{ padding: "1rem", display: "block" }} className="text-text-light">—</span>
                   )}
                 </td>
               </tr>
@@ -368,19 +333,16 @@ export function Teams({ matches, players, teamNames, seasons, selectedSeason, on
           </tbody>
         </table>
       ) : sorted.length > 0 ? (
-        <div className="teams-grid">
+        <div className="grid gap-4 mt-2 grid-cols-[repeat(auto-fill,minmax(260px,1fr))] max-[480px]:grid-cols-[1fr]">
           {sorted.map((team) => (
             <div
               key={team.key}
-              className="team-card"
+              className="bg-bg border border-border rounded-lg p-5 cursor-pointer transition-[box-shadow,border-color] hover:shadow-lg hover:border-primary"
               onClick={() => onTeamClick(team)}
               style={{ borderLeft: `4px solid ${teamColor(team)}` }}
             >
-              <TeamTooltip
-                tooltipPlayers={teamPlayers(team)}
-                color={teamColor(team)}
-              >
-                <div className="team-card-names">
+              <TeamTooltip tooltipPlayers={teamPlayers(team)} color={teamColor(team)}>
+                <div className="font-bold text-base text-text mb-0.5">
                   {MEDALS[globalRankMap.get(team.key)!] && (
                     <span style={{ marginRight: "0.35rem" }}>
                       {MEDALS[globalRankMap.get(team.key)!]}
@@ -389,38 +351,26 @@ export function Teams({ matches, players, teamNames, seasons, selectedSeason, on
                   {getTeamDisplayName(team, players)}
                 </div>
                 {(team.nameRow?.alias_1 || team.nameRow?.alias_2) && (
-                  <div className="team-card-alias">
-                    {[team.nameRow!.alias_1, team.nameRow!.alias_2]
-                      .filter(Boolean)
-                      .join(" · ")}
+                  <div className="text-[0.75rem] text-text-light mb-3">
+                    {[team.nameRow!.alias_1, team.nameRow!.alias_2].filter(Boolean).join(" · ")}
                   </div>
                 )}
               </TeamTooltip>
-              <div className="team-card-stats">
-                <span className="team-combined-elo">{team.combinedElo}</span>
-                <span className="team-record">
-                  {team.wins} – {team.losses}
-                </span>
-                <span
-                  className="team-winrate"
-                  style={{ color: winRateColor(team.winRate) }}
-                >
+              <div className="flex gap-4 items-baseline flex-wrap mt-2">
+                <span className="text-[1.375rem] font-bold text-primary">{team.combinedElo}</span>
+                <span className="text-[0.85rem] text-text-light">{team.wins} – {team.losses}</span>
+                <span className="text-[0.85rem] font-semibold" style={{ color: winRateColor(team.winRate) }}>
                   {(team.winRate * 100).toFixed(0)}%
                 </span>
               </div>
               {team.rivals[0] &&
                 (() => {
-                  const { name, color, rivalTeam } = rivalDisplay(
-                    team.rivals[0].key,
-                  );
+                  const { name, color, rivalTeam } = rivalDisplay(team.rivals[0].key);
                   const rPlayers = rivalTeam ? teamPlayers(rivalTeam) : [];
                   return (
                     <TeamTooltip tooltipPlayers={rPlayers} color={color}>
-                      <div className="team-rival-tag">
-                        <span
-                          className="team-color-dot"
-                          style={{ background: color }}
-                        />
+                      <div className="flex items-center gap-1.5 mt-3 text-[0.75rem] text-text-light border-t border-border-light pt-2">
+                        <span className="inline-block w-2 h-2 rounded-full shrink-0" style={{ background: color }} />
                         {name} ({team.rivals[0].matchesPlayed}×)
                       </div>
                     </TeamTooltip>
