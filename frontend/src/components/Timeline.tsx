@@ -225,8 +225,18 @@ function buildTimeline(
       groups.push({ kind: "rankings", events: dayRankChanges });
     }
 
-    // Achievements group
-    const dayAchievements = achievementsByDate.get(date) ?? [];
+    // Achievements group (newest first, then by player name, then achievement id)
+    const dayAchievements = (achievementsByDate.get(date) ?? [])
+      .slice()
+      .sort((a, b) => {
+        const timeDiff = b.unlocked_at.localeCompare(a.unlocked_at);
+        if (timeDiff !== 0) return timeDiff;
+        const nameA = players.find((p) => p.id === a.player_id)?.name ?? "";
+        const nameB = players.find((p) => p.id === b.player_id)?.name ?? "";
+        const nameDiff = nameA.localeCompare(nameB);
+        if (nameDiff !== 0) return nameDiff;
+        return a.achievement_id.localeCompare(b.achievement_id);
+      });
     if (dayAchievements.length > 0) {
       groups.push({
         kind: "achievements",

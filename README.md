@@ -1,4 +1,4 @@
-# TöggELO
+# TöggElo   
 
 A dashboard to track 2v2 table soccer (foosball) matches and rank players using the Elo ranking system.
 
@@ -12,8 +12,12 @@ A dashboard to track 2v2 table soccer (foosball) matches and rank players using 
 - **Achievements tab** — per-player achievement tracking (users/admins only)
 - Match history with per-match ELO changes and season badge
 - Season support: all views filter by season; each season has its own K-factor
+
+#### Miscellaneous
+
 - Role-based access: viewers (read-only), users (record matches, edit, achievements), admins (full control)
 - Magic link login
+- Themes: Light mode, Dark mode, Windows 95 mode
 
 ## ELO Calculation
 

@@ -137,7 +137,7 @@ function AchievementRow({
           {unlockedCount}/{total}
         </span>
       </td>
-      <td className="achievements-progress">
+      <td className="achievements-progress" style={{ width: "100%" }}>
         <div className="achievements-progress-bar">
           <div
             className="achievements-progress-fill"
@@ -145,7 +145,7 @@ function AchievementRow({
           />
         </div>
       </td>
-      <td>
+      <td style={{ width: "1%", whiteSpace: "nowrap" }}>
         <div className="achievements-highlights">
           {highlights.map((s) => (
             <span
