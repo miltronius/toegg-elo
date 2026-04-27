@@ -35,7 +35,7 @@ Copy `frontend/.env.example` to `frontend/.env.local` and fill in:
 ## Architecture
 
 ### Stack
-- **Frontend:** React 19 + Vite + TypeScript, Recharts for ELO history charts
+- **Frontend:** React 19 + Vite + TypeScript, Recharts for ELO history charts, `@react95/core` for Win95 theme chrome
 - **Backend:** Supabase (PostgreSQL + Auth + RLS)
 - **Edge Function:** Deno (`supabase/functions/calculate-elo/`) for ELO computation
 - **Package manager:** pnpm
@@ -43,10 +43,11 @@ Copy `frontend/.env.example` to `frontend/.env.local` and fill in:
 ### Frontend Structure
 - `frontend/src/lib/supabase.ts` — all Supabase queries and mutations; single source of truth for data access
 - `frontend/src/contexts/AuthContext.tsx` — wraps the app, exposes `useAuth()` with user, role, and auth methods
+- `frontend/src/contexts/ThemeContext.tsx` — exposes `useTheme()` with `theme` (`"light" | "dark" | "win95"`) and `setTheme()`; persists selection in cookie `toegg-theme` (1-year); sets `data-theme` on `<html>` synchronously to avoid flash
 - `frontend/src/App.tsx` — main orchestrator; owns `loadData()` for refetching all state, passes data + callbacks to children; manages `selectedSeason` shared across Leaderboard, Teams, and PlayerDetail
 - `frontend/src/lib/teamUtils.ts` — pure team stat computation (`computeTeamStats`, `teamColor`, `teamKey`); no DB calls
 - `frontend/src/lib/achievements.ts` — `ACHIEVEMENT_DEFINITIONS` array; shared between frontend and the `_shared` edge function
-- `frontend/src/components/` — tab-based UI: Timeline, Leaderboard, Teams, TeamDetail, MatchForm, MatchHistory, PlayerDetail/Modal, Achievements, UserManagement, SeasonDialog
+- `frontend/src/components/` — tab-based UI: Timeline, Leaderboard, Teams, TeamDetail, MatchForm, MatchHistory, PlayerDetail/Modal, Achievements, UserManagement, SeasonDialog, ThemeToggle, Win95Shell
 - `frontend/src/test/setup.ts` — Vitest setup (jest-dom matchers, ResizeObserver mock)
 
 **Tab visibility rules:**
@@ -97,6 +98,16 @@ Two GitHub Actions workflows run on push/PR to main:
 - **Frontend:** Vitest + React Testing Library; test files colocated with source (`*.test.ts(x)`)
 - **Edge function:** Deno test runner; `elo_test.ts` covers pure ELO math (`getExpectedScore`, `calculateNewElo`)
 - Imports for the edge function declared in `deno.json` (not inline `jsr:`/`https:` specifiers — enforced by linter)
+
+### Theming
+
+Three themes selectable via a ☀️/🌙/🪟 toggle in the header; choice saved in cookie `toegg-theme`.
+
+- **Light** (default) — existing design unchanged
+- **Dark** — CSS variable overrides on `[data-theme="dark"]`; hardcoded `white` backgrounds in dialogs overridden via `[data-theme="dark"] .bg-white`
+- **Win95** — teal desktop + custom Win95 window chrome (`Win95Shell`); uses `@react95/core` (v9) for Win95 CSS variables/theming imported via `@react95/core/themes/win95.css`; component styles overridden via `[data-theme="win95"]` in `App.css`
+
+`ThemeProvider` must wrap `AuthProvider` in `main.tsx`. Do **not** use react95's `Modal` component as the window frame — it attaches drag event listeners that break inner click handlers; `Win95Shell` uses plain HTML instead.
 
 ### Workspace layout
 Root `package.json` + `pnpm-workspace.yaml` declare `frontend` as a pnpm workspace package. Husky is installed at root; `pnpm-lock.yaml` is committed at root (not gitignored).

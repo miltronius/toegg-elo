@@ -391,7 +391,7 @@ td.winrate { color: var(--color-success); text-align: center; font-weight: 500; 
 .achievements-progress-bar { background: var(--color-border); border-radius: 999px; height: 8px; overflow: hidden; }
 .achievements-progress-fill { background: var(--color-primary); height: 100%; border-radius: 999px; transition: width 0.3s; }
 .achievements-count { font-weight: 600; font-size: 0.9rem; }
-.achievements-highlights { display: flex; gap: 0.3rem; align-items: center; flex-wrap: wrap; }
+.achievements-highlights { display: flex; gap: 0.3rem; align-items: center; flex-wrap: nowrap; width: max-content; }
 .achievements-highlight-badge { display: inline-flex; align-items: center; justify-content: center; width: 1.75rem; height: 1.75rem; border-radius: 50%; border: 1.5px solid; font-size: 0.95rem; line-height: 1; }
 .achievements-none { font-size: 0.75rem; color: var(--color-text-light); }
 
@@ -608,4 +608,170 @@ td.winrate { color: var(--color-success); text-align: center; font-weight: 500; 
 }
 @media (max-width: 640px) {
   .leaderboard-table { font-size: 0.85rem; }
+}
+
+/* ── Dark theme ──────────────────────────────────────────────────── */
+[data-theme="dark"] {
+  --color-primary:       #60a5fa;
+  --color-primary-dark:  #3b82f6;
+  --color-success:       #34d399;
+  --color-success-light: #064e3b;
+  --color-error:         #f87171;
+  --color-error-light:   #450a0a;
+  --color-warning:       #fbbf24;
+  --color-text:          #e5e7eb;
+  --color-text-light:    #9ca3af;
+  --color-bg:            #111827;
+  --color-bg-light:      #1f2937;
+  --color-border:        #374151;
+  --color-border-light:  #1f2937;
+  --bump-grid:           #374151;
+  --tooltip-bg:          #1f2937;
+  --tooltip-sub:         #9ca3af;
+}
+
+[data-theme="dark"] ::selection { background: #60a5fa; color: #111827; }
+
+[data-theme="dark"] .card { background: #1f2937; }
+[data-theme="dark"] header,
+[data-theme="dark"] nav { background: #1f2937 !important; }
+[data-theme="dark"] .btn-secondary { background: #1f2937; }
+[data-theme="dark"] .btn-secondary:hover { background: #374151; }
+[data-theme="dark"] .form-group input,
+[data-theme="dark"] .form-group select { background: #1f2937; color: var(--color-text); }
+[data-theme="dark"] .lb-toggle-btn.active { background: #374151; }
+[data-theme="dark"] .season-select { background: #1f2937; color: var(--color-text); }
+[data-theme="dark"] .team-tooltip { background: #1f2937; }
+[data-theme="dark"] .achievement-card { background: #1f2937; }
+[data-theme="dark"] .auth-method-toggle::before { background: #374151; }
+[data-theme="dark"] .bg-white { background-color: #1f2937 !important; }
+[data-theme="dark"] .text-gray-900,
+[data-theme="dark"] .text-gray-800 { color: var(--color-text) !important; }
+
+/* ── Win95 theme ─────────────────────────────────────────────────── */
+[data-theme="win95"] {
+  --color-primary:       #000080;
+  --color-primary-dark:  #000060;
+  --color-success:       #008000;
+  --color-success-light: #c0ffc0;
+  --color-error:         #800000;
+  --color-error-light:   #ffc0c0;
+  --color-warning:       #808000;
+  --color-text:          #000000;
+  --color-text-light:    #444444;
+  --color-bg:            #c0c0c0;
+  --color-bg-light:      #d4d0c8;
+  --color-border:        #808080;
+  --color-border-light:  #a0a0a0;
+  --font-sans:           "MS Sans Serif", "Segoe UI", Arial, sans-serif;
+  --bump-grid:           #808080;
+  --tooltip-bg:          #ffffdc;
+  --tooltip-sub:         #444444;
+}
+
+[data-theme="win95"] ::selection { background: #000080; color: #ffffff; }
+
+[data-theme="win95"] .card {
+  background: #d4d0c8;
+  border-radius: 0;
+  border: none;
+  box-shadow: inset 0.5px 0.5px 0px 0.5px #ffffff,
+    inset 0 0 0 1px #868a8e,
+    1px 0px 0 0px #000000,
+    0px 1px 0 0px #000000,
+    1px 1px 0 0px #000000;
+}
+
+[data-theme="win95"] header,
+[data-theme="win95"] nav {
+  background: #d4d0c8 !important;
+  border-color: #808080 !important;
+  box-shadow: none !important;
+}
+
+[data-theme="win95"] .btn-primary {
+  background: #d4d0c8;
+  color: #000000;
+  border-radius: 0;
+  border: none;
+  box-shadow: inset 0.5px 0.5px 0px 0.5px #ffffff,
+    inset 0 0 0 1px #868a8e,
+    1px 1px 0 0px #000000;
+}
+[data-theme="win95"] .btn-primary:hover { background: #d4d0c8; box-shadow: inset 0.5px 0.5px 0px 0.5px #ffffff, inset 0 0 0 1px #868a8e, 1px 1px 0 0px #000000; }
+[data-theme="win95"] .btn-primary:active { box-shadow: inset 1px 1px 0px 1px #868a8e, inset 0 0 0 1px #ffffff; }
+[data-theme="win95"] .btn-primary:disabled { background: #d4d0c8; color: #808080; }
+
+[data-theme="win95"] .btn-secondary {
+  background: #d4d0c8;
+  border-radius: 0;
+  border: none;
+  box-shadow: inset 0.5px 0.5px 0px 0.5px #ffffff,
+    inset 0 0 0 1px #868a8e,
+    1px 1px 0 0px #000000;
+}
+[data-theme="win95"] .btn-secondary:hover { background: #d4d0c8; box-shadow: inset 0.5px 0.5px 0px 0.5px #ffffff, inset 0 0 0 1px #868a8e, 1px 1px 0 0px #000000; }
+
+[data-theme="win95"] .btn-small,
+[data-theme="win95"] .btn-delete,
+[data-theme="win95"] .btn-danger {
+  border-radius: 0;
+}
+
+[data-theme="win95"] .form-group input,
+[data-theme="win95"] .form-group select {
+  background: #ffffff;
+  border-radius: 0;
+  border: none;
+  box-shadow: inset 1px 1px 0 0 #868a8e,
+    inset -0.5px -0.5px 0 0.5px #ffffff,
+    inset 1px 1px 0 1px #000000;
+}
+[data-theme="win95"] .form-group input:focus,
+[data-theme="win95"] .form-group select:focus {
+  box-shadow: inset 1px 1px 0 0 #868a8e, inset -0.5px -0.5px 0 0.5px #ffffff, inset 1px 1px 0 1px #000000;
+  border-color: transparent;
+}
+
+[data-theme="win95"] .lb-toggle { background: #d4d0c8; border-radius: 0; border-color: #808080; }
+[data-theme="win95"] .lb-toggle-btn { border-radius: 0; }
+[data-theme="win95"] .lb-toggle-btn.active {
+  background: #d4d0c8;
+  box-shadow: inset 1px 1px 0 0 #868a8e, inset -0.5px -0.5px 0 0.5px #ffffff, inset 1px 1px 0 1px #000000;
+}
+
+[data-theme="win95"] .season-select {
+  background: #ffffff;
+  border-radius: 0;
+  font-family: var(--font-sans);
+}
+
+[data-theme="win95"] .leaderboard-table tbody tr:hover { background: #000080; }
+[data-theme="win95"] .leaderboard-table tbody tr:hover td { color: #ffffff; }
+[data-theme="win95"] .leaderboard-table tbody tr:hover .elo,
+[data-theme="win95"] .leaderboard-table tbody tr:hover .rank { color: #ffffff; }
+
+[data-theme="win95"] .stat-card { background: #d4d0c8; border-radius: 0; border-color: #808080; }
+[data-theme="win95"] .achievement-card { background: #d4d0c8; border-radius: 0; }
+[data-theme="win95"] .team-tooltip { background: #ffffdc; border-radius: 0; box-shadow: 1px 1px 0 0 #000000; }
+
+[data-theme="win95"] main { max-width: none; }
+[data-theme="win95"] .match-season-badge { border-radius: 0; }
+[data-theme="win95"] .achievement-rarity-badge { border-radius: 0; }
+[data-theme="win95"] .achievements-progress-bar { border-radius: 0; }
+[data-theme="win95"] .achievements-progress-fill { border-radius: 0; }
+
+/* Win95 scrollbar */
+[data-theme="win95"] ::-webkit-scrollbar { width: 16px; height: 16px; }
+[data-theme="win95"] ::-webkit-scrollbar-track { background: #c0c0c0; }
+[data-theme="win95"] ::-webkit-scrollbar-thumb {
+  background: #c0c0c0;
+  box-shadow: inset 0.5px 0.5px 0px 0.5px #ffffff, inset 0 0 0 1px #868a8e, 1px 1px 0 0px #000000;
+}
+[data-theme="win95"] ::-webkit-scrollbar-button {
+  background: #c0c0c0;
+  box-shadow: inset 0.5px 0.5px 0px 0.5px #ffffff, inset 0 0 0 1px #868a8e, 1px 1px 0 0px #000000;
+  display: block;
+  height: 16px;
+  width: 16px;
 }

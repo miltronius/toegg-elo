@@ -19,6 +19,7 @@ import {
 } from "./lib/supabase";
 import type { PlayerAchievementRow } from "./lib/achievements";
 import { useAuth } from "./contexts/AuthContext";
+import { useTheme } from "./contexts/ThemeContext";
 import { AuthScreen } from "./components/AuthScreen";
 import { CreatePlayerModal } from "./components/PlayerModal";
 import { MatchForm } from "./components/MatchForm";
@@ -31,11 +32,14 @@ import { TeamDetail } from "./components/TeamDetail";
 import { Achievements } from "./components/Achievements";
 import { Timeline } from "./components/Timeline";
 import { SeasonDialog } from "./components/SeasonDialog";
+import { ThemeToggle } from "./components/ThemeToggle";
+import { Win95Shell } from "./components/Win95Shell";
 import { computeTeamStats, TeamStats } from "./lib/teamUtils";
 import "./App.css";
 
 function App() {
   const { user, role, loading: authLoading, signOut } = useAuth();
+  const { theme } = useTheme();
   const [players, setPlayers] = useState<Player[]>([]);
   const [matches, setMatches] = useState<Match[]>([]);
   const [eloHistory, setEloHistory] = useState<Map<string, EloHistory[]>>(
@@ -144,7 +148,7 @@ function App() {
         : "text-text-light border-b-transparent hover:text-text hover:border-b-primary"
     }`;
 
-  return (
+  const appContent = (
     <div className="min-h-screen flex flex-col">
       <header className="bg-white border-b border-border px-8 py-6 flex justify-between items-center shadow-sm flex-wrap gap-3">
         <h1 className="text-[1.875rem] font-bold">TöggElo⚽</h1>
@@ -154,6 +158,7 @@ function App() {
           onSeasonChanged={loadData}
         />
         <div className="flex items-center gap-3">
+          <ThemeToggle />
           {canEdit && (
             <button className="btn-primary" onClick={() => setModalOpen(true)}>
               + New Player
@@ -324,6 +329,8 @@ function App() {
       {authOpen && <AuthScreen onClose={() => setAuthOpen(false)} />}
     </div>
   );
+
+  return theme === "win95" ? <Win95Shell>{appContent}</Win95Shell> : appContent;
 }
 
 export default App;
