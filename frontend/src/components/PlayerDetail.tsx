@@ -111,6 +111,16 @@ export function PlayerDetail({
   );
   const [rawHistory, setRawHistory] = useState<EloHistory[]>([]);
   const [xAxisMode, setXAxisMode] = useState<"game" | "date">("date");
+
+  const currentStreak = useMemo(() => {
+    const matchRows = rawHistory.filter((h) => h.match_id != null);
+    let streak = 0;
+    for (let i = matchRows.length - 1; i >= 0; i--) {
+      if (matchRows[i].elo_change > 0) streak++;
+      else break;
+    }
+    return streak >= 2 ? streak : 0;
+  }, [rawHistory]);
   const [loading, setLoading] = useState(true);
   const [isEditingName, setIsEditingName] = useState(false);
   const [newName, setNewName] = useState(player.name);
@@ -318,12 +328,17 @@ export function PlayerDetail({
               </button>
             </div>
           ) : (
-            <h2
-              onClick={() => setIsEditingName(true)}
-              className="text-2xl font-bold cursor-pointer hover:text-primary transition-colors m-0"
-            >
-              {player.name}
-            </h2>
+            <div className="flex items-center gap-2 min-w-0">
+              <h2
+                onClick={() => setIsEditingName(true)}
+                className="text-2xl font-bold cursor-pointer hover:text-primary transition-colors m-0"
+              >
+                {player.name}
+              </h2>
+              {currentStreak > 0 && (
+                <span className="streak-badge" title="Winstreak">🔥{currentStreak}</span>
+              )}
+            </div>
           )}
           <div className="flex items-center gap-2 shrink-0">
             {onNavigate && (

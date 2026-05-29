@@ -32,6 +32,28 @@ interface Snapshot {
 const playerColor = (i: number, total: number) =>
   `hsl(${Math.round((i / Math.max(total, 1)) * 360)}, 85%, 60%)`;
 
+function computePlayerStreaks(history: EloHistory[]): Map<string, number> {
+  const byPlayer = new Map<string, EloHistory[]>();
+  for (const h of history) {
+    if (!h.match_id) continue;
+    if (!byPlayer.has(h.player_id)) byPlayer.set(h.player_id, []);
+    byPlayer.get(h.player_id)!.push(h);
+  }
+  const streaks = new Map<string, number>();
+  for (const [playerId, entries] of byPlayer) {
+    const sorted = [...entries].sort(
+      (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+    );
+    let streak = 0;
+    for (let i = sorted.length - 1; i >= 0; i--) {
+      if (sorted[i].elo_change > 0) streak++;
+      else break;
+    }
+    if (streak >= 2) streaks.set(playerId, streak);
+  }
+  return streaks;
+}
+
 function buildSnapshots(players: Player[], history: EloHistory[], isSeasonView = false): Snapshot[] {
   if (!history.length) return [];
   const sorted = [...history].sort(
@@ -293,6 +315,8 @@ export function Leaderboard({
     isSeasonView && selectedSeason
       ? history.filter((h) => (h as { season_id?: string }).season_id === selectedSeason.id)
       : history;
+  const playerStreaks = computePlayerStreaks(effectiveHistory);
+
   const [sortBy, setSortBy] = useState<"elo" | "name" | "winrate">("elo");
   const [sortAsc, setSortAsc] = useState(false);
   const [show1500Sep, setShow1500Sep] = useState(true);
@@ -572,7 +596,12 @@ export function Leaderboard({
                     className={`clickable-row${rowClass ? ` ${rowClass}` : ""}`}
                   >
                     <td className="rank">#{rank}</td>
-                    <td className="name">{player.name}</td>
+                    <td className="name">
+                      {player.name}
+                      {playerStreaks.get(player.id) && (
+                        <span className="streak-badge" title="Winstreak">🔥{playerStreaks.get(player.id)}</span>
+                      )}
+                    </td>
                     <td className="elo">{player.current_elo}</td>
                     <td className="winrate">{winrate}%</td>
                   </tr>
