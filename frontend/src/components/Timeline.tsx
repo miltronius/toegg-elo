@@ -120,12 +120,31 @@ function buildTimeline(
 
   // Season ELO reconstruction — keyed by season_id, each player starts at 1500
   const seasonElos = new Map<string, Map<string, number>>();
+  const seasonWins = new Map<string, Map<string, number>>();
+  const seasonLosses = new Map<string, Map<string, number>>();
 
   const getSeasonElos = (seasonId: string): Map<string, number> => {
     if (!seasonElos.has(seasonId)) {
       seasonElos.set(seasonId, new Map(players.map((p) => [p.id, 1500])));
     }
     return seasonElos.get(seasonId)!;
+  };
+
+  const getSeasonWins = (seasonId: string): Map<string, number> => {
+    if (!seasonWins.has(seasonId)) seasonWins.set(seasonId, new Map());
+    return seasonWins.get(seasonId)!;
+  };
+
+  const getSeasonLosses = (seasonId: string): Map<string, number> => {
+    if (!seasonLosses.has(seasonId)) seasonLosses.set(seasonId, new Map());
+    return seasonLosses.get(seasonId)!;
+  };
+
+  const seasonWinrate = (seasonId: string, playerId: string): number => {
+    const w = getSeasonWins(seasonId).get(playerId) ?? 0;
+    const l = getSeasonLosses(seasonId).get(playerId) ?? 0;
+    const t = w + l;
+    return t > 0 ? w / t : 0;
   };
 
   const activeDates = [...matchesByDate.keys()].sort();
@@ -150,7 +169,7 @@ function buildTimeline(
     const rankBefore = new Map<string, number>();
     [...elosForSeason.entries()]
       .filter(([id]) => seasonActivePlayers.has(id))
-      .sort((a, b) => b[1] - a[1])
+      .sort((a, b) => (b[1] - a[1]) || (seasonWinrate(seasonId, b[0]) - seasonWinrate(seasonId, a[0])))
       .forEach(([id], i) => rankBefore.set(id, i + 1));
 
     // Apply all elo changes for this day (season-filtered entries only)
@@ -160,13 +179,20 @@ function buildTimeline(
       const delta = entry.elo_after - entry.elo_before;
       elosForSeason.set(entry.player_id, current + delta);
       seasonActivePlayers.add(entry.player_id);
+      if (entry.elo_change > 0) {
+        const w = getSeasonWins(seasonId);
+        w.set(entry.player_id, (w.get(entry.player_id) ?? 0) + 1);
+      } else if (entry.elo_change < 0) {
+        const l = getSeasonLosses(seasonId);
+        l.set(entry.player_id, (l.get(entry.player_id) ?? 0) + 1);
+      }
     }
 
     // Rank after (active players only)
     const rankAfter = new Map<string, number>();
     [...elosForSeason.entries()]
       .filter(([id]) => seasonActivePlayers.has(id))
-      .sort((a, b) => b[1] - a[1])
+      .sort((a, b) => (b[1] - a[1]) || (seasonWinrate(seasonId, b[0]) - seasonWinrate(seasonId, a[0])))
       .forEach(([id], i) => rankAfter.set(id, i + 1));
 
     const events: (RankChangeEvent | FirstGameEvent)[] = [];

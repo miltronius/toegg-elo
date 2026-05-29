@@ -99,16 +99,29 @@ function buildSnapshots(players: Player[], history: EloHistory[], isSeasonView =
     if (currentElo[p.id] === undefined) currentElo[p.id] = p.current_elo;
   });
 
+  const currentWins: Record<string, number> = {};
+  const currentLosses: Record<string, number> = {};
+
   const rankablePlayers = isSeasonView
     ? players.filter((p) => seenPlayerIds.has(p.id))
     : players;
 
   const snapshots: Snapshot[] = [];
   matchOrder.forEach((matchId, matchIdx) => {
-    for (const h of byMatch[matchId]) currentElo[h.player_id] = h.elo_after;
+    for (const h of byMatch[matchId]) {
+      currentElo[h.player_id] = h.elo_after;
+      if (h.elo_change > 0) currentWins[h.player_id] = (currentWins[h.player_id] ?? 0) + 1;
+      else if (h.elo_change < 0) currentLosses[h.player_id] = (currentLosses[h.player_id] ?? 0) + 1;
+    }
+    const winrateOf = (id: string) => {
+      const w = currentWins[id] ?? 0;
+      const l = currentLosses[id] ?? 0;
+      const t = w + l;
+      return t > 0 ? w / t : 0;
+    };
     const ranked = [...rankablePlayers]
       .map((p) => ({ id: p.id, elo: normalize(p.id, currentElo[p.id] ?? p.current_elo) }))
-      .sort((a, b) => b.elo - a.elo);
+      .sort((a, b) => (b.elo - a.elo) || (winrateOf(b.id) - winrateOf(a.id)));
     ranked.forEach(({ id, elo }, i) =>
       snapshots.push({
         player_id: id,
