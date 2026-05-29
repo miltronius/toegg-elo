@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Leaderboard } from "./Leaderboard";
-import type { Player, EloHistory } from "../lib/supabase";
+import type { Player, EloHistory, Season, PlayerSeasonStats } from "../lib/supabase";
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -162,6 +162,148 @@ describe("Leaderboard — winrate", () => {
     // toggle off Active only → newbie appears
     fireEvent.click(screen.getByText("Active only"));
     expect(screen.getByText("0%")).toBeInTheDocument();
+  });
+});
+
+// ── season view: exclude players who didn't exist that season ──────────────────
+
+describe("Leaderboard — season view participation", () => {
+  const season = (
+    id: string,
+    number: number,
+    name: string,
+    is_active = false,
+  ): Season => ({
+    id,
+    number,
+    name,
+    is_active,
+    k_factor: 32,
+    inactivity_penalty_percent: 0,
+    started_at: "2024-01-01T00:00:00Z",
+    ended_at: is_active ? null : "2024-06-01T00:00:00Z",
+    created_at: "2024-01-01T00:00:00Z",
+  });
+
+  const eh = (
+    player_id: string,
+    season_id: string,
+    match_id: string,
+    elo_before: number,
+    elo_after: number,
+    created_at: string,
+  ): EloHistory => ({
+    id: `${player_id}-${match_id}`,
+    player_id,
+    match_id,
+    season_id,
+    elo_before,
+    elo_after,
+    elo_change: elo_after - elo_before,
+    created_at,
+  });
+
+  const pss = (
+    player_id: string,
+    season_id: string,
+    current_season_elo = 1500,
+    wins = 0,
+    losses = 0,
+  ): PlayerSeasonStats => ({
+    id: `${player_id}-${season_id}`,
+    player_id,
+    season_id,
+    elo_at_start: 1500,
+    current_season_elo,
+    wins,
+    losses,
+    last_match_at: null,
+    created_at: "2024-01-01T00:00:00Z",
+  });
+
+  const S1 = season("s1", 1, "Spring");
+  const S2 = season("s2", 2, "Summer", true);
+  // Veteran played in S1; Latecomer first appears in S2. Both have all-time matches.
+  const VETERAN = player("vvv", "Veteran", 1700, 8, 2);
+  const LATECOMER = player("lll", "Latecomer", 1600, 3, 1);
+  const HISTORY: EloHistory[] = [
+    eh("vvv", "s1", "m1", 1500, 1520, "2024-02-01T00:00:00Z"),
+    eh("lll", "s2", "m2", 1500, 1530, "2024-07-01T00:00:00Z"),
+  ];
+
+  it("excludes a player who has no history in the selected older season", () => {
+    render(
+      <Leaderboard
+        players={[VETERAN, LATECOMER]}
+        history={HISTORY}
+        seasons={[S2, S1]}
+        selectedSeason={S1}
+      />,
+    );
+    expect(screen.getByText("Veteran")).toBeInTheDocument();
+    expect(screen.queryByText("Latecomer")).not.toBeInTheDocument();
+  });
+
+  it("includes a player only in the season where they actually played", () => {
+    render(
+      <Leaderboard
+        players={[VETERAN, LATECOMER]}
+        history={HISTORY}
+        seasons={[S2, S1]}
+        selectedSeason={S2}
+      />,
+    );
+    expect(screen.getByText("Latecomer")).toBeInTheDocument();
+    expect(screen.queryByText("Veteran")).not.toBeInTheDocument();
+  });
+
+  it("shows all players with matches in all-time view", () => {
+    render(
+      <Leaderboard
+        players={[VETERAN, LATECOMER]}
+        history={HISTORY}
+        seasons={[S2, S1]}
+        selectedSeason={null}
+      />,
+    );
+    expect(screen.getByText("Veteran")).toBeInTheDocument();
+    expect(screen.getByText("Latecomer")).toBeInTheDocument();
+  });
+
+  it("shows the full season roster (incl. zero-match players) when Active only is off", () => {
+    // Freshly created S2: every current player has a stats row but no matches yet.
+    render(
+      <Leaderboard
+        players={[VETERAN, LATECOMER]}
+        history={[]}
+        seasons={[S2, S1]}
+        selectedSeason={S2}
+        playerSeasonStats={[pss("vvv", "s2"), pss("lll", "s2")]}
+      />,
+    );
+    // Active only is on by default → nobody has played the new season yet.
+    expect(screen.queryByText("Veteran")).not.toBeInTheDocument();
+    expect(screen.queryByText("Latecomer")).not.toBeInTheDocument();
+    // Turn Active only off → the whole roster shows (all at starting ELO).
+    fireEvent.click(screen.getByText("Active only"));
+    expect(screen.getByText("Veteran")).toBeInTheDocument();
+    expect(screen.getByText("Latecomer")).toBeInTheDocument();
+  });
+
+  it("still excludes a later-season newcomer from an older season even with Active only off", () => {
+    // S1 roster only had Veteran; Latecomer joined for S2.
+    render(
+      <Leaderboard
+        players={[VETERAN, LATECOMER]}
+        history={HISTORY}
+        seasons={[S2, S1]}
+        selectedSeason={S1}
+        playerSeasonStats={[pss("vvv", "s1", 1520, 1, 0)]}
+      />,
+    );
+    fireEvent.click(screen.getByText("Active only"));
+    expect(screen.getByText("Veteran")).toBeInTheDocument();
+    expect(screen.queryByText("Latecomer")).not.toBeInTheDocument();
   });
 });
 

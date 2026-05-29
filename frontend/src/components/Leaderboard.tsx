@@ -355,9 +355,23 @@ export function Leaderboard({
     return () => ro.disconnect();
   }, [view]);
 
-  const visiblePlayers = showOnlyActive
-    ? effectivePlayers.filter((p) => p.matches_played > 0)
+  // In season view, scope the player list to that season's roster: anyone with a
+  // per-season stats row (one is created for every player when the season starts)
+  // or who appears in the season's history. This excludes players who first joined
+  // in a later season — otherwise they'd chart with their all-time ELO across a
+  // season they never played — while still showing the full roster of a freshly
+  // created season that has no matches yet (so "Active only off" lists everyone).
+  const seasonRosterIds = new Set<string>([
+    ...(playerSeasonStats ?? []).map((s) => s.player_id),
+    ...effectiveHistory.map((h) => h.player_id),
+  ]);
+  const scopedPlayers = isSeasonView
+    ? effectivePlayers.filter((p) => seasonRosterIds.has(p.id))
     : effectivePlayers;
+
+  const visiblePlayers = showOnlyActive
+    ? scopedPlayers.filter((p) => p.matches_played > 0)
+    : scopedPlayers;
 
   const anyAtStartingElo = visiblePlayers.some((p) => p.current_elo === 1500);
 
