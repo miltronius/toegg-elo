@@ -9,6 +9,9 @@ import {
   Legend,
   ResponsiveContainer,
   ReferenceLine,
+  ComposedChart,
+  Bar,
+  LabelList,
 } from "recharts";
 import {
   getEloHistory,
@@ -24,6 +27,7 @@ import {
   buildAchievementStatuses,
   type PlayerAchievementRow,
 } from "../lib/achievements";
+import { computeWeekdayStats } from "../lib/weekdayStats";
 import { AchievementGallery } from "./Achievements";
 
 interface HeadToHead {
@@ -216,6 +220,25 @@ export function PlayerDetail({
         : matches,
     [matches, selectedSeason],
   );
+
+  // Games + winrate per weekday (Mon–Fri), scoped to the selected season.
+  const weekdayStats = useMemo(
+    () => computeWeekdayStats(rawHistory, selectedSeason?.id ?? null),
+    [rawHistory, selectedSeason],
+  );
+
+  // Recharts tooltips render a hardcoded white box; drive their colors from the
+  // theme CSS variables so they stay legible in dark mode. --tooltip-bg and
+  // --color-text are both theme-aware (defined per theme in App.css).
+  const tooltipStyle = {
+    contentStyle: {
+      background: "var(--tooltip-bg)",
+      border: "1px solid var(--bump-grid)",
+      borderRadius: 8,
+      color: "var(--color-text)",
+    },
+    labelStyle: { color: "var(--color-text)" },
+  };
 
   const effectiveStats = useMemo(() => {
     if (!selectedSeason)
@@ -485,8 +508,8 @@ export function PlayerDetail({
                 </div>
 
                 <div className="mb-6">
-                  <h3>ELO Progression</h3>
-                  <ResponsiveContainer width="100%" height={300}>
+                  <h3>ELO &amp; Winrate Over Time</h3>
+                  <ResponsiveContainer width="100%" height={320}>
                     <LineChart
                       data={
                         xAxisMode === "date"
@@ -496,10 +519,27 @@ export function PlayerDetail({
                     >
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="date" />
-                      <YAxis domain={["dataMin - 50", "dataMax + 50"]} />
-                      <Tooltip />
+                      <YAxis
+                        yAxisId="elo"
+                        domain={["dataMin - 50", "dataMax + 50"]}
+                      />
+                      <YAxis
+                        yAxisId="winrate"
+                        orientation="right"
+                        domain={[0, 100]}
+                        tickFormatter={(v) => `${v}%`}
+                      />
+                      <Tooltip
+                        {...tooltipStyle}
+                        formatter={(value, name) =>
+                          name === "Winrate %"
+                            ? `${(value as number).toFixed(1)}%`
+                            : value
+                        }
+                      />
                       <Legend />
                       <ReferenceLine
+                        yAxisId="elo"
                         y={1500}
                         stroke="#f59e0b"
                         strokeDasharray="6 4"
@@ -513,6 +553,7 @@ export function PlayerDetail({
                         }}
                       />
                       <Line
+                        yAxisId="elo"
                         type="monotone"
                         dataKey="elo"
                         stroke="#3b82f6"
@@ -520,26 +561,8 @@ export function PlayerDetail({
                         dot={false}
                         strokeWidth={2}
                       />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-
-                <div className="mb-6">
-                  <h3>Winrate Over Time</h3>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <LineChart
-                      data={
-                        xAxisMode === "date"
-                          ? chartData.perDate
-                          : chartData.perGame
-                      }
-                    >
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="date" />
-                      <YAxis domain={[0, 100]} label={{ value: "%" }} />
-                      <Tooltip formatter={(value) => `${value.toFixed(1)}%`} />
-                      <Legend />
                       <Line
+                        yAxisId="winrate"
                         type="monotone"
                         dataKey="winrate"
                         stroke="#10b981"
@@ -548,6 +571,72 @@ export function PlayerDetail({
                         strokeWidth={2}
                       />
                     </LineChart>
+                  </ResponsiveContainer>
+                </div>
+
+                <div className="mb-6">
+                  <h3>Games by Weekday</h3>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <ComposedChart data={weekdayStats}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="day" />
+                      <YAxis
+                        yAxisId="games"
+                        allowDecimals={false}
+                        label={{
+                          value: "Games",
+                          angle: -90,
+                          position: "insideLeft",
+                        }}
+                      />
+                      <YAxis
+                        yAxisId="winrate"
+                        orientation="right"
+                        domain={[0, 100]}
+                        tickFormatter={(v) => `${v}%`}
+                      />
+                      <Tooltip
+                        {...tooltipStyle}
+                        formatter={(value, name) =>
+                          name === "Winrate %"
+                            ? [
+                                value == null
+                                  ? "—"
+                                  : `${(value as number).toFixed(1)}%`,
+                                name,
+                              ]
+                            : [value as number, name]
+                        }
+                      />
+                      <Legend />
+                      <Bar
+                        yAxisId="games"
+                        dataKey="games"
+                        name="Games"
+                        fill="#3b82f6"
+                        radius={[4, 4, 0, 0]}
+                        maxBarSize={56}
+                      />
+                      <Line
+                        yAxisId="winrate"
+                        type="monotone"
+                        dataKey="winrate"
+                        name="Winrate %"
+                        stroke="#10b981"
+                        strokeWidth={2}
+                        connectNulls={false}
+                        dot={{ r: 3 }}
+                      >
+                        <LabelList
+                          dataKey="winrate"
+                          position="top"
+                          formatter={(value: number | null) =>
+                            value == null ? "" : `${Math.round(value)}%`
+                          }
+                          style={{ fill: "#10b981", fontSize: 11 }}
+                        />
+                      </Line>
+                    </ComposedChart>
                   </ResponsiveContainer>
                 </div>
               </>

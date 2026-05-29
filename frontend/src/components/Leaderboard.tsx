@@ -385,6 +385,14 @@ export function Leaderboard({
     (a, b) => (b.current_elo - a.current_elo) || (winrateOf(b) - winrateOf(a)),
   );
 
+  // effectivePlayers/visiblePlayers carry season-overridden ELO/wins/losses for
+  // in-table display. Consumers (PlayerDetail) expect the canonical all-time
+  // player, so map back to the original by id before handing it off — otherwise
+  // PlayerDetail's All-Time view would show the season's numbers.
+  const handlePlayerClick = onPlayerClick
+    ? (p: Player) => onPlayerClick(players.find((orig) => orig.id === p.id) ?? p)
+    : undefined;
+
   const handleSort = (key: "elo" | "name" | "winrate") => {
     if (sortBy === key) setSortAsc((a) => !a);
     else { setSortBy(key); setSortAsc(false); }
@@ -620,7 +628,7 @@ export function Leaderboard({
                 const row = (
                   <tr
                     key={player.id}
-                    onClick={() => onPlayerClick?.(player)}
+                    onClick={() => handlePlayerClick?.(player)}
                     className={`clickable-row${rowClass ? ` ${rowClass}` : ""}`}
                   >
                     <td className="rank">#{rank}</td>
@@ -667,7 +675,7 @@ export function Leaderboard({
                 }}
                 onMouseEnter={() => setHovered(p.id)}
                 onMouseLeave={() => setHovered(null)}
-                onClick={() => onPlayerClick?.(p)}
+                onClick={() => handlePlayerClick?.(p)}
               >
                 <span
                   className="bump-legend-dot"
@@ -835,7 +843,7 @@ export function Leaderboard({
                           transition: "fill-opacity 0.2s",
                           cursor: "pointer",
                         }}
-                        onClick={() => onPlayerClick(player)}
+                        onClick={() => handlePlayerClick?.(player)}
                       >
                         {player.name}
                       </text>
@@ -938,7 +946,7 @@ export function Leaderboard({
                 }}
                 onMouseEnter={() => setHovered(p.id)}
                 onMouseLeave={() => setHovered(null)}
-                onClick={() => onPlayerClick?.(p)}
+                onClick={() => handlePlayerClick?.(p)}
               >
                 <span
                   className="bump-legend-dot"
