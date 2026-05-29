@@ -355,13 +355,18 @@ export function Leaderboard({
     return () => ro.disconnect();
   }, [view]);
 
-  // In season view, only players who actually appear in the selected season's
-  // history "existed" then. Without this, a player who first joined in a later
-  // season is charted with their all-time ELO across an older season they never
-  // played in. (Mirrors the bump chart's seen-player filtering in buildSnapshots.)
-  const seasonParticipantIds = new Set(effectiveHistory.map((h) => h.player_id));
+  // In season view, scope the player list to that season's roster: anyone with a
+  // per-season stats row (one is created for every player when the season starts)
+  // or who appears in the season's history. This excludes players who first joined
+  // in a later season — otherwise they'd chart with their all-time ELO across a
+  // season they never played — while still showing the full roster of a freshly
+  // created season that has no matches yet (so "Active only off" lists everyone).
+  const seasonRosterIds = new Set<string>([
+    ...(playerSeasonStats ?? []).map((s) => s.player_id),
+    ...effectiveHistory.map((h) => h.player_id),
+  ]);
   const scopedPlayers = isSeasonView
-    ? effectivePlayers.filter((p) => seasonParticipantIds.has(p.id))
+    ? effectivePlayers.filter((p) => seasonRosterIds.has(p.id))
     : effectivePlayers;
 
   const visiblePlayers = showOnlyActive
