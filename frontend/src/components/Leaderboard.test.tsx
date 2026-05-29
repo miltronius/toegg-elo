@@ -93,6 +93,20 @@ describe("Leaderboard — sorting", () => {
     expect(rows[2]).toHaveTextContent("Alice");
   });
 
+  it("breaks ELO ties by winrate descending", () => {
+    const tied = [
+      player("aaa", "Alice", 1600, 8, 2), // 80% winrate
+      player("bbb", "Bob",   1600, 5, 5), // 50% winrate
+      player("ccc", "Carl",  1300, 2, 8),
+    ];
+    render(<Leaderboard players={tied} history={NO_HISTORY} />);
+    const rows = screen.getAllByRole("row").slice(1);
+    expect(rows[0]).toHaveTextContent("Alice"); // same ELO, higher winrate → #1
+    expect(rows[1]).toHaveTextContent("Bob");
+    expect(rows[0]).toHaveTextContent("#1");
+    expect(rows[1]).toHaveTextContent("#2");
+  });
+
   it("rank column always reflects ELO position regardless of sort", async () => {
     render(<Leaderboard players={PLAYERS} history={NO_HISTORY} />);
     // Click Name twice: first click = A→Z, second click = Z→A (Carl first)
