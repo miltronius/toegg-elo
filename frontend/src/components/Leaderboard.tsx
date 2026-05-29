@@ -355,9 +355,18 @@ export function Leaderboard({
     return () => ro.disconnect();
   }, [view]);
 
-  const visiblePlayers = showOnlyActive
-    ? effectivePlayers.filter((p) => p.matches_played > 0)
+  // In season view, only players who actually appear in the selected season's
+  // history "existed" then. Without this, a player who first joined in a later
+  // season is charted with their all-time ELO across an older season they never
+  // played in. (Mirrors the bump chart's seen-player filtering in buildSnapshots.)
+  const seasonParticipantIds = new Set(effectiveHistory.map((h) => h.player_id));
+  const scopedPlayers = isSeasonView
+    ? effectivePlayers.filter((p) => seasonParticipantIds.has(p.id))
     : effectivePlayers;
+
+  const visiblePlayers = showOnlyActive
+    ? scopedPlayers.filter((p) => p.matches_played > 0)
+    : scopedPlayers;
 
   const anyAtStartingElo = visiblePlayers.some((p) => p.current_elo === 1500);
 
