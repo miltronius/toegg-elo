@@ -305,5 +305,27 @@ describe("Leaderboard — season view participation", () => {
     expect(screen.getByText("Veteran")).toBeInTheDocument();
     expect(screen.queryByText("Latecomer")).not.toBeInTheDocument();
   });
+
+  it("hands the canonical all-time player to onPlayerClick, not season-overridden stats", async () => {
+    const onPlayerClick = vi.fn();
+    render(
+      <Leaderboard
+        players={[VETERAN]}
+        history={[eh("vvv", "s1", "m1", 1500, 1520, "2024-02-01T00:00:00Z")]}
+        seasons={[S2, S1]}
+        selectedSeason={S1}
+        playerSeasonStats={[pss("vvv", "s1", 1520, 1, 0)]}
+        onPlayerClick={onPlayerClick}
+      />,
+    );
+    // The table shows Veteran's S1 numbers (ELO 1520, 1–0), but PlayerDetail must
+    // receive the all-time player so its All-Time view isn't polluted with them.
+    await userEvent.click(screen.getByText("Veteran"));
+    expect(onPlayerClick).toHaveBeenCalledTimes(1);
+    const clicked = onPlayerClick.mock.calls[0][0];
+    expect(clicked.current_elo).toBe(1700);
+    expect(clicked.wins).toBe(8);
+    expect(clicked.losses).toBe(2);
+  });
 });
 
