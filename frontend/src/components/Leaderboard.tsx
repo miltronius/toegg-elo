@@ -348,9 +348,14 @@ export function Leaderboard({
 
   const anyAtStartingElo = visiblePlayers.some((p) => p.current_elo === 1500);
 
-  // sortedPlayers is always ELO desc — used for charts and color assignment
+  const winrateOf = (p: Player) => {
+    const t = p.wins + p.losses;
+    return t > 0 ? p.wins / t : 0;
+  };
+
+  // sortedPlayers is always ELO desc (winrate tiebreaker) — used for charts and color assignment
   const sortedPlayers = [...visiblePlayers].sort(
-    (a, b) => b.current_elo - a.current_elo,
+    (a, b) => (b.current_elo - a.current_elo) || (winrateOf(b) - winrateOf(a)),
   );
 
   const handleSort = (key: "elo" | "name" | "winrate") => {
@@ -359,12 +364,8 @@ export function Leaderboard({
   };
 
   const tableRows = [...sortedPlayers].sort((a, b) => {
-    const winrateOf = (p: Player) => {
-      const t = p.wins + p.losses;
-      return t > 0 ? p.wins / t : 0;
-    };
     let diff = 0;
-    if (sortBy === "elo") diff = b.current_elo - a.current_elo;
+    if (sortBy === "elo") diff = (b.current_elo - a.current_elo) || (winrateOf(b) - winrateOf(a));
     else if (sortBy === "name") diff = a.name.localeCompare(b.name);
     else diff = winrateOf(b) - winrateOf(a);
     return sortAsc ? -diff : diff;

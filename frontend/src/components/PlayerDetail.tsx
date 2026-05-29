@@ -336,7 +336,9 @@ export function PlayerDetail({
                 {player.name}
               </h2>
               {currentStreak > 0 && (
-                <span className="streak-badge" title="Winstreak">🔥{currentStreak}</span>
+                <span className="streak-badge" title="Winstreak">
+                  🔥{currentStreak}
+                </span>
               )}
             </div>
           )}
@@ -402,6 +404,12 @@ export function PlayerDetail({
                   )
                 : "0"}
               %
+            </div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-label">W - L</div>
+            <div className="stat-value" style={{ fontSize: "1.1rem" }}>
+              {effectiveStats.wins} - {effectiveStats.losses}
             </div>
           </div>
           {topEnemy && (
