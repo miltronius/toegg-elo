@@ -89,7 +89,12 @@ export function TeamDetail({
           className="flex items-center justify-between mb-4"
           style={{ borderLeft: `4px solid ${teamColor(team)}`, paddingLeft: "0.75rem" }}
         >
-          <h2 className="text-2xl font-bold text-text m-0">{getTeamDisplayName(team, players)}</h2>
+          <div className="flex items-center gap-2 min-w-0">
+            <h2 className="text-2xl font-bold text-text m-0">{getTeamDisplayName(team, players)}</h2>
+            {team.currentStreak > 0 && (
+              <span className="streak-badge" title="Winstreak">🔥{team.currentStreak}</span>
+            )}
+          </div>
           <button className="close-btn" onClick={onClose}>
             ×
           </button>

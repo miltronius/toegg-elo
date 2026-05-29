@@ -289,7 +289,12 @@ export function Teams({ matches, players, teamNames, seasons, selectedSeason, on
                     color={teamColor(team)}
                   >
                     <div style={{ padding: "1rem" }}>
-                      <div>{getTeamDisplayName(team, players)}</div>
+                      <div>
+                        {getTeamDisplayName(team, players)}
+                        {team.currentStreak > 0 && (
+                          <span className="streak-badge" title="Winstreak">🔥{team.currentStreak}</span>
+                        )}
+                      </div>
                       {(team.nameRow?.alias_1 || team.nameRow?.alias_2) && (
                         <div className="text-[0.75rem] text-text-light mt-0.5">
                           {[team.nameRow.alias_1, team.nameRow.alias_2]
@@ -349,6 +354,9 @@ export function Teams({ matches, players, teamNames, seasons, selectedSeason, on
                     </span>
                   )}
                   {getTeamDisplayName(team, players)}
+                  {team.currentStreak > 0 && (
+                    <span className="streak-badge">🔥{team.currentStreak}</span>
+                  )}
                 </div>
                 {(team.nameRow?.alias_1 || team.nameRow?.alias_2) && (
                   <div className="text-[0.75rem] text-text-light mb-3">

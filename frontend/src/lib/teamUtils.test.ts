@@ -183,6 +183,7 @@ describe("teamColor", () => {
     losses: 0,
     winRate: 1,
     combinedElo: 3000,
+    currentStreak: 0,
     rivals: [],
   };
 
@@ -223,6 +224,7 @@ describe("getTeamDisplayName", () => {
     losses: 0,
     winRate: 1,
     combinedElo: 3000,
+    currentStreak: 0,
     rivals: [],
     nameRow: null,
   };

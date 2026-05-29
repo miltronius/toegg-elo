@@ -10,6 +10,7 @@ export type TeamStats = {
   losses: number;
   winRate: number;
   combinedElo: number;
+  currentStreak: number;
   nameRow: TeamNameRow | null;
   rivals: { key: string; matchesPlayed: number; wins: number; losses: number }[];
 };
@@ -33,11 +34,17 @@ export function computeTeamStats(
     teamNames.map((r) => [teamKey(r.player_id_lo, r.player_id_hi), r]),
   );
 
+  // Sort chronologically so winHistory order is correct for streak computation
+  const sortedMatches = [...matches].sort(
+    (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+  );
+
   type Acc = {
     lo: string;
     hi: string;
     wins: number;
     losses: number;
+    winHistory: boolean[];
     opponents: Map<string, { played: number; wins: number; losses: number }>;
   };
 
@@ -46,12 +53,12 @@ export function computeTeamStats(
   const getOrCreate = (lo: string, hi: string): Acc => {
     const k = `${lo}:${hi}`;
     if (!acc.has(k)) {
-      acc.set(k, { lo, hi, wins: 0, losses: 0, opponents: new Map() });
+      acc.set(k, { lo, hi, wins: 0, losses: 0, winHistory: [], opponents: new Map() });
     }
     return acc.get(k)!;
   };
 
-  for (const m of matches) {
+  for (const m of sortedMatches) {
     const a1 = m.team_a_player_1_id;
     const a2 = m.team_a_player_2_id;
     const b1 = m.team_b_player_1_id;
@@ -69,6 +76,8 @@ export function computeTeamStats(
 
     const aWon = m.winning_team === "A";
     if (aWon) { teamA.wins++; teamB.losses++; } else { teamB.wins++; teamA.losses++; }
+    teamA.winHistory.push(aWon);
+    teamB.winHistory.push(!aWon);
 
     const aVsB = teamA.opponents.get(kB) ?? { played: 0, wins: 0, losses: 0 };
     teamA.opponents.set(kB, { played: aVsB.played + 1, wins: aVsB.wins + (aWon ? 1 : 0), losses: aVsB.losses + (aWon ? 0 : 1) });
@@ -76,6 +85,15 @@ export function computeTeamStats(
     const bVsA = teamB.opponents.get(kA) ?? { played: 0, wins: 0, losses: 0 };
     teamB.opponents.set(kA, { played: bVsA.played + 1, wins: bVsA.wins + (aWon ? 0 : 1), losses: bVsA.losses + (aWon ? 1 : 0) });
   }
+
+  const trailingWinStreak = (winHistory: boolean[]): number => {
+    let streak = 0;
+    for (let i = winHistory.length - 1; i >= 0; i--) {
+      if (winHistory[i]) streak++;
+      else break;
+    }
+    return streak >= 2 ? streak : 0;
+  };
 
   return Array.from(acc.entries())
     .map(([key, data]) => {
@@ -96,6 +114,7 @@ export function computeTeamStats(
         losses: data.losses,
         winRate: total > 0 ? data.wins / total : 0,
         combinedElo: (p1?.current_elo ?? 0) + (p2?.current_elo ?? 0),
+        currentStreak: trailingWinStreak(data.winHistory),
         nameRow: nameMap.get(key) ?? null,
         rivals,
       };
