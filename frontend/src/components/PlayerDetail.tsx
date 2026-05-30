@@ -16,12 +16,14 @@ import {
 import {
   getEloHistory,
   updatePlayerName,
+  updatePlayerAnonymousName,
   EloHistory,
   Match,
   Player,
   Season,
   PlayerSeasonStats,
 } from "../lib/supabase";
+import { generateAnonymousName } from "../lib/anonymousNames";
 import {
   computeTeammateCounts,
   buildAchievementStatuses,
@@ -73,6 +75,8 @@ interface PlayerDetailProps {
   playerSeasonStats: PlayerSeasonStats[];
   onClose: () => void;
   onPlayerUpdated?: () => void;
+  // Refreshes app data without closing the modal (used for inline anonymous-name edits).
+  onPlayerRefresh?: () => void;
   onNavigate?: (player: Player) => void;
   initialTab?: "stats" | "achievements";
 }
@@ -96,6 +100,7 @@ export function PlayerDetail({
   playerSeasonStats,
   onClose,
   onPlayerUpdated,
+  onPlayerRefresh,
   onNavigate,
   initialTab = "stats",
 }: PlayerDetailProps) {
@@ -129,11 +134,26 @@ export function PlayerDetail({
   const [isEditingName, setIsEditingName] = useState(false);
   const [newName, setNewName] = useState(player.name);
   const [isSaving, setIsSaving] = useState(false);
+  const [isEditingAnon, setIsEditingAnon] = useState(false);
+  const [newAnon, setNewAnon] = useState(player.anonymous_name ?? "");
+  const [isSavingAnon, setIsSavingAnon] = useState(false);
+  // Locally tracked anonymous name so an inline save shows immediately without
+  // closing the modal or waiting for the (stale) player prop to update.
+  const [anonName, setAnonName] = useState(player.anonymous_name ?? "");
 
   // Sync initialTab when player changes (navigation)
   useEffect(() => {
     setDetailTab(initialTab);
   }, [player.id, initialTab]);
+
+  // Reset inline editors when navigating to a different player
+  useEffect(() => {
+    setIsEditingName(false);
+    setNewName(player.name);
+    setIsEditingAnon(false);
+    setNewAnon(player.anonymous_name ?? "");
+    setAnonName(player.anonymous_name ?? "");
+  }, [player.id, player.name, player.anonymous_name]);
 
   useEffect(() => {
     if (!onNavigate) return;
@@ -301,6 +321,41 @@ export function PlayerDetail({
     }
   };
 
+  const handleSaveAnon = async () => {
+    const trimmed = newAnon.trim();
+    if (!trimmed || trimmed === anonName) {
+      setIsEditingAnon(false);
+      setNewAnon(anonName);
+      return;
+    }
+
+    setIsSavingAnon(true);
+    try {
+      await updatePlayerAnonymousName(player.id, trimmed);
+      // Update the open modal immediately, then refresh app data in the
+      // background without closing (admins don't see anon names elsewhere).
+      setAnonName(trimmed);
+      setIsEditingAnon(false);
+      onPlayerRefresh?.();
+    } catch (error) {
+      alert(
+        "Failed to update anonymous name: " +
+          (error instanceof Error ? error.message : "Unknown error"),
+      );
+      setNewAnon(anonName);
+    } finally {
+      setIsSavingAnon(false);
+    }
+  };
+
+  const handleRegenerateAnon = () => {
+    const taken = players
+      .filter((p) => p.id !== player.id)
+      .map((p) => p.anonymous_name)
+      .filter((n): n is string => !!n);
+    setNewAnon(generateAnonymousName(player.name, taken));
+  };
+
   const achievementStatuses = buildAchievementStatuses(
     player.id,
     player,
@@ -390,6 +445,65 @@ export function PlayerDetail({
               ✕
             </button>
           </div>
+        </div>
+
+        <div className="flex items-center gap-2 mb-4 text-sm text-text-light">
+          {isEditingAnon ? (
+            <>
+              <span title="Name shown to viewers / logged-out users">🎭</span>
+              <input
+                type="text"
+                value={newAnon}
+                onChange={(e) => setNewAnon(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleSaveAnon();
+                  if (e.key === "Escape") {
+                    setIsEditingAnon(false);
+                    setNewAnon(anonName);
+                  }
+                }}
+                disabled={isSavingAnon}
+                autoFocus
+                className="flex-1 max-w-[260px] px-2 py-1 border border-border rounded-md text-sm focus:outline-none focus:border-primary"
+              />
+              <button
+                onClick={handleRegenerateAnon}
+                disabled={isSavingAnon}
+                title="Generate a new anonymous name"
+                className="btn-small"
+              >
+                🔁
+              </button>
+              <button
+                onClick={handleSaveAnon}
+                disabled={isSavingAnon}
+                className="btn-small"
+              >
+                {isSavingAnon ? "..." : "✓"}
+              </button>
+              <button
+                onClick={() => {
+                  setIsEditingAnon(false);
+                  setNewAnon(anonName);
+                }}
+                disabled={isSavingAnon}
+                className="btn-small btn-cancel"
+              >
+                ✕
+              </button>
+            </>
+          ) : (
+            <span
+              onClick={() => {
+                setNewAnon(anonName);
+                setIsEditingAnon(true);
+              }}
+              className="cursor-pointer hover:text-primary transition-colors"
+              title="Anonymous name shown to viewers / logged-out users — click to edit"
+            >
+              🎭 {anonName || "Set anonymous name"}
+            </span>
+          )}
         </div>
 
         {seasons.length > 0 && (

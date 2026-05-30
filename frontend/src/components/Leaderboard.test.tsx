@@ -20,6 +20,7 @@ const player = (
   wins,
   losses,
   created_at: "2024-01-01T00:00:00Z",
+  anonymous_name: null,
 });
 
 const PLAYERS: Player[] = [

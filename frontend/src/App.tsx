@@ -71,6 +71,14 @@ function App() {
     loadData();
   }, []);
 
+  // Keep the open player detail in sync with refreshed data (e.g. after an
+  // inline edit) so it never shows a stale snapshot.
+  useEffect(() => {
+    setSelectedPlayer((prev) =>
+      prev ? (players.find((p) => p.id === prev.id) ?? prev) : prev,
+    );
+  }, [players]);
+
   // Close auth modal on successful login; switch to timeline on first login
   useEffect(() => {
     if (user) {
@@ -292,6 +300,7 @@ function App() {
           isOpen={modalOpen}
           onClose={() => setModalOpen(false)}
           onPlayerCreated={loadData}
+          players={players}
         />
       )}
       {selectedPlayer && canEdit && (
@@ -310,6 +319,7 @@ function App() {
             loadData();
             setSelectedPlayer(null);
           }}
+          onPlayerRefresh={loadData}
           onNavigate={setSelectedPlayer}
         />
       )}

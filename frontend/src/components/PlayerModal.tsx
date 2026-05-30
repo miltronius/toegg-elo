@@ -1,20 +1,48 @@
 import { useState } from "react";
 import { createPlayer, Player } from "../lib/supabase";
+import { generateAnonymousName } from "../lib/anonymousNames";
 
 interface CreatePlayerModalProps {
   isOpen: boolean;
   onClose: () => void;
   onPlayerCreated: () => void;
+  players: Player[];
 }
 
 export function CreatePlayerModal({
   isOpen,
   onClose,
   onPlayerCreated,
+  players,
 }: CreatePlayerModalProps) {
   const [name, setName] = useState("");
+  const [anonymousName, setAnonymousName] = useState("");
+  // True once the user manually edits the anonymous name, so we stop auto-prefilling it.
+  const [anonEdited, setAnonEdited] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const takenNames = players
+    .map((p) => p.anonymous_name)
+    .filter((n): n is string => !!n);
+
+  const handleNameChange = (value: string) => {
+    setName(value);
+    if (!anonEdited) {
+      setAnonymousName(value.trim() ? generateAnonymousName(value, takenNames) : "");
+    }
+  };
+
+  const handleRegenerate = () => {
+    setAnonymousName(generateAnonymousName(name, takenNames));
+    setAnonEdited(false);
+  };
+
+  const reset = () => {
+    setName("");
+    setAnonymousName("");
+    setAnonEdited(false);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,8 +50,10 @@ export function CreatePlayerModal({
     setError(null);
 
     try {
-      await createPlayer(name);
-      setName("");
+      const finalAnon =
+        anonymousName.trim() || generateAnonymousName(name, takenNames);
+      await createPlayer(name, finalAnon);
+      reset();
       onPlayerCreated();
       onClose();
     } catch (err) {
@@ -44,11 +74,38 @@ export function CreatePlayerModal({
             type="text"
             placeholder="Player name"
             value={name}
-            onChange={(e) => setName(e.target.value)}
+            onChange={(e) => handleNameChange(e.target.value)}
             required
             disabled={loading}
             className="w-full px-3 py-2.5 border border-border rounded-md text-[0.95rem] focus:outline-none focus:border-primary focus:ring-[3px] focus:ring-primary/10 disabled:bg-bg-light disabled:cursor-not-allowed disabled:opacity-60"
           />
+          <div className="flex flex-col gap-1">
+            <label className="text-xs text-text-light">
+              Anonymous name (shown to viewers)
+            </label>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                placeholder="Anonymous name"
+                value={anonymousName}
+                onChange={(e) => {
+                  setAnonymousName(e.target.value);
+                  setAnonEdited(true);
+                }}
+                disabled={loading}
+                className="flex-1 px-3 py-2.5 border border-border rounded-md text-[0.95rem] focus:outline-none focus:border-primary focus:ring-[3px] focus:ring-primary/10 disabled:bg-bg-light disabled:cursor-not-allowed disabled:opacity-60"
+              />
+              <button
+                type="button"
+                onClick={handleRegenerate}
+                disabled={loading || !name.trim()}
+                title="Generate a new anonymous name"
+                className="btn-secondary px-3"
+              >
+                🔁
+              </button>
+            </div>
+          </div>
           {error && (
             <div className="bg-error-light text-error px-4 py-3 rounded-md text-sm border-l-4 border-error">
               {error}
