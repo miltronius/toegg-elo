@@ -67,9 +67,13 @@ function App() {
   const canSeeFullHistory = role === "user" || role === "admin";
   const visibleMatches = canSeeFullHistory ? matches : matches.slice(0, 5);
 
+  // Load (and reload) data once auth state is known and whenever the user/role
+  // changes — the get_players RPC returns different names per role, so logging
+  // in or out must refetch to avoid showing stale (anonymous vs real) names.
   useEffect(() => {
+    if (authLoading) return;
     loadData();
-  }, []);
+  }, [authLoading, user?.id, role]);
 
   // Keep the open player detail in sync with refreshed data (e.g. after an
   // inline edit) so it never shows a stale snapshot.
