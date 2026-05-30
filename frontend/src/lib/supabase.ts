@@ -52,6 +52,9 @@ export type Player = {
   wins: number;
   losses: number;
   created_at: string;
+  // Musician name shown to viewers / logged-out users instead of the real name.
+  // Populated only for user/admin callers by the get_players RPC (null for others).
+  anonymous_name: string | null;
 };
 
 export type Match = {
@@ -77,19 +80,22 @@ export type EloHistory = {
 };
 
 export async function getPlayers(): Promise<Player[]> {
-  const { data, error } = await supabase
-    .from("players")
-    .select("*")
-    .order("current_elo", { ascending: false });
+  // Reads go through the get_players RPC so the server can swap real names for
+  // anonymous (musician) names when the caller isn't a user/admin. The RPC already
+  // orders by current_elo descending.
+  const { data, error } = await supabase.rpc("get_players");
 
   if (error) throw error;
-  return data || [];
+  return (data ?? []) as Player[];
 }
 
-export async function createPlayer(name: string): Promise<Player> {
+export async function createPlayer(
+  name: string,
+  anonymousName: string,
+): Promise<Player> {
   const { data, error } = await supabase
     .from("players")
-    .insert({ name })
+    .insert({ name, anonymous_name: anonymousName })
     .select()
     .single();
 
@@ -268,6 +274,18 @@ export async function updatePlayerName(playerId: string, newName: string) {
   const { error } = await supabase
     .from("players")
     .update({ name: newName })
+    .eq("id", playerId);
+
+  if (error) throw error;
+}
+
+export async function updatePlayerAnonymousName(
+  playerId: string,
+  anonymousName: string,
+) {
+  const { error } = await supabase
+    .from("players")
+    .update({ anonymous_name: anonymousName })
     .eq("id", playerId);
 
   if (error) throw error;

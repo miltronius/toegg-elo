@@ -7,7 +7,7 @@ import type { Match, Player } from "./supabase";
 // ---------------------------------------------------------------------------
 
 function makePlayer(id = "p1"): Player {
-  return { id, name: "Test", current_elo: 1500, matches_played: 0, wins: 0, losses: 0, created_at: "" };
+  return { id, name: "Test", current_elo: 1500, matches_played: 0, wins: 0, losses: 0, created_at: "", anonymous_name: null };
 }
 
 let matchCounter = 0;
