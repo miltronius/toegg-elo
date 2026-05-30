@@ -225,7 +225,7 @@ export const ACHIEVEMENT_DEFINITIONS: AchievementDefinition[] = [
   },
   {
     id: "streak_win_3",
-    icon: "🔥",
+    icon: "🌪️",
     name: "Unstoppable",
     description: "Win 3 matches in a row",
   },
@@ -243,7 +243,7 @@ export const ACHIEVEMENT_DEFINITIONS: AchievementDefinition[] = [
   },
   {
     id: "streak_win_10",
-    icon: "⚡",
+    icon: "🔱",
     name: "Godlike",
     description: "Win 10 matches in a row",
   },
@@ -303,7 +303,7 @@ export const ACHIEVEMENT_DEFINITIONS: AchievementDefinition[] = [
   },
   {
     id: "to_the_moon",
-    icon: "🚀",
+    icon: "🌝",
     name: "To The Moon",
     description: "Gain +100 ELO in a single day",
   },
@@ -315,7 +315,7 @@ export const ACHIEVEMENT_DEFINITIONS: AchievementDefinition[] = [
   },
   {
     id: "carrying_hard",
-    icon: "💪",
+    icon: "🏋️",
     name: "Carrying Hard",
     description: "Win with a partner rated 200+ ELO below you",
   },
