@@ -287,6 +287,7 @@ function App() {
             players={players}
             matches={matches}
             allAchievementRows={allAchievementRows}
+            eloHistory={allEloHistory}
             onSelectPlayer={
               canEdit
                 ? (player) => {
@@ -313,6 +314,7 @@ function App() {
           players={players}
           matches={matches}
           allAchievementRows={allAchievementRows}
+          eloHistory={allEloHistory}
           seasons={seasons}
           selectedSeason={selectedSeason}
           onSeasonSelect={handleSeasonSelect}

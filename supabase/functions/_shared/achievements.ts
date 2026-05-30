@@ -30,7 +30,25 @@ export type AchievementId =
   | "bff"
   | "sworn_enemies"
   | "arch_nemesis"
-  | "achievement_hunter";
+  | "achievement_hunter"
+  | "streak_win_3"
+  | "streak_win_5"
+  | "streak_win_7"
+  | "streak_win_10"
+  | "streak_loss_3"
+  | "streak_loss_5"
+  | "comeback_kid"
+  | "punching_bag"
+  | "teams_1"
+  | "teams_3"
+  | "teams_10"
+  | "world_tour"
+  | "nemesis_of_all"
+  | "to_the_moon"
+  | "rock_bottom"
+  | "carrying_hard"
+  | "deadweight"
+  | "completionist";
 
 interface Player {
   id: string;
@@ -49,6 +67,17 @@ interface Match {
   team_b_player_1_id: string;
   team_b_player_2_id: string;
   winning_team: "A" | "B";
+  created_at: string;
+}
+
+interface EloHistory {
+  id: string;
+  player_id: string;
+  match_id: string | null;
+  season_id: string | null;
+  elo_before: number;
+  elo_after: number;
+  elo_change: number;
   created_at: string;
 }
 
@@ -109,6 +138,8 @@ function computeAchievementsForPlayer(
   playerId: string,
   _player: Player,
   matches: Match[],
+  allPlayers: Player[] = [],
+  eloHistory: EloHistory[] = [],
 ): UnlockedAchievement[] {
   const unlocked: UnlockedAchievement[] = [];
 
@@ -269,10 +300,185 @@ function computeAchievementsForPlayer(
     }
   }
 
+  // win / loss streaks + comeback_kid — single chronological pass
+  {
+    let winStreak = 0;
+    let lossStreak = 0;
+    const winHit = new Set<number>();
+    const lossHit = new Set<number>();
+    let comebackDone = false;
+    const winThresholds: [AchievementId, number][] = [
+      ["streak_win_3", 3], ["streak_win_5", 5], ["streak_win_7", 7], ["streak_win_10", 10],
+    ];
+    const lossThresholds: [AchievementId, number][] = [
+      ["streak_loss_3", 3], ["streak_loss_5", 5],
+    ];
+    for (const m of sorted) {
+      const inA = m.team_a_player_1_id === playerId || m.team_a_player_2_id === playerId;
+      const won = (inA && m.winning_team === "A") || (!inA && m.winning_team === "B");
+      if (won) {
+        if (!comebackDone && lossStreak >= 3) {
+          unlocked.push({ achievementId: "comeback_kid", unlockedAt: new Date(m.created_at) });
+          comebackDone = true;
+        }
+        lossStreak = 0;
+        winStreak++;
+        for (const [id, n] of winThresholds) {
+          if (winStreak === n && !winHit.has(n)) {
+            winHit.add(n);
+            unlocked.push({ achievementId: id, unlockedAt: new Date(m.created_at) });
+          }
+        }
+      } else {
+        winStreak = 0;
+        lossStreak++;
+        for (const [id, n] of lossThresholds) {
+          if (lossStreak === n && !lossHit.has(n)) {
+            lossHit.add(n);
+            unlocked.push({ achievementId: id, unlockedAt: new Date(m.created_at) });
+          }
+        }
+      }
+    }
+  }
+
+  // punching_bag — 3 consecutive wins vs the same opponent (last 3 meetings)
+  {
+    const consecWins = new Map<string, number>();
+    let done = false;
+    for (const m of sorted) {
+      if (done) break;
+      const inA = m.team_a_player_1_id === playerId || m.team_a_player_2_id === playerId;
+      const won = (inA && m.winning_team === "A") || (!inA && m.winning_team === "B");
+      const opponents = inA
+        ? [m.team_b_player_1_id, m.team_b_player_2_id]
+        : [m.team_a_player_1_id, m.team_a_player_2_id];
+      for (const oppId of opponents) {
+        const next = won ? (consecWins.get(oppId) ?? 0) + 1 : 0;
+        consecWins.set(oppId, next);
+        if (next === 3 && !done) {
+          unlocked.push({ achievementId: "punching_bag", unlockedAt: new Date(m.created_at), meta: { opponentId: oppId } });
+          done = true;
+        }
+      }
+    }
+  }
+
+  // teams_1 / teams_3 / teams_10 — distinct partners over time
+  {
+    const partners = new Set<string>();
+    const hit = new Set<number>();
+    const thresholds: [AchievementId, number][] = [
+      ["teams_1", 1], ["teams_3", 3], ["teams_10", 10],
+    ];
+    for (const m of sorted) {
+      const inA = m.team_a_player_1_id === playerId || m.team_a_player_2_id === playerId;
+      const partner = inA
+        ? (m.team_a_player_1_id === playerId ? m.team_a_player_2_id : m.team_a_player_1_id)
+        : (m.team_b_player_1_id === playerId ? m.team_b_player_2_id : m.team_b_player_1_id);
+      partners.add(partner);
+      for (const [id, n] of thresholds) {
+        if (partners.size >= n && !hit.has(n)) {
+          hit.add(n);
+          unlocked.push({ achievementId: id, unlockedAt: new Date(m.created_at) });
+        }
+      }
+    }
+  }
+
+  // world_tour / nemesis_of_all — breadth across the roster (>= 4 players)
+  if (allPlayers.length >= 4) {
+    const others = new Set(allPlayers.map((p) => p.id).filter((id) => id !== playerId));
+    const faced = new Set<string>();
+    const beaten = new Set<string>();
+    let worldTourDone = false;
+    let nemesisDone = false;
+    for (const m of sorted) {
+      if (worldTourDone && nemesisDone) break;
+      const inA = m.team_a_player_1_id === playerId || m.team_a_player_2_id === playerId;
+      const won = (inA && m.winning_team === "A") || (!inA && m.winning_team === "B");
+      const opponents = inA
+        ? [m.team_b_player_1_id, m.team_b_player_2_id]
+        : [m.team_a_player_1_id, m.team_a_player_2_id];
+      for (const oppId of opponents) {
+        if (!others.has(oppId)) continue;
+        faced.add(oppId);
+        if (won) beaten.add(oppId);
+      }
+      if (!worldTourDone && faced.size === others.size) {
+        unlocked.push({ achievementId: "world_tour", unlockedAt: new Date(m.created_at) });
+        worldTourDone = true;
+      }
+      if (!nemesisDone && beaten.size === others.size) {
+        unlocked.push({ achievementId: "nemesis_of_all", unlockedAt: new Date(m.created_at) });
+        nemesisDone = true;
+      }
+    }
+  }
+
+  // to_the_moon / rock_bottom — net ELO change within a single calendar day
+  {
+    const playerHistory = eloHistory
+      .filter((h) => h.player_id === playerId)
+      .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+    const dayDelta = new Map<string, number>();
+    let moonDone = false;
+    let bottomDone = false;
+    for (const h of playerHistory) {
+      const day = h.created_at.slice(0, 10);
+      const total = (dayDelta.get(day) ?? 0) + h.elo_change;
+      dayDelta.set(day, total);
+      if (!moonDone && total >= 100) {
+        unlocked.push({ achievementId: "to_the_moon", unlockedAt: new Date(h.created_at) });
+        moonDone = true;
+      }
+      if (!bottomDone && total <= -75) {
+        unlocked.push({ achievementId: "rock_bottom", unlockedAt: new Date(h.created_at) });
+        bottomDone = true;
+      }
+    }
+  }
+
+  // carrying_hard / deadweight — partner ELO gap (200+) on a won match
+  {
+    const eloBeforeByMatch = new Map<string, number>();
+    for (const h of eloHistory) {
+      if (h.match_id) eloBeforeByMatch.set(`${h.match_id}:${h.player_id}`, h.elo_before);
+    }
+    let carryDone = false;
+    let deadweightDone = false;
+    for (const m of sorted) {
+      if (carryDone && deadweightDone) break;
+      const inA = m.team_a_player_1_id === playerId || m.team_a_player_2_id === playerId;
+      const won = (inA && m.winning_team === "A") || (!inA && m.winning_team === "B");
+      if (!won) continue;
+      const partnerId = inA
+        ? (m.team_a_player_1_id === playerId ? m.team_a_player_2_id : m.team_a_player_1_id)
+        : (m.team_b_player_1_id === playerId ? m.team_b_player_2_id : m.team_b_player_1_id);
+      const myElo = eloBeforeByMatch.get(`${m.id}:${playerId}`);
+      const partnerElo = eloBeforeByMatch.get(`${m.id}:${partnerId}`);
+      if (myElo === undefined || partnerElo === undefined) continue;
+      if (!carryDone && partnerElo <= myElo - 200) {
+        unlocked.push({ achievementId: "carrying_hard", unlockedAt: new Date(m.created_at), meta: { partnerId } });
+        carryDone = true;
+      }
+      if (!deadweightDone && partnerElo >= myElo + 200) {
+        unlocked.push({ achievementId: "deadweight", unlockedAt: new Date(m.created_at), meta: { partnerId } });
+        deadweightDone = true;
+      }
+    }
+  }
+
   // achievement_hunter — unlockedAt = date the 10th achievement was earned
   if (unlocked.length >= 10) {
     const tenth = [...unlocked].sort((a, b) => a.unlockedAt.getTime() - b.unlockedAt.getTime())[9];
     unlocked.push({ achievementId: "achievement_hunter", unlockedAt: tenth.unlockedAt });
+  }
+
+  // completionist — unlockedAt = date the 20th achievement was earned
+  if (unlocked.length >= 20) {
+    const twentieth = [...unlocked].sort((a, b) => a.unlockedAt.getTime() - b.unlockedAt.getTime())[19];
+    unlocked.push({ achievementId: "completionist", unlockedAt: twentieth.unlockedAt });
   }
 
   return unlocked;
@@ -294,8 +500,18 @@ export async function recomputeAllAchievements(
     meta: Record<string, unknown> | null;
   }[] = [];
 
+  // ELO history feeds the day-swing and partner-gap achievements.
+  const { data: eloHistory } = await supabase.from("elo_history").select("*");
+  const history = (eloHistory ?? []) as EloHistory[];
+
   for (const player of players) {
-    const unlocked = computeAchievementsForPlayer(player.id, player, matches);
+    const unlocked = computeAchievementsForPlayer(
+      player.id,
+      player,
+      matches,
+      players,
+      history,
+    );
     for (const u of unlocked) {
       rows.push({
         player_id: player.id,

@@ -12,12 +12,13 @@ import {
   type PlayerAchievementRow,
   type AchievementStatus,
 } from "../lib/achievements";
-import type { Player, Match } from "../lib/supabase";
+import type { Player, Match, EloHistory } from "../lib/supabase";
 
 interface AchievementsProps {
   players: Player[];
   matches: Match[];
   allAchievementRows: PlayerAchievementRow[];
+  eloHistory: EloHistory[];
   onSelectPlayer: (player: Player) => void;
 }
 
@@ -25,6 +26,7 @@ export function Achievements({
   players,
   matches,
   allAchievementRows,
+  eloHistory,
   onSelectPlayer,
 }: AchievementsProps) {
   const [view, setView] = useState<"overview" | "players">("overview");
@@ -39,6 +41,7 @@ export function Achievements({
         players,
         matches,
         allAchievementRows,
+        eloHistory,
       );
       const unlockedCount = statuses.filter((s) => s.unlocked).length;
       return { player, statuses, unlockedCount };
@@ -70,6 +73,7 @@ export function Achievements({
           players={players}
           matches={matches}
           allAchievementRows={allAchievementRows}
+          eloHistory={eloHistory}
         />
       ) : (
         <table className="leaderboard-table achievements-table">
@@ -190,17 +194,19 @@ interface AchievementsOverviewProps {
   players: Player[];
   matches: Match[];
   allAchievementRows: PlayerAchievementRow[];
+  eloHistory: EloHistory[];
 }
 
 function AchievementsOverview({
   players,
   matches,
   allAchievementRows,
+  eloHistory,
 }: AchievementsOverviewProps) {
   const rarityMap =
     allAchievementRows.length > 0
       ? computeRarityMap(allAchievementRows, players.length)
-      : computeClientSideRarityMap(players, matches);
+      : computeClientSideRarityMap(players, matches, eloHistory);
 
   type Item = {
     def: (typeof ACHIEVEMENT_DEFINITIONS)[number];
@@ -307,6 +313,7 @@ interface AchievementGalleryProps {
   players: Player[];
   playerId: string;
   matches: Match[];
+  eloHistory: EloHistory[];
 }
 
 export function AchievementGallery({
@@ -314,6 +321,7 @@ export function AchievementGallery({
   players,
   playerId,
   matches,
+  eloHistory,
 }: AchievementGalleryProps) {
   const [sortMode, setSortMode] = useState<"rarity" | "date">("rarity");
   const playerMap = new Map(players.map((p) => [p.id, p]));
@@ -337,7 +345,13 @@ export function AchievementGallery({
   const locked = statuses.filter((s) => !s.unlocked);
 
   const unlockedIds = new Set(unlocked.map((s) => s.definition.id));
-  const nextUp = computeAchievementProgress(playerId, matches, unlockedIds).slice(0, 2);
+  const nextUp = computeAchievementProgress(
+    playerId,
+    matches,
+    unlockedIds,
+    players,
+    eloHistory,
+  ).slice(0, 2);
 
   return (
     <div className="flex flex-col gap-6">
