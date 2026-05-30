@@ -69,6 +69,7 @@ interface PlayerDetailProps {
   players: Player[];
   matches: Match[];
   allAchievementRows: PlayerAchievementRow[];
+  eloHistory: EloHistory[];
   seasons: Season[];
   selectedSeason: Season | null;
   onSeasonSelect: (season: Season | null) => void;
@@ -94,6 +95,7 @@ export function PlayerDetail({
   players,
   matches,
   allAchievementRows,
+  eloHistory,
   seasons,
   selectedSeason,
   onSeasonSelect,
@@ -362,6 +364,7 @@ export function PlayerDetail({
     players,
     matches,
     allAchievementRows,
+    eloHistory,
   );
 
   return (
@@ -803,6 +806,7 @@ export function PlayerDetail({
             players={players}
             playerId={player.id}
             matches={matches}
+            eloHistory={eloHistory}
           />
         )}
       </div>
