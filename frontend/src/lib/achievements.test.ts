@@ -230,20 +230,52 @@ describe("punching_bag achievement", () => {
 // ---------------------------------------------------------------------------
 
 describe("teams achievements", () => {
-  it("unlocks Pairing Up on the first match", () => {
+  it("does not unlock Pairing Up after a single match with a partner", () => {
     const r = computeAchievementsForPlayer("p1", makePlayer(), [makeMatch({ id: "t1" })]);
+    expect(r.find((a) => a.achievementId === "teams_1")).toBeUndefined();
+  });
+
+  it("unlocks Pairing Up after teaming with the same partner twice", () => {
+    const matches = [
+      makeMatch({ id: "t1", created_at: onDay(0, 1), team_a_player_2_id: "p2" }),
+      makeMatch({ id: "t2", created_at: onDay(0, 2), team_a_player_2_id: "p2" }),
+    ];
+    const r = computeAchievementsForPlayer("p1", makePlayer(), matches);
     expect(r.find((a) => a.achievementId === "teams_1")).toBeDefined();
   });
 
-  it("unlocks Team Player with 3 distinct partners", () => {
+  it("counts a partner only once no matter how many matches they share", () => {
+    const matches = Array.from({ length: 10 }, (_, i) =>
+      makeMatch({ id: `t${i}`, created_at: onDay(0, i), team_a_player_2_id: "p2" }),
+    );
+    const r = computeAchievementsForPlayer("p1", makePlayer(), matches);
+    // One partner played 10 times is still a single team, not 10.
+    expect(r.find((a) => a.achievementId === "teams_1")).toBeDefined();
+    expect(r.find((a) => a.achievementId === "teams_3")).toBeUndefined();
+  });
+
+  it("unlocks Team Player with 3 partners played twice each", () => {
+    const matches = [
+      makeMatch({ id: "tA1", created_at: onDay(0, 1), team_a_player_2_id: "p2" }),
+      makeMatch({ id: "tA2", created_at: onDay(0, 2), team_a_player_2_id: "p2" }),
+      makeMatch({ id: "tB1", created_at: onDay(0, 3), team_a_player_2_id: "p5" }),
+      makeMatch({ id: "tB2", created_at: onDay(0, 4), team_a_player_2_id: "p5" }),
+      makeMatch({ id: "tC1", created_at: onDay(0, 5), team_a_player_2_id: "p6" }),
+      makeMatch({ id: "tC2", created_at: onDay(0, 6), team_a_player_2_id: "p6" }),
+    ];
+    const r = computeAchievementsForPlayer("p1", makePlayer(), matches);
+    expect(r.find((a) => a.achievementId === "teams_3")).toBeDefined();
+    expect(r.find((a) => a.achievementId === "teams_10")).toBeUndefined();
+  });
+
+  it("does not unlock Team Player when partners are each played only once", () => {
     const matches = [
       makeMatch({ id: "tA", created_at: onDay(0, 1), team_a_player_2_id: "p2" }),
       makeMatch({ id: "tB", created_at: onDay(0, 2), team_a_player_2_id: "p5" }),
       makeMatch({ id: "tC", created_at: onDay(0, 3), team_a_player_2_id: "p6" }),
     ];
     const r = computeAchievementsForPlayer("p1", makePlayer(), matches);
-    expect(r.find((a) => a.achievementId === "teams_3")).toBeDefined();
-    expect(r.find((a) => a.achievementId === "teams_10")).toBeUndefined();
+    expect(r.find((a) => a.achievementId === "teams_3")).toBeUndefined();
   });
 });
 
@@ -320,35 +352,68 @@ describe("to_the_moon and rock_bottom achievements", () => {
 // ---------------------------------------------------------------------------
 
 describe("carrying_hard and deadweight achievements", () => {
-  const winMatch = [makeMatch({ id: "cw1", winning_team: "A", created_at: onDay(0, 1) })];
-
-  it("unlocks Carrying Hard when the partner is 200+ below", () => {
-    const elo = [
-      makeElo({ match_id: "cw1", player_id: "p1", elo_before: 1600 }),
-      makeElo({ match_id: "cw1", player_id: "p2", elo_before: 1390 }),
+  // The gap is measured on SEASON ELO, which normalizes both players to 1500 at
+  // their first match of the season. A baseline match (both at 1500) sets that
+  // start; the gap then opens up on the later target match.
+  it("unlocks Carrying Hard when the partner is 200+ below (season ELO)", () => {
+    const matches = [
+      makeMatch({ id: "cw0", winning_team: "A", created_at: onDay(0, 1) }),
+      makeMatch({ id: "cw1", winning_team: "A", created_at: onDay(0, 2) }),
     ];
-    const r = computeAchievementsForPlayer("p1", makePlayer(), winMatch, [], elo);
+    const elo = [
+      makeElo({ match_id: "cw0", player_id: "p1", elo_before: 1500, created_at: onDay(0, 1) }),
+      makeElo({ match_id: "cw0", player_id: "p2", elo_before: 1500, created_at: onDay(0, 1) }),
+      // p1 climbed +200 in season ELO, p2 stayed flat → 200 gap
+      makeElo({ match_id: "cw1", player_id: "p1", elo_before: 1700, created_at: onDay(0, 2) }),
+      makeElo({ match_id: "cw1", player_id: "p2", elo_before: 1500, created_at: onDay(0, 2) }),
+    ];
+    const r = computeAchievementsForPlayer("p1", makePlayer(), matches, [], elo);
     const ch = r.find((a) => a.achievementId === "carrying_hard");
     expect(ch).toBeDefined();
     expect(ch!.meta?.partnerId).toBe("p2");
   });
 
-  it("unlocks Deadweight when the partner is 200+ above", () => {
-    const elo = [
-      makeElo({ match_id: "cw1", player_id: "p1", elo_before: 1600 }),
-      makeElo({ match_id: "cw1", player_id: "p2", elo_before: 1820 }),
+  it("unlocks Deadweight when the partner is 200+ above (season ELO)", () => {
+    const matches = [
+      makeMatch({ id: "cw0", winning_team: "A", created_at: onDay(0, 1) }),
+      makeMatch({ id: "cw1", winning_team: "A", created_at: onDay(0, 2) }),
     ];
-    const r = computeAchievementsForPlayer("p1", makePlayer(), winMatch, [], elo);
+    const elo = [
+      makeElo({ match_id: "cw0", player_id: "p1", elo_before: 1500, created_at: onDay(0, 1) }),
+      makeElo({ match_id: "cw0", player_id: "p2", elo_before: 1500, created_at: onDay(0, 1) }),
+      // p2 climbed +200 in season ELO, p1 stayed flat → partner 200 above
+      makeElo({ match_id: "cw1", player_id: "p1", elo_before: 1500, created_at: onDay(0, 2) }),
+      makeElo({ match_id: "cw1", player_id: "p2", elo_before: 1700, created_at: onDay(0, 2) }),
+    ];
+    const r = computeAchievementsForPlayer("p1", makePlayer(), matches, [], elo);
     expect(r.find((a) => a.achievementId === "deadweight")).toBeDefined();
   });
 
-  it("does not unlock on a loss even with a big gap", () => {
-    const lossMatch = [makeMatch({ id: "cl1", winning_team: "B", created_at: onDay(0, 1) })];
+  it("uses season ELO, not all-time, so a big all-time gap on a first season match does not count", () => {
+    // Single match of the season: both players normalize to 1500 regardless of
+    // their all-time ELO, so there is no season-ELO gap.
+    const matches = [makeMatch({ id: "cw1", winning_team: "A", created_at: onDay(0, 1) })];
     const elo = [
-      makeElo({ match_id: "cl1", player_id: "p1", elo_before: 1600 }),
-      makeElo({ match_id: "cl1", player_id: "p2", elo_before: 1390 }),
+      makeElo({ match_id: "cw1", player_id: "p1", elo_before: 1600, created_at: onDay(0, 1) }),
+      makeElo({ match_id: "cw1", player_id: "p2", elo_before: 1390, created_at: onDay(0, 1) }),
     ];
-    const r = computeAchievementsForPlayer("p1", makePlayer(), lossMatch, [], elo);
+    const r = computeAchievementsForPlayer("p1", makePlayer(), matches, [], elo);
+    expect(r.find((a) => a.achievementId === "carrying_hard")).toBeUndefined();
+    expect(r.find((a) => a.achievementId === "deadweight")).toBeUndefined();
+  });
+
+  it("does not unlock on a loss even with a big season gap", () => {
+    const matches = [
+      makeMatch({ id: "cl0", winning_team: "B", created_at: onDay(0, 1) }),
+      makeMatch({ id: "cl1", winning_team: "B", created_at: onDay(0, 2) }),
+    ];
+    const elo = [
+      makeElo({ match_id: "cl0", player_id: "p1", elo_before: 1500, created_at: onDay(0, 1) }),
+      makeElo({ match_id: "cl0", player_id: "p2", elo_before: 1500, created_at: onDay(0, 1) }),
+      makeElo({ match_id: "cl1", player_id: "p1", elo_before: 1700, created_at: onDay(0, 2) }),
+      makeElo({ match_id: "cl1", player_id: "p2", elo_before: 1500, created_at: onDay(0, 2) }),
+    ];
+    const r = computeAchievementsForPlayer("p1", makePlayer(), matches, [], elo);
     expect(r.find((a) => a.achievementId === "carrying_hard")).toBeUndefined();
     expect(r.find((a) => a.achievementId === "deadweight")).toBeUndefined();
   });

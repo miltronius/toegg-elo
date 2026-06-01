@@ -5,6 +5,7 @@ import {
   buildAchievementStatuses,
   computeRarityMap,
   computeClientSideRarityMap,
+  computeAchievementsForPlayer,
   computeAchievementProgress,
   rarityColorForTier,
   rarityTierForPercent,
@@ -208,6 +209,38 @@ function AchievementsOverview({
       ? computeRarityMap(allAchievementRows, players.length)
       : computeClientSideRarityMap(players, matches, eloHistory);
 
+  // Players who have each achievement, for the hover bubble.
+  const playerById = new Map(players.map((p) => [p.id, p] as const));
+  const achieversById = new Map<string, { name: string; elo: number }[]>();
+  const addAchiever = (achievementId: string, player: Player) => {
+    const entry = { name: player.name, elo: player.current_elo };
+    const list = achieversById.get(achievementId);
+    if (list) list.push(entry);
+    else achieversById.set(achievementId, [entry]);
+  };
+  if (allAchievementRows.length > 0) {
+    for (const row of allAchievementRows) {
+      const player = playerById.get(row.player_id);
+      if (player) addAchiever(row.achievement_id, player);
+    }
+  } else {
+    for (const player of players) {
+      for (const { achievementId } of computeAchievementsForPlayer(
+        player.id,
+        player,
+        matches,
+        players,
+        eloHistory,
+      )) {
+        addAchiever(achievementId, player);
+      }
+    }
+  }
+  // Highest all-time ELO first.
+  for (const list of achieversById.values()) {
+    list.sort((a, b) => b.elo - a.elo);
+  }
+
   type Item = {
     def: (typeof ACHIEVEMENT_DEFINITIONS)[number];
     percent: number | undefined;
@@ -251,6 +284,7 @@ function AchievementsOverview({
             </div>
             {groupItems.map(({ def, percent }) => {
               const barColor = isNone ? "var(--border)" : groupColor;
+              const achievers = achieversById.get(def.id) ?? [];
               return (
                 <div
                   key={def.id}
@@ -284,6 +318,27 @@ function AchievementsOverview({
                     {percent !== undefined && percent > 0
                       ? `${percent.toFixed(0)}%`
                       : "—"}
+                  </div>
+                  <div className="achievements-overview-tooltip" role="tooltip">
+                    <div className="achievements-overview-tooltip-title">
+                      {achievers.length > 0
+                        ? `Earned by ${achievers.length} player${achievers.length === 1 ? "" : "s"}`
+                        : "Not yet unlocked"}
+                    </div>
+                    {achievers.length > 0 && (
+                      <ul className="achievements-overview-tooltip-list">
+                        {achievers.map((a) => (
+                          <li key={a.name}>
+                            <span className="achievements-overview-tooltip-name">
+                              {a.name}
+                            </span>
+                            <span className="achievements-overview-tooltip-elo">
+                              {Math.round(a.elo)}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
                   </div>
                 </div>
               );

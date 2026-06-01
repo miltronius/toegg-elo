@@ -54,7 +54,7 @@ Copy `frontend/.env.example` to `frontend/.env.local` and fill in:
 
 - Timeline: logged-in users only; shown as first tab when authenticated
 - Teams, Record Match, Achievements: `user` or `admin` role only
-- Users: `admin` only
+- Admin (user management + achievement recompute): `admin` only
 - Leaderboard and History: always visible
 
 ### Data Flow

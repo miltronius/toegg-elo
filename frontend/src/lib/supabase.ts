@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { recomputeAllAchievements } from "./achievements";
 
 // The anon key is also known as the publishable key in Supabase
 // Both refer to the same public key found in your project settings
@@ -444,4 +445,27 @@ export async function upsertPlayerAchievements(
     ignoreDuplicates: false,
   });
   if (error) throw error;
+}
+
+/**
+ * Admin-only: wipe the derived achievements cache and rebuild it from scratch
+ * so changed unlock logic is fully reflected. unlocked_at is recomputed from
+ * historical match/ELO dates, so timestamps stay correct after the rebuild.
+ * Requires the admin role (DELETE on player_achievements is admin-only via RLS).
+ */
+export async function recomputeAllAchievementsAdmin(): Promise<{
+  players: number;
+  matches: number;
+}> {
+  // Clear every row first: recomputeAllAchievements upserts with
+  // ignoreDuplicates and never deletes, so stale rows must be removed here.
+  const { error: deleteError } = await supabase
+    .from("player_achievements")
+    .delete()
+    .not("id", "is", null);
+  if (deleteError) throw deleteError;
+
+  const [players, matches] = await Promise.all([getPlayers(), getMatches()]);
+  await recomputeAllAchievements(supabase, players, matches);
+  return { players: players.length, matches: matches.length };
 }

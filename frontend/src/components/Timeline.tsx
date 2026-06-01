@@ -37,10 +37,19 @@ type FirstGameEvent = {
   rank: number;
 };
 
+type SeasonStanding = {
+  playerId: string;
+  elo: number;
+  wins: number;
+  losses: number;
+};
+
 type SeasonTransitionEvent = {
   type: "season_transition";
   endedSeason: Season;
   startedSeason: Season;
+  // Final standings of the ended season, best first (up to 5 entries).
+  standings: SeasonStanding[];
 };
 
 type EventGroup =
@@ -71,7 +80,7 @@ function buildTimeline(
     const next = sortedSeasons.find((ns) => ns.number === s.number + 1);
     if (!next) continue;
     const day = s.ended_at.slice(0, 10);
-    transitionByDate.set(day, { type: "season_transition", endedSeason: s, startedSeason: next });
+    transitionByDate.set(day, { type: "season_transition", endedSeason: s, startedSeason: next, standings: [] });
   }
 
   // Build match-id → elo entries lookup
@@ -216,6 +225,29 @@ function buildTimeline(
     if (events.length > 0) rankChangesForDay.set(date, events);
   }
 
+  // Now that season ELOs are fully accumulated, compute each ended season's
+  // final standings (same ranking rule as the leaderboard: ELO, then winrate).
+  for (const transition of transitionByDate.values()) {
+    const seasonId = transition.endedSeason.id;
+    const elos = seasonElos.get(seasonId);
+    if (!elos) continue;
+    const active = getActivePlayers(seasonId);
+    transition.standings = [...elos.entries()]
+      .filter(([id]) => active.has(id))
+      .sort(
+        (a, b) =>
+          b[1] - a[1] ||
+          seasonWinrate(seasonId, b[0]) - seasonWinrate(seasonId, a[0]),
+      )
+      .slice(0, 5)
+      .map(([id, elo]) => ({
+        playerId: id,
+        elo: Math.round(elo),
+        wins: getSeasonWins(seasonId).get(id) ?? 0,
+        losses: getSeasonLosses(seasonId).get(id) ?? 0,
+      }));
+  }
+
   // Collect all dates: match days + season transition days
   const allDates = [...new Set([...activeDates, ...transitionByDate.keys()])].sort();
 
@@ -297,6 +329,64 @@ function formatDay(date: string): string {
 
 function formatTime(iso: string): string {
   return new Date(iso).toLocaleTimeString("de-CH", { hour: "2-digit", minute: "2-digit" });
+}
+
+const PLACE_MEDALS: Record<number, string> = { 1: "🥇", 2: "🥈", 3: "🥉" };
+
+function SeasonPodium({
+  standings,
+  endedSeason,
+  playerMap,
+}: {
+  standings: SeasonStanding[];
+  endedSeason: Season;
+  playerMap: Map<string, Player>;
+}) {
+  if (standings.length === 0) return null;
+
+  const ranked = standings.map((s, i) => ({ ...s, place: i + 1 }));
+  const top3 = ranked.slice(0, 3);
+  const mentions = ranked.slice(3, 5);
+  // Pedestal order: 2nd, 1st, 3rd (classic podium layout)
+  const pedestal = [top3[1], top3[0], top3[2]].filter(Boolean) as typeof top3;
+
+  return (
+    <div className="season-podium">
+      <div className="season-podium-title">
+        🏆 Season {endedSeason.number} final standings
+      </div>
+      <div className="season-podium-pedestals">
+        {pedestal.map((s) => (
+          <div
+            key={s.playerId}
+            className={`season-podium-place season-podium-place--${s.place}`}
+          >
+            <div className="season-podium-name">
+              {playerMap.get(s.playerId)?.name ?? "?"}
+            </div>
+            <div className="season-podium-elo">{s.elo}</div>
+            <div className="season-podium-block">
+              <span className="season-podium-medal">{PLACE_MEDALS[s.place]}</span>
+              <span className="season-podium-rank">#{s.place}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+      {mentions.length > 0 && (
+        <div className="season-podium-mentions">
+          {mentions.map((s) => (
+            <span key={s.playerId} className="season-podium-mention">
+              <span className="season-podium-mention-rank">#{s.place}</span>
+              <span className="season-podium-mention-name">
+                {playerMap.get(s.playerId)?.name ?? "?"}
+              </span>
+              <span className="season-podium-mention-elo">{s.elo}</span>
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 const GROUP_LABELS: Record<EventGroup["kind"], string> = {
@@ -409,15 +499,22 @@ export function Timeline({
                       })}
 
                     {group.kind === "season" && (
-                      <div className="dashboard-event dashboard-season-transition">
-                        <span className="dashboard-event-icon">🏆</span>
-                        <span className="dashboard-event-time" />
-                        <span className="dashboard-event-body">
-                          <span className="dashboard-season-label">S{group.event.endedSeason.number} · {group.event.endedSeason.name} ended</span>
-                          <span className="dashboard-match-sep"> · </span>
-                          <span className="dashboard-season-label">S{group.event.startedSeason.number} · {group.event.startedSeason.name} started</span>
-                        </span>
-                      </div>
+                      <>
+                        <div className="dashboard-event dashboard-season-transition">
+                          <span className="dashboard-event-icon">🏆</span>
+                          <span className="dashboard-event-time" />
+                          <span className="dashboard-event-body">
+                            <span className="dashboard-season-label">S{group.event.endedSeason.number} · {group.event.endedSeason.name} ended</span>
+                            <span className="dashboard-match-sep"> · </span>
+                            <span className="dashboard-season-label">S{group.event.startedSeason.number} · {group.event.startedSeason.name} started</span>
+                          </span>
+                        </div>
+                        <SeasonPodium
+                          standings={group.event.standings}
+                          endedSeason={group.event.endedSeason}
+                          playerMap={playerMap}
+                        />
+                      </>
                     )}
 
                     {group.kind === "rankings" &&

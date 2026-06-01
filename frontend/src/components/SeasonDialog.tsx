@@ -1,13 +1,32 @@
 import { useState } from "react";
-import { Season, endSeasonAndStartNew } from "../lib/supabase";
+import {
+  Season,
+  endSeasonAndStartNew,
+  type Match,
+  type Player,
+  type EloHistory,
+} from "../lib/supabase";
+import { SeasonStats } from "./SeasonStats";
 
 interface SeasonDialogProps {
   activeSeason: Season | null;
   isAdmin: boolean;
   onSeasonChanged: () => void;
+  seasons: Season[];
+  matches: Match[];
+  history: EloHistory[];
+  players: Player[];
 }
 
-export function SeasonDialog({ activeSeason, isAdmin, onSeasonChanged }: SeasonDialogProps) {
+export function SeasonDialog({
+  activeSeason,
+  isAdmin,
+  onSeasonChanged,
+  seasons,
+  matches,
+  history,
+  players,
+}: SeasonDialogProps) {
   const [open, setOpen] = useState(false);
   const [view, setView] = useState<"info" | "new-season">("info");
   const [newName, setNewName] = useState("");
@@ -69,7 +88,7 @@ export function SeasonDialog({ activeSeason, isAdmin, onSeasonChanged }: SeasonD
 
       {open && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[1000]" onClick={close}>
-          <div className="bg-white rounded-lg p-8 max-w-[440px] w-[90%] shadow-[0_20px_25px_-5px_rgba(0,0,0,0.1)]" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-white rounded-lg p-8 max-w-140 w-[90%] max-h-[90vh] overflow-y-auto shadow-[0_20px_25px_-5px_rgba(0,0,0,0.1)]" onClick={(e) => e.stopPropagation()}>
             {view === "info" && (
               <>
                 <h2 className="text-2xl font-semibold mb-5 flex items-center gap-2.5">
@@ -94,7 +113,15 @@ export function SeasonDialog({ activeSeason, isAdmin, onSeasonChanged }: SeasonD
                   <dd className="m-0">{activeSeason ? formatDate(activeSeason.started_at) : "—"}</dd>
                 </dl>
 
-                <div className="flex gap-4 justify-end">
+                <SeasonStats
+                  activeSeason={activeSeason}
+                  seasons={seasons}
+                  matches={matches}
+                  history={history}
+                  players={players}
+                />
+
+                <div className="flex gap-4 justify-end mt-6">
                   <button className="btn-secondary" onClick={close}>
                     Close
                   </button>

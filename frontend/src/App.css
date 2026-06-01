@@ -661,6 +661,7 @@ td.winrate {
 }
 
 .achievements-overview-row {
+  position: relative;
   display: grid;
   grid-template-columns: 2rem 1fr 30% 2.5rem;
   align-items: center;
@@ -671,12 +672,141 @@ td.winrate {
     background 0.15s,
     box-shadow 0.15s;
 }
+
+/* Hover bubble listing the players who earned an achievement.
+   Flies out to the right of the row. */
+.achievements-overview-tooltip {
+  position: absolute;
+  left: calc(100% + 14px);
+  top: 50%;
+  z-index: 30;
+  width: max-content;
+  min-width: 150px;
+  max-width: 240px;
+  background: var(--color-bg);
+  color: var(--color-text);
+  border: 1px solid var(--ach-color, var(--color-border));
+  border-radius: 8px;
+  box-shadow: 0 6px 20px
+    color-mix(in srgb, var(--ach-color, #000) 35%, transparent);
+  padding: 0.6rem 0.75rem;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(-50%) translateX(-6px);
+  transition:
+    opacity 0.15s,
+    transform 0.15s;
+}
+.achievements-overview-row:hover .achievements-overview-tooltip {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(-50%) translateX(0);
+}
+/* speech-bubble tail pointing left toward the row */
+.achievements-overview-tooltip::before,
+.achievements-overview-tooltip::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  border-style: solid;
+}
+.achievements-overview-tooltip::before {
+  left: -8px;
+  border-width: 8px 8px 8px 0;
+  border-color: transparent var(--ach-color, var(--color-border)) transparent
+    transparent;
+}
+.achievements-overview-tooltip::after {
+  left: -7px;
+  border-width: 7px 7px 7px 0;
+  border-color: transparent var(--color-bg) transparent transparent;
+}
+.achievements-overview-tooltip-title {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--color-text-light);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.achievements-overview-tooltip-list {
+  list-style: none;
+  margin: 0.4rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+.achievements-overview-tooltip-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.achievements-overview-tooltip-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.achievements-overview-tooltip-elo {
+  flex-shrink: 0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  padding: 0.05rem 0.4rem;
+  border-radius: 999px;
+  color: var(--ach-color, var(--color-text-light));
+  background: color-mix(
+    in srgb,
+    var(--ach-color, var(--color-text-light)) 16%,
+    transparent
+  );
+}
+
+/* On narrow screens the right flyout would run off-screen — drop it below. */
+@media (max-width: 768px) {
+  .achievements-overview-tooltip {
+    left: auto;
+    right: 0;
+    top: calc(100% + 8px);
+    transform: translateY(-6px);
+  }
+  .achievements-overview-row:hover .achievements-overview-tooltip {
+    transform: translateY(0);
+  }
+  .achievements-overview-tooltip::before {
+    left: auto;
+    right: 16px;
+    top: auto;
+    bottom: 100%;
+    transform: none;
+    border-width: 0 8px 8px 8px;
+    border-color: transparent transparent var(--ach-color, var(--color-border))
+      transparent;
+  }
+  .achievements-overview-tooltip::after {
+    left: auto;
+    right: 17px;
+    top: auto;
+    bottom: calc(100% - 1px);
+    transform: none;
+    border-width: 0 7px 7px 7px;
+    border-color: transparent transparent var(--color-bg) transparent;
+  }
+}
 .achievements-overview-row[style]:hover {
   background: color-mix(in srgb, var(--ach-color) 15%, transparent);
   box-shadow: inset 3px 0 0 var(--ach-color);
 }
 .achievements-overview-row:not([style]):hover {
   background: #fff;
+  filter: invert(1);
+}
+/* Counter the row's invert(1) so the hover bubble keeps its real colors */
+.achievements-overview-row:not([style]) .achievements-overview-tooltip {
   filter: invert(1);
 }
 .achievements-overview-icon {
@@ -994,6 +1124,176 @@ td.winrate {
   font-weight: 600;
   color: var(--color-primary);
   font-size: 0.85rem;
+}
+
+/* ── Season podium (timeline season transitions) ─────────────────── */
+.season-podium {
+  margin: 0.5rem 0 0.25rem;
+  padding: 0.75rem 0.75rem 0.6rem;
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-primary) 5%, var(--color-bg-light));
+}
+.season-podium-title {
+  text-align: center;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--color-text-light);
+  margin-bottom: 0.75rem;
+}
+.season-podium-pedestals {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 0.5rem;
+}
+.season-podium-place {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 6.5rem;
+  max-width: 32%;
+}
+.season-podium-name {
+  font-weight: 600;
+  font-size: 0.85rem;
+  text-align: center;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+  hyphens: auto;
+  max-width: 100%;
+}
+.season-podium-elo {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--color-text-light);
+  font-variant-numeric: tabular-nums;
+  margin-bottom: 0.3rem;
+}
+.season-podium-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.1rem;
+  width: 100%;
+  padding-top: 0.4rem;
+  border-radius: 6px 6px 0 0;
+  background: var(--podium-color);
+  color: #3a2f00;
+}
+.season-podium-medal {
+  font-size: 1.4rem;
+  line-height: 1;
+}
+.season-podium-rank {
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+.season-podium-place--1 .season-podium-block {
+  height: 5.25rem;
+  --podium-color: linear-gradient(180deg, #ffe27a, #f5c518);
+}
+.season-podium-place--2 .season-podium-block {
+  height: 4rem;
+  --podium-color: linear-gradient(180deg, #e4e4e4, #c0c0c0);
+}
+.season-podium-place--3 .season-podium-block {
+  height: 3rem;
+  --podium-color: linear-gradient(180deg, #e6a866, #cd7f32);
+}
+.season-podium-mentions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.4rem;
+  margin-top: 0.6rem;
+}
+.season-podium-mention {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  background: rgba(100, 220, 130, 0.12);
+  border: 1px solid rgba(100, 220, 130, 0.4);
+}
+.season-podium-mention-rank {
+  font-weight: 800;
+  color: #16a34a;
+}
+.season-podium-mention-name {
+  font-weight: 600;
+}
+.season-podium-mention-elo {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-light);
+}
+
+/* ── Season statistics (season dialog) ──────────────────────────── */
+.season-stats {
+  border-top: 1px solid var(--color-border);
+  padding-top: 1rem;
+  margin-top: 0.5rem;
+}
+.season-stats-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.85rem;
+}
+.season-stats-title {
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+.season-stats-select {
+  padding: 0.3rem 0.5rem;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-bg-light);
+  color: var(--color-text);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  max-width: 60%;
+}
+.season-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
+  gap: 0.6rem;
+}
+.season-stat-tile {
+  background: var(--color-bg-light);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 0.6rem 0.7rem;
+}
+.season-stat-value {
+  font-size: 1.4rem;
+  font-weight: 800;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+.season-stat-label {
+  font-size: 0.72rem;
+  color: var(--color-text-light);
+  margin-top: 0.2rem;
+}
+.season-stats-chart {
+  margin-top: 1rem;
+}
+.season-stats-subhead {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--color-text-light);
+  margin-bottom: 0.35rem;
 }
 
 /* ── Auth screen (animated gradient, can't be a Tailwind utility) ── */

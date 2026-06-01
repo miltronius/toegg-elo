@@ -10,6 +10,7 @@ A dashboard to track 2v2 table soccer (foosball) matches and rank players using 
 - **Player detail modal** with ELO progression, winrate chart, Top Enemy & Nemesis stats, season dropdown, and ‹ › keyboard navigation (← → / A D)
 - **Teams tab** — all player pairs (≥ 2 matches) with combined ELO, win rate, nemesis rival, custom names/colors; season-filtered
 - **Achievements tab** — per-player achievement tracking (users/admins only)
+- **Admin tab** — user role management and one-click achievement recompute (admins only)
 - Match history with per-match ELO changes and season badge
 - Season support: all views filter by season; each season has its own K-factor
 
