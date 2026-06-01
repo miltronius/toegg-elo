@@ -168,6 +168,10 @@ function App() {
           activeSeason={activeSeason}
           isAdmin={isAdmin}
           onSeasonChanged={loadData}
+          seasons={seasons}
+          matches={matches}
+          history={allEloHistory}
+          players={players}
         />
         <div className="flex items-center gap-3">
           <ThemeToggle />
@@ -221,7 +225,7 @@ function App() {
         )}
         {isAdmin && (
           <button className={tabCls("users")} onClick={() => setActiveTab("users")}>
-            Users
+            Admin
           </button>
         )}
       </nav>
@@ -298,7 +302,9 @@ function App() {
             }
           />
         )}
-        {activeTab === "users" && isAdmin && <UserManagement />}
+        {activeTab === "users" && isAdmin && (
+          <UserManagement onRecomputed={loadData} />
+        )}
       </main>
       {canEdit && (
         <CreatePlayerModal

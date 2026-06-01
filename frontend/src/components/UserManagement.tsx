@@ -1,15 +1,23 @@
 import { useEffect, useState } from "react";
-import { getAllProfiles, updateUserRole, type Profile, type Role } from "../lib/supabase";
+import {
+  getAllProfiles,
+  recomputeAllAchievementsAdmin,
+  updateUserRole,
+  type Profile,
+  type Role,
+} from "../lib/supabase";
 import { useAuth } from "../contexts/AuthContext";
 
 const ROLES: Role[] = ["viewer", "user", "admin"];
 
-export function UserManagement() {
+export function UserManagement({ onRecomputed }: { onRecomputed?: () => void }) {
   const { user } = useAuth();
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [recomputing, setRecomputing] = useState(false);
+  const [recomputeMsg, setRecomputeMsg] = useState<string | null>(null);
 
   useEffect(() => {
     getAllProfiles()
@@ -29,6 +37,24 @@ export function UserManagement() {
       setError(e instanceof Error ? e.message : "Failed to update role");
     } finally {
       setSaving(null);
+    }
+  };
+
+  const handleRecompute = async () => {
+    setRecomputing(true);
+    setRecomputeMsg(null);
+    try {
+      const { players, matches } = await recomputeAllAchievementsAdmin();
+      setRecomputeMsg(
+        `Recomputed achievements for ${players} player(s) across ${matches} match(es).`
+      );
+      onRecomputed?.();
+    } catch (e) {
+      setRecomputeMsg(
+        e instanceof Error ? e.message : "Failed to recompute achievements"
+      );
+    } finally {
+      setRecomputing(false);
     }
   };
 
@@ -73,6 +99,27 @@ export function UserManagement() {
           ))}
         </tbody>
       </table>
+
+      <div className="mt-6 pt-4 border-t border-border-light">
+        <h3 className="font-semibold">Achievements</h3>
+        <p className="text-text-light text-[0.85rem] mt-1 mb-3">
+          Rebuild the achievements cache from scratch. Use this after the unlock
+          rules change. Historical unlock dates are preserved.
+        </p>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={handleRecompute}
+            disabled={recomputing}
+            className="btn-secondary disabled:opacity-60 disabled:cursor-default"
+          >
+            {recomputing ? "Recomputing..." : "Recompute achievements"}
+          </button>
+          {recomputeMsg && (
+            <span className="text-text-light text-[0.85rem]">{recomputeMsg}</span>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
