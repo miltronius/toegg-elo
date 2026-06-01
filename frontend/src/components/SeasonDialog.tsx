@@ -6,6 +6,7 @@ import {
   type Player,
   type EloHistory,
 } from "../lib/supabase";
+import type { PlayerAchievementRow } from "../lib/achievements";
 import { SeasonStats } from "./SeasonStats";
 
 interface SeasonDialogProps {
@@ -16,6 +17,7 @@ interface SeasonDialogProps {
   matches: Match[];
   history: EloHistory[];
   players: Player[];
+  achievements: PlayerAchievementRow[];
 }
 
 export function SeasonDialog({
@@ -26,7 +28,12 @@ export function SeasonDialog({
   matches,
   history,
   players,
+  achievements,
 }: SeasonDialogProps) {
+  // Ending a season is temporarily disabled for everyone. Flip to re-enable
+  // (the new-season flow is gated on admin role below).
+  const ALLOW_END_SEASON = false;
+
   const [open, setOpen] = useState(false);
   const [view, setView] = useState<"info" | "new-season">("info");
   const [newName, setNewName] = useState("");
@@ -83,12 +90,20 @@ export function SeasonDialog({
         title="View season info"
       >
         S{activeSeason?.number ?? "?"}
-        <span className="font-normal opacity-85 max-sm:hidden">{activeSeason?.name ?? "No season"}</span>
+        <span className="font-normal opacity-85 max-sm:hidden">
+          {activeSeason?.name ?? "No season"}
+        </span>
       </button>
 
       {open && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[1000]" onClick={close}>
-          <div className="bg-white rounded-lg p-8 max-w-140 w-[90%] max-h-[90vh] overflow-y-auto shadow-[0_20px_25px_-5px_rgba(0,0,0,0.1)]" onClick={(e) => e.stopPropagation()}>
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-[1000]"
+          onClick={close}
+        >
+          <div
+            className="bg-white rounded-lg p-8 max-w-140 w-[90%] max-h-[90vh] overflow-y-auto shadow-[0_20px_25px_-5px_rgba(0,0,0,0.1)]"
+            onClick={(e) => e.stopPropagation()}
+          >
             {view === "info" && (
               <>
                 <h2 className="text-2xl font-semibold mb-5 flex items-center gap-2.5">
@@ -99,18 +114,26 @@ export function SeasonDialog({
                 </h2>
 
                 <dl className="grid grid-cols-[auto_1fr] gap-x-5 gap-y-2 mb-6 text-[0.9rem]">
-                  <dt className="font-semibold text-text-light whitespace-nowrap">K-Factor</dt>
+                  <dt className="font-semibold text-text-light whitespace-nowrap">
+                    K-Factor
+                  </dt>
                   <dd className="m-0">{activeSeason?.k_factor ?? "—"}</dd>
 
-                  <dt className="font-semibold text-text-light whitespace-nowrap">Inactivity Penalty</dt>
+                  <dt className="font-semibold text-text-light whitespace-nowrap">
+                    Inactivity Penalty
+                  </dt>
                   <dd className="m-0">
                     {activeSeason?.inactivity_penalty_percent
                       ? `${activeSeason.inactivity_penalty_percent}% per week`
                       : "None"}
                   </dd>
 
-                  <dt className="font-semibold text-text-light whitespace-nowrap">Started</dt>
-                  <dd className="m-0">{activeSeason ? formatDate(activeSeason.started_at) : "—"}</dd>
+                  <dt className="font-semibold text-text-light whitespace-nowrap">
+                    Started
+                  </dt>
+                  <dd className="m-0">
+                    {activeSeason ? formatDate(activeSeason.started_at) : "—"}
+                  </dd>
                 </dl>
 
                 <SeasonStats
@@ -119,13 +142,14 @@ export function SeasonDialog({
                   matches={matches}
                   history={history}
                   players={players}
+                  achievements={achievements}
                 />
 
                 <div className="flex gap-4 justify-end mt-6">
                   <button className="btn-secondary" onClick={close}>
                     Close
                   </button>
-                  {isAdmin && (
+                  {ALLOW_END_SEASON && isAdmin && (
                     <button
                       className="btn-primary"
                       onClick={() => setView("new-season")}
@@ -139,10 +163,13 @@ export function SeasonDialog({
 
             {view === "new-season" && (
               <>
-                <h2 className="text-2xl font-semibold mb-5">Start New Season</h2>
+                <h2 className="text-2xl font-semibold mb-5">
+                  Start New Season
+                </h2>
 
                 <div className="bg-[#fef3c7] border border-warning rounded-md p-3 text-[0.875rem] text-[#92400e] mb-5">
-                  All players will reset to <strong>1500 ELO</strong> when the new season begins.
+                  All players will reset to <strong>1500 Elo</strong> when the
+                  new season begins.
                 </div>
 
                 <div className="form-group">
@@ -162,7 +189,9 @@ export function SeasonDialog({
                   <select
                     id="season-kfactor"
                     value={newKFactor}
-                    onChange={(e) => setNewKFactor(Number(e.target.value) as 32 | 64 | 128)}
+                    onChange={(e) =>
+                      setNewKFactor(Number(e.target.value) as 32 | 64 | 128)
+                    }
                     disabled={loading}
                   >
                     <option value={32}>32 — Standard (slower)</option>
@@ -173,7 +202,7 @@ export function SeasonDialog({
 
                 <div className="form-group">
                   <label htmlFor="season-penalty">
-                    Weekly Inactivity Penalty (% of ELO)
+                    Weekly Inactivity Penalty (% of Elo)
                   </label>
                   <input
                     id="season-penalty"
@@ -186,7 +215,8 @@ export function SeasonDialog({
                     disabled={loading}
                   />
                   <span className="block text-[0.78rem] text-text-light mt-1">
-                    Applied every Monday to players inactive for 7+ days. 0 = disabled.
+                    Applied every Monday to players inactive for 7+ days. 0 =
+                    disabled.
                   </span>
                 </div>
 
@@ -199,7 +229,10 @@ export function SeasonDialog({
                 <div className="flex gap-4 justify-end">
                   <button
                     className="btn-secondary"
-                    onClick={() => { setView("info"); setError(null); }}
+                    onClick={() => {
+                      setView("info");
+                      setError(null);
+                    }}
                     disabled={loading}
                   >
                     Back
@@ -209,7 +242,9 @@ export function SeasonDialog({
                     onClick={handleConfirmNewSeason}
                     disabled={loading || !newName.trim()}
                   >
-                    {loading ? "Starting…" : `Confirm — End Season ${activeSeason?.number}`}
+                    {loading
+                      ? "Starting…"
+                      : `Confirm — End Season ${activeSeason?.number}`}
                   </button>
                 </div>
               </>
