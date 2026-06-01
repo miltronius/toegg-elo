@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { computeSeasonStats } from "./seasonStats";
 import type { Match, Player, EloHistory } from "./supabase";
+import type { PlayerAchievementRow } from "./achievements";
 
 function makePlayer(id: string, name = id): Player {
   return {
@@ -109,5 +110,44 @@ describe("computeSeasonStats", () => {
     const matches = [makeMatch({ season_id: "s1" }), makeMatch({ season_id: "s2" })];
     const r = computeSeasonStats(null, matches, [], players);
     expect(r.gamesPlayed).toBe(2);
+  });
+
+  it("finds the win-rate leader among players with enough games", () => {
+    // p1 & p2 (team A) win all 6; p3 & p4 lose all 6. minGames = max(3, 3) = 3.
+    const matches = Array.from({ length: 6 }, (_, i) =>
+      makeMatch({ created_at: `2024-01-15T${10 + i}:00:00Z`, winning_team: "A" }),
+    );
+    const r = computeSeasonStats("s1", matches, [], players);
+    expect(r.winRateLeader).toEqual({
+      name: "Alice",
+      winrate: 100,
+      games: 6,
+      minGames: 3,
+    });
+  });
+
+  it("counts achievements unlocked within the season window, and all-time", () => {
+    const ach = (id: string, unlocked_at: string): PlayerAchievementRow => ({
+      id,
+      player_id: "p1",
+      achievement_id: "win_1",
+      unlocked_at,
+      meta: null,
+    });
+    const achievements = [
+      ach("a1", "2024-01-10T10:00:00Z"), // before window
+      ach("a2", "2024-02-01T10:00:00Z"), // in window
+      ach("a3", "2024-02-15T10:00:00Z"), // in window
+      ach("a4", "2024-03-05T10:00:00Z"), // after window (ended)
+    ];
+    const bounds = {
+      startedAt: "2024-01-20T00:00:00Z",
+      endedAt: "2024-03-01T00:00:00Z",
+    };
+    const seasonR = computeSeasonStats("s1", [], [], players, achievements, bounds);
+    expect(seasonR.achievementsUnlocked).toBe(2);
+
+    const allR = computeSeasonStats(null, [], [], players, achievements);
+    expect(allR.achievementsUnlocked).toBe(4);
   });
 });

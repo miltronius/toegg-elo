@@ -172,6 +172,7 @@ function App() {
           matches={matches}
           history={allEloHistory}
           players={players}
+          achievements={allAchievementRows}
         />
         <div className="flex items-center gap-3">
           <ThemeToggle />

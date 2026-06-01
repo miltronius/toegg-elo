@@ -1,4 +1,5 @@
 import type { Match, Player, EloHistory } from "./supabase";
+import type { PlayerAchievementRow } from "./achievements";
 
 // Monday–Friday only — foosball is played on working days, consistent with
 // weekdayStats.ts and the all_weekdays achievement. getDay(): 0=Sun..6=Sat.
@@ -24,6 +25,15 @@ export interface SeasonStats {
   biggestWin: { name: string; gain: number } | null;
   /** Calendar day with the most matches. */
   busiestDay: { day: string; games: number } | null;
+  /** Best win % among players with at least `minGames` games. */
+  winRateLeader: {
+    name: string;
+    winrate: number;
+    games: number;
+    minGames: number;
+  } | null;
+  /** Achievements unlocked in scope (this season, or all-time). */
+  achievementsUnlocked: number;
 }
 
 /** Whether `playerId` was on the winning side of `m` (null if they didn't play). */
@@ -55,6 +65,8 @@ export function computeSeasonStats(
   matches: Match[],
   history: EloHistory[],
   players: Player[],
+  achievements: PlayerAchievementRow[] = [],
+  seasonBounds: { startedAt: string; endedAt: string | null } | null = null,
 ): SeasonStats {
   const nameById = new Map(players.map((p) => [p.id, p.name]));
   const seasonMatches = seasonId
@@ -64,7 +76,7 @@ export function computeSeasonStats(
     (h) => h.match_id != null && (seasonId == null || h.season_id === seasonId),
   );
 
-  // Games per weekday (Mon–Fri) + busiest calendar day.
+  // Games per weekday (Mon–Fri) + busiest calendar day, games & wins per player.
   const weekday: WeekdayGames[] = WEEKDAY_LABELS.map((day) => ({
     day,
     games: 0,
@@ -72,6 +84,7 @@ export function computeSeasonStats(
   const perDay = new Map<string, number>();
   const participants = new Set<string>();
   const gamesByPlayer = new Map<string, number>();
+  const winsByPlayer = new Map<string, number>();
   for (const m of seasonMatches) {
     const dow = new Date(m.created_at).getDay();
     if (dow >= 1 && dow <= 5) weekday[dow - 1].games++;
@@ -80,6 +93,9 @@ export function computeSeasonStats(
     for (const pid of matchPlayerIds(m)) {
       participants.add(pid);
       gamesByPlayer.set(pid, (gamesByPlayer.get(pid) ?? 0) + 1);
+      if (playerWon(m, pid)) {
+        winsByPlayer.set(pid, (winsByPlayer.get(pid) ?? 0) + 1);
+      }
     }
   }
 
@@ -131,6 +147,37 @@ export function computeSeasonStats(
     }
   }
 
+  // Win-rate leader among players with enough games to be meaningful. The
+  // threshold scales with the most active player (half their games, min 3).
+  const maxGames = Math.max(0, ...gamesByPlayer.values());
+  const minGames = Math.max(3, Math.ceil(maxGames / 2));
+  let winRateLeader: SeasonStats["winRateLeader"] = null;
+  for (const [pid, games] of gamesByPlayer) {
+    if (games < minGames) continue;
+    const winrate = ((winsByPlayer.get(pid) ?? 0) / games) * 100;
+    if (
+      !winRateLeader ||
+      winrate > winRateLeader.winrate ||
+      (winrate === winRateLeader.winrate && games > winRateLeader.games)
+    ) {
+      winRateLeader = { name: nameById.get(pid) ?? "?", winrate, games, minGames };
+    }
+  }
+
+  // Achievements unlocked: all-time = every row; per-season = rows whose
+  // unlocked_at falls inside the season's [startedAt, endedAt) window.
+  const achievementsUnlocked =
+    seasonId == null
+      ? achievements.length
+      : seasonBounds
+        ? achievements.filter(
+            (a) =>
+              a.unlocked_at >= seasonBounds.startedAt &&
+              (seasonBounds.endedAt == null ||
+                a.unlocked_at < seasonBounds.endedAt),
+          ).length
+        : 0;
+
   return {
     gamesPlayed: seasonMatches.length,
     activePlayers: participants.size,
@@ -139,5 +186,7 @@ export function computeSeasonStats(
     bestDayGain,
     biggestWin,
     busiestDay,
+    winRateLeader,
+    achievementsUnlocked,
   };
 }

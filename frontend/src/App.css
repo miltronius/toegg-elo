@@ -1279,6 +1279,11 @@ td.winrate {
   line-height: 1.1;
   font-variant-numeric: tabular-nums;
 }
+.season-stat-unit {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-text-light);
+}
 .season-stat-label {
   font-size: 0.72rem;
   color: var(--color-text-light);

@@ -10,6 +10,7 @@ import {
   LabelList,
 } from "recharts";
 import type { Season, Match, Player, EloHistory } from "../lib/supabase";
+import type { PlayerAchievementRow } from "../lib/achievements";
 import { computeSeasonStats } from "../lib/seasonStats";
 
 interface SeasonStatsProps {
@@ -18,6 +19,18 @@ interface SeasonStatsProps {
   matches: Match[];
   history: EloHistory[];
   players: Player[];
+  achievements: PlayerAchievementRow[];
+}
+
+// Rough estimate: a 2v2 match takes about this long start to finish.
+const MINUTES_PER_GAME = 17;
+
+function formatDuration(totalMinutes: number): string {
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  if (hours === 0) return `${minutes}m`;
+  if (minutes === 0) return `${hours}h`;
+  return `${hours}h ${minutes}m`;
 }
 
 function formatDay(day: string): string {
@@ -35,6 +48,7 @@ export function SeasonStats({
   matches,
   history,
   players,
+  achievements,
 }: SeasonStatsProps) {
   const orderedSeasons = useMemo(
     () => [...seasons].sort((a, b) => b.number - a.number),
@@ -43,10 +57,20 @@ export function SeasonStats({
   const [scope, setScope] = useState<string>(activeSeason?.id ?? "all");
 
   const seasonId = scope === "all" ? null : scope;
-  const stats = useMemo(
-    () => computeSeasonStats(seasonId, matches, history, players),
-    [seasonId, matches, history, players],
-  );
+  const stats = useMemo(() => {
+    const season = seasonId ? seasons.find((s) => s.id === seasonId) : null;
+    const bounds = season
+      ? { startedAt: season.started_at, endedAt: season.ended_at }
+      : null;
+    return computeSeasonStats(
+      seasonId,
+      matches,
+      history,
+      players,
+      achievements,
+      bounds,
+    );
+  }, [seasonId, seasons, matches, history, players, achievements]);
 
   const maxWeekday = Math.max(1, ...stats.weekday.map((w) => w.games));
 
@@ -97,6 +121,7 @@ export function SeasonStats({
               <div className="season-stat-tile">
                 <div className="season-stat-value">
                   +{stats.bestDayGain.gain}
+                  <span className="season-stat-unit"> Elo</span>
                 </div>
                 <div className="season-stat-label">
                   Best day · {stats.bestDayGain.name} ·{" "}
@@ -106,7 +131,10 @@ export function SeasonStats({
             )}
             {stats.biggestWin && (
               <div className="season-stat-tile">
-                <div className="season-stat-value">+{stats.biggestWin.gain}</div>
+                <div className="season-stat-value">
+                  +{stats.biggestWin.gain}
+                  <span className="season-stat-unit"> Elo</span>
+                </div>
                 <div className="season-stat-label">
                   Biggest single win · {stats.biggestWin.name}
                 </div>
@@ -114,12 +142,46 @@ export function SeasonStats({
             )}
             {stats.busiestDay && (
               <div className="season-stat-tile">
-                <div className="season-stat-value">{stats.busiestDay.games}</div>
+                <div className="season-stat-value">
+                  {stats.busiestDay.games}
+                  <span className="season-stat-unit">
+                    {stats.busiestDay.games === 1 ? " game" : " games"}
+                  </span>
+                </div>
                 <div className="season-stat-label">
                   Busiest day · {formatDay(stats.busiestDay.day)}
                 </div>
               </div>
             )}
+            {stats.winRateLeader && (
+              <div className="season-stat-tile">
+                <div className="season-stat-value">
+                  {stats.winRateLeader.winrate.toFixed(0)}%
+                </div>
+                <div className="season-stat-label">
+                  Win-rate leader ({stats.winRateLeader.minGames}+ games) ·{" "}
+                  {stats.winRateLeader.name}
+                </div>
+              </div>
+            )}
+            <div className="season-stat-tile">
+              <div className="season-stat-value">
+                {stats.achievementsUnlocked}
+              </div>
+              <div className="season-stat-label">
+                {scope === "all"
+                  ? "Achievements unlocked in total"
+                  : "Achievements unlocked this season"}
+              </div>
+            </div>
+            <div className="season-stat-tile">
+              <div className="season-stat-value">
+                {formatDuration(stats.gamesPlayed * MINUTES_PER_GAME)}
+              </div>
+              <div className="season-stat-label">
+                Est. time played · ~{MINUTES_PER_GAME}min/game
+              </div>
+            </div>
           </div>
 
           <div className="season-stats-chart">
@@ -131,7 +193,7 @@ export function SeasonStats({
               >
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
                 <XAxis dataKey="day" tickLine={false} />
-                <YAxis allowDecimals={false} domain={[0, maxWeekday]} />
+                <YAxis allowDecimals={false} domain={[0, maxWeekday + 1]} />
                 <Tooltip
                   cursor={{ fill: "rgba(0,0,0,0.05)" }}
                   contentStyle={{
