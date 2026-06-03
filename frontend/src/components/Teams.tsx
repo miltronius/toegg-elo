@@ -294,6 +294,9 @@ export function Teams({ matches, players, teamNames, seasons, selectedSeason, on
                         {team.currentStreak > 0 && (
                           <span className="streak-badge" title="Winstreak">🔥{team.currentStreak}</span>
                         )}
+                        {team.currentLoseStreak > 0 && (
+                          <span className="streak-badge lose" title="Losestreak">🥶{team.currentLoseStreak}</span>
+                        )}
                       </div>
                       {(team.nameRow?.alias_1 || team.nameRow?.alias_2) && (
                         <div className="text-[0.75rem] text-text-light mt-0.5">
@@ -355,7 +358,10 @@ export function Teams({ matches, players, teamNames, seasons, selectedSeason, on
                   )}
                   {getTeamDisplayName(team, players)}
                   {team.currentStreak > 0 && (
-                    <span className="streak-badge">🔥{team.currentStreak}</span>
+                    <span className="streak-badge" title="Winstreak">🔥{team.currentStreak}</span>
+                  )}
+                  {team.currentLoseStreak > 0 && (
+                    <span className="streak-badge lose" title="Losestreak">🥶{team.currentLoseStreak}</span>
                   )}
                 </div>
                 {(team.nameRow?.alias_1 || team.nameRow?.alias_2) && (

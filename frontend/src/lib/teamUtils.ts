@@ -11,6 +11,7 @@ export type TeamStats = {
   winRate: number;
   combinedElo: number;
   currentStreak: number;
+  currentLoseStreak: number;
   nameRow: TeamNameRow | null;
   rivals: { key: string; matchesPlayed: number; wins: number; losses: number }[];
 };
@@ -86,10 +87,12 @@ export function computeTeamStats(
     teamB.opponents.set(kA, { played: bVsA.played + 1, wins: bVsA.wins + (aWon ? 0 : 1), losses: bVsA.losses + (aWon ? 1 : 0) });
   }
 
-  const trailingWinStreak = (winHistory: boolean[]): number => {
+  // Trailing run of consecutive matches with the given outcome (won/lost).
+  // Only surfaced when it's at least 2 long, matching the badge threshold.
+  const trailingStreak = (winHistory: boolean[], won: boolean): number => {
     let streak = 0;
     for (let i = winHistory.length - 1; i >= 0; i--) {
-      if (winHistory[i]) streak++;
+      if (winHistory[i] === won) streak++;
       else break;
     }
     return streak >= 2 ? streak : 0;
@@ -114,7 +117,8 @@ export function computeTeamStats(
         losses: data.losses,
         winRate: total > 0 ? data.wins / total : 0,
         combinedElo: (p1?.current_elo ?? 0) + (p2?.current_elo ?? 0),
-        currentStreak: trailingWinStreak(data.winHistory),
+        currentStreak: trailingStreak(data.winHistory, true),
+        currentLoseStreak: trailingStreak(data.winHistory, false),
         nameRow: nameMap.get(key) ?? null,
         rivals,
       };

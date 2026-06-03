@@ -12,6 +12,7 @@ import {
 import type { Season, Match, Player, EloHistory } from "../lib/supabase";
 import type { PlayerAchievementRow } from "../lib/achievements";
 import { computeSeasonStats } from "../lib/seasonStats";
+import { ActivityHeatmap } from "./ActivityHeatmap";
 
 interface SeasonStatsProps {
   activeSeason: Season | null;
@@ -74,6 +75,20 @@ export function SeasonStats({
 
   const maxWeekday = Math.max(1, ...stats.weekday.map((w) => w.games));
 
+  // Date range: for a season use its official start/end (ongoing → today);
+  // for all-time fall back to the first/last day with a match.
+  const season = seasonId ? seasons.find((s) => s.id === seasonId) : null;
+  const today = new Date().toISOString().slice(0, 10);
+  const range = season
+    ? { start: season.started_at.slice(0, 10), end: (season.ended_at ?? today).slice(0, 10) }
+    : stats.dateRange;
+
+  // The heatmap runs up to the most recent relevant day (today for all-time and
+  // ongoing seasons; the season's end otherwise) so current days sit far-right.
+  const heatmapRange = range
+    ? { start: range.start, end: season ? (season.ended_at ?? today).slice(0, 10) : today }
+    : null;
+
   return (
     <div className="season-stats">
       <div className="season-stats-head">
@@ -91,6 +106,13 @@ export function SeasonStats({
           ))}
         </select>
       </div>
+
+      {range && (
+        <div className="season-stats-daterange">
+          📅 {formatDay(range.start)} – {formatDay(range.end)}
+          {season && !season.ended_at ? " (ongoing)" : ""}
+        </div>
+      )}
 
       {stats.gamesPlayed === 0 ? (
         <p className="text-text-light text-[0.85rem] py-3 text-center">
@@ -117,6 +139,16 @@ export function SeasonStats({
                 </div>
               </div>
             )}
+            {stats.topLoseStreak && (
+              <div className="season-stat-tile">
+                <div className="season-stat-value">
+                  🥶 {stats.topLoseStreak.streak}
+                </div>
+                <div className="season-stat-label">
+                  Longest lose streak · {stats.topLoseStreak.name}
+                </div>
+              </div>
+            )}
             {stats.bestDayGain && (
               <div className="season-stat-tile">
                 <div className="season-stat-value">
@@ -137,6 +169,49 @@ export function SeasonStats({
                 </div>
                 <div className="season-stat-label">
                   Biggest single win · {stats.biggestWin.name}
+                </div>
+              </div>
+            )}
+            {stats.biggestLoss && (
+              <div className="season-stat-tile">
+                <div className="season-stat-value">
+                  −{stats.biggestLoss.drop}
+                  <span className="season-stat-unit"> Elo</span>
+                </div>
+                <div className="season-stat-label">
+                  Biggest single loss · {stats.biggestLoss.name}
+                </div>
+              </div>
+            )}
+            {stats.worstDayDrop && (
+              <div className="season-stat-tile">
+                <div className="season-stat-value">
+                  −{stats.worstDayDrop.drop}
+                  <span className="season-stat-unit"> Elo</span>
+                </div>
+                <div className="season-stat-label">
+                  Worst day · {stats.worstDayDrop.name} ·{" "}
+                  {formatDay(stats.worstDayDrop.day)}
+                </div>
+              </div>
+            )}
+            {stats.highestElo && (
+              <div className="season-stat-tile">
+                <div className="season-stat-value">
+                  📈 {stats.highestElo.elo}
+                </div>
+                <div className="season-stat-label">
+                  Highest Elo · {stats.highestElo.name}
+                </div>
+              </div>
+            )}
+            {stats.lowestElo && (
+              <div className="season-stat-tile">
+                <div className="season-stat-value">
+                  📉 {stats.lowestElo.elo}
+                </div>
+                <div className="season-stat-label">
+                  Lowest Elo · {stats.lowestElo.name}
                 </div>
               </div>
             )}
@@ -225,6 +300,18 @@ export function SeasonStats({
               </BarChart>
             </ResponsiveContainer>
           </div>
+
+          {heatmapRange && (
+            <div className="season-stats-chart">
+              <div className="season-stats-subhead">Daily activity</div>
+              <ActivityHeatmap
+                activity={stats.activity}
+                start={heatmapRange.start}
+                end={heatmapRange.end}
+                firstDay={range?.start}
+              />
+            </div>
+          )}
         </>
       )}
     </div>
