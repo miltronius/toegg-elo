@@ -123,15 +123,32 @@ export function PlayerDetail({
   const [rawHistory, setRawHistory] = useState<EloHistory[]>([]);
   const [xAxisMode, setXAxisMode] = useState<"game" | "date">("date");
 
+  // Streaks respect the selected season (or all-time when none is selected).
+  const streakRows = useMemo(
+    () =>
+      rawHistory.filter(
+        (h) =>
+          h.match_id != null &&
+          (!selectedSeason || h.season_id === selectedSeason.id),
+      ),
+    [rawHistory, selectedSeason],
+  );
   const currentStreak = useMemo(() => {
-    const matchRows = rawHistory.filter((h) => h.match_id != null);
     let streak = 0;
-    for (let i = matchRows.length - 1; i >= 0; i--) {
-      if (matchRows[i].elo_change > 0) streak++;
+    for (let i = streakRows.length - 1; i >= 0; i--) {
+      if (streakRows[i].elo_change > 0) streak++;
       else break;
     }
     return streak >= 2 ? streak : 0;
-  }, [rawHistory]);
+  }, [streakRows]);
+  const currentLoseStreak = useMemo(() => {
+    let streak = 0;
+    for (let i = streakRows.length - 1; i >= 0; i--) {
+      if (streakRows[i].elo_change < 0) streak++;
+      else break;
+    }
+    return streak >= 2 ? streak : 0;
+  }, [streakRows]);
   const [loading, setLoading] = useState(true);
   const [isEditingName, setIsEditingName] = useState(false);
   const [newName, setNewName] = useState(player.name);
@@ -419,6 +436,11 @@ export function PlayerDetail({
               {currentStreak > 0 && (
                 <span className="streak-badge" title="Winstreak">
                   🔥{currentStreak}
+                </span>
+              )}
+              {currentLoseStreak > 0 && (
+                <span className="streak-badge lose" title="Losestreak">
+                  🥶{currentLoseStreak}
                 </span>
               )}
             </div>

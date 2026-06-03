@@ -17,12 +17,26 @@ export interface SeasonStats {
   activePlayers: number;
   /** Match counts per workday (Mon–Fri). */
   weekday: WeekdayGames[];
+  /** Per-calendar-day match counts (days with ≥1 match), ascending by day. */
+  activity: { day: string; games: number }[];
+  /** First and last calendar day with a match in scope, or null when empty. */
+  dateRange: { start: string; end: string } | null;
   /** Player with the longest run of consecutive wins. */
   topStreak: { name: string; streak: number } | null;
+  /** Player with the longest run of consecutive losses. */
+  topLoseStreak: { name: string; streak: number } | null;
   /** Best net ELO gained by a single player on a single calendar day. */
   bestDayGain: { name: string; day: string; gain: number } | null;
   /** Largest ELO gain from a single match. */
   biggestWin: { name: string; gain: number } | null;
+  /** Worst net ELO lost by a single player on a single calendar day. */
+  worstDayDrop: { name: string; day: string; drop: number } | null;
+  /** Largest ELO drop from a single match. */
+  biggestLoss: { name: string; drop: number } | null;
+  /** Highest ELO score any player reached in scope (season-normalized for a season). */
+  highestElo: { name: string; elo: number } | null;
+  /** Lowest ELO score any player reached in scope (season-normalized for a season). */
+  lowestElo: { name: string; elo: number } | null;
   /** Calendar day with the most matches. */
   busiestDay: { day: string; games: number } | null;
   /** Best win % among players with at least `minGames` games. */
@@ -104,12 +118,22 @@ export function computeSeasonStats(
     if (!busiestDay || games > busiestDay.games) busiestDay = { day, games };
   }
 
-  // Longest win streak across all players.
+  const activity = [...perDay.entries()]
+    .map(([day, games]) => ({ day, games }))
+    .sort((a, b) => a.day.localeCompare(b.day));
+  const dateRange =
+    activity.length > 0
+      ? { start: activity[0].day, end: activity[activity.length - 1].day }
+      : null;
+
+  // Longest win and lose streaks across all players.
   const sorted = [...seasonMatches].sort((a, b) =>
     a.created_at.localeCompare(b.created_at),
   );
   const streaks = new Map<string, number>();
+  const loseStreaks = new Map<string, number>();
   let topStreak: SeasonStats["topStreak"] = null;
+  let topLoseStreak: SeasonStats["topLoseStreak"] = null;
   for (const m of sorted) {
     for (const pid of matchPlayerIds(m)) {
       const won = playerWon(m, pid);
@@ -118,32 +142,59 @@ export function computeSeasonStats(
       if (won && (!topStreak || next > topStreak.streak)) {
         topStreak = { name: nameById.get(pid) ?? "?", streak: next };
       }
+      const nextLose = won ? 0 : (loseStreaks.get(pid) ?? 0) + 1;
+      loseStreaks.set(pid, nextLose);
+      if (!won && (!topLoseStreak || nextLose > topLoseStreak.streak)) {
+        topLoseStreak = { name: nameById.get(pid) ?? "?", streak: nextLose };
+      }
     }
   }
 
-  // Best single-day ELO gain + biggest single-match ELO gain.
+  // Per-player season-start all-time ELO (the elo_before of their first match
+  // in scope), used to season-normalize absolute ELO scores: 1500 + (alltime -
+  // start). For all-time scope we report raw all-time ELO instead.
+  const startById = new Map<string, { at: string; elo: number }>();
+  for (const h of seasonHistory) {
+    const cur = startById.get(h.player_id);
+    if (!cur || h.created_at < cur.at) {
+      startById.set(h.player_id, { at: h.created_at, elo: h.elo_before });
+    }
+  }
+  const normElo = (pid: string, alltime: number): number =>
+    seasonId == null ? alltime : 1500 + (alltime - (startById.get(pid)?.elo ?? alltime));
+
+  // Best/worst single-day net ELO swing + biggest single-match gain/drop +
+  // highest/lowest ELO score reached.
   const dayGain = new Map<string, number>();
   let biggestWin: SeasonStats["biggestWin"] = null;
+  let biggestLoss: SeasonStats["biggestLoss"] = null;
+  let highestElo: SeasonStats["highestElo"] = null;
+  let lowestElo: SeasonStats["lowestElo"] = null;
   for (const h of seasonHistory) {
+    const name = nameById.get(h.player_id) ?? "?";
     if (h.elo_change > 0 && (!biggestWin || h.elo_change > biggestWin.gain)) {
-      biggestWin = {
-        name: nameById.get(h.player_id) ?? "?",
-        gain: h.elo_change,
-      };
+      biggestWin = { name, gain: h.elo_change };
     }
+    if (h.elo_change < 0 && (!biggestLoss || -h.elo_change > biggestLoss.drop)) {
+      biggestLoss = { name, drop: -h.elo_change };
+    }
+    const elo = normElo(h.player_id, h.elo_after);
+    if (!highestElo || elo > highestElo.elo) highestElo = { name, elo };
+    if (!lowestElo || elo < lowestElo.elo) lowestElo = { name, elo };
     const key = `${h.player_id}:${h.created_at.slice(0, 10)}`;
     dayGain.set(key, (dayGain.get(key) ?? 0) + h.elo_change);
   }
   let bestDayGain: SeasonStats["bestDayGain"] = null;
+  let worstDayDrop: SeasonStats["worstDayDrop"] = null;
   for (const [key, gain] of dayGain) {
+    const sep = key.lastIndexOf(":");
+    const pid = key.slice(0, sep);
+    const day = key.slice(sep + 1);
     if (gain > 0 && (!bestDayGain || gain > bestDayGain.gain)) {
-      const sep = key.lastIndexOf(":");
-      const pid = key.slice(0, sep);
-      bestDayGain = {
-        name: nameById.get(pid) ?? "?",
-        day: key.slice(sep + 1),
-        gain,
-      };
+      bestDayGain = { name: nameById.get(pid) ?? "?", day, gain };
+    }
+    if (gain < 0 && (!worstDayDrop || -gain > worstDayDrop.drop)) {
+      worstDayDrop = { name: nameById.get(pid) ?? "?", day, drop: -gain };
     }
   }
 
@@ -182,9 +233,16 @@ export function computeSeasonStats(
     gamesPlayed: seasonMatches.length,
     activePlayers: participants.size,
     weekday,
+    activity,
+    dateRange,
     topStreak,
+    topLoseStreak,
     bestDayGain,
     biggestWin,
+    worstDayDrop,
+    biggestLoss,
+    highestElo,
+    lowestElo,
     busiestDay,
     winRateLeader,
     achievementsUnlocked,

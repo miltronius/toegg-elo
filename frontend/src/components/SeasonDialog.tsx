@@ -101,7 +101,7 @@ export function SeasonDialog({
           onClick={close}
         >
           <div
-            className="bg-white rounded-lg p-8 max-w-140 w-[90%] max-h-[90vh] overflow-y-auto shadow-[0_20px_25px_-5px_rgba(0,0,0,0.1)]"
+            className={`bg-white rounded-lg p-8 ${view === "info" ? "max-w-200" : "max-w-140"} w-[90%] max-h-[90vh] overflow-y-auto shadow-[0_20px_25px_-5px_rgba(0,0,0,0.1)]`}
             onClick={(e) => e.stopPropagation()}
           >
             {view === "info" && (

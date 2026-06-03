@@ -47,7 +47,9 @@ Copy `frontend/.env.example` to `frontend/.env.local` and fill in:
 - `frontend/src/App.tsx` — main orchestrator; owns `loadData()` for refetching all state, passes data + callbacks to children; manages `selectedSeason` shared across Leaderboard, Teams, and PlayerDetail
 - `frontend/src/lib/teamUtils.ts` — pure team stat computation (`computeTeamStats`, `teamColor`, `teamKey`); no DB calls
 - `frontend/src/lib/achievements.ts` — `ACHIEVEMENT_DEFINITIONS` array; shared between frontend and the `_shared` edge function
-- `frontend/src/components/` — tab-based UI: Timeline, Leaderboard, Teams, TeamDetail, MatchForm, MatchHistory, PlayerDetail/Modal, Achievements, UserManagement, SeasonDialog, ThemeToggle, Win95Shell
+- `frontend/src/lib/seasonStats.ts` — pure headline-stat computation (`computeSeasonStats`): games played, active players, longest win/lose streak, best/worst day, biggest win/loss, highest/lowest Elo (season-normalized for a season, raw all-time otherwise), busiest day, win-rate leader, achievements unlocked, games-by-weekday, per-day activity + date range; no DB calls
+- `frontend/src/components/ActivityHeatmap.tsx` — pure presentational GitHub-style contribution graph (weeks as columns, Mon→Sun rows, oldest left → most recent right) of per-day match counts; pads the window backwards to `minWeeks` (default 13 ≈ 3 months) and highlights the `firstDay` cell in purple; used by SeasonStats
+- `frontend/src/components/` — tab-based UI: Timeline, Leaderboard, Teams, TeamDetail, MatchForm, MatchHistory, PlayerDetail/Modal, SeasonStats, ActivityHeatmap, Achievements, UserManagement, SeasonDialog, ThemeToggle, Win95Shell
 - `frontend/src/test/setup.ts` — Vitest setup (jest-dom matchers, ResizeObserver mock)
 
 **Tab visibility rules:**

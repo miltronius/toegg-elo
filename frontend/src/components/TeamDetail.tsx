@@ -94,6 +94,9 @@ export function TeamDetail({
             {team.currentStreak > 0 && (
               <span className="streak-badge" title="Winstreak">🔥{team.currentStreak}</span>
             )}
+            {team.currentLoseStreak > 0 && (
+              <span className="streak-badge lose" title="Losestreak">🥶{team.currentLoseStreak}</span>
+            )}
           </div>
           <button className="close-btn" onClick={onClose}>
             ×

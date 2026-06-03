@@ -212,11 +212,15 @@ function AchievementsOverview({
   // Players who have each achievement, for the hover bubble.
   const playerById = new Map(players.map((p) => [p.id, p] as const));
   const achieversById = new Map<string, { name: string; elo: number }[]>();
+  const achieverIdsById = new Map<string, Set<string>>();
   const addAchiever = (achievementId: string, player: Player) => {
     const entry = { name: player.name, elo: player.current_elo };
     const list = achieversById.get(achievementId);
     if (list) list.push(entry);
     else achieversById.set(achievementId, [entry]);
+    const ids = achieverIdsById.get(achievementId);
+    if (ids) ids.add(player.id);
+    else achieverIdsById.set(achievementId, new Set([player.id]));
   };
   if (allAchievementRows.length > 0) {
     for (const row of allAchievementRows) {
@@ -285,6 +289,17 @@ function AchievementsOverview({
             {groupItems.map(({ def, percent }) => {
               const barColor = isNone ? "var(--border)" : groupColor;
               const achievers = achieversById.get(def.id) ?? [];
+              // For common achievements the achiever list is long and uninformative;
+              // flip it to show who is still missing it instead.
+              const isCommon = tier === "common";
+              const achieverIds = achieverIdsById.get(def.id);
+              const nonAchievers = isCommon
+                ? players
+                    .filter((p) => !achieverIds?.has(p.id))
+                    .sort((a, b) => b.current_elo - a.current_elo)
+                : [];
+              const earnedByAll =
+                isCommon && achievers.length > 0 && nonAchievers.length === 0;
               return (
                 <div
                   key={def.id}
@@ -321,23 +336,45 @@ function AchievementsOverview({
                   </div>
                   <div className="achievements-overview-tooltip" role="tooltip">
                     <div className="achievements-overview-tooltip-title">
-                      {achievers.length > 0
-                        ? `Earned by ${achievers.length} player${achievers.length === 1 ? "" : "s"}`
-                        : "Not yet unlocked"}
+                      {achievers.length === 0
+                        ? "Not yet unlocked"
+                        : earnedByAll
+                          ? `Earned by all ${achievers.length} player${achievers.length === 1 ? "" : "s"} 🎉`
+                          : `Earned by ${achievers.length} player${achievers.length === 1 ? "" : "s"}`}
                     </div>
-                    {achievers.length > 0 && (
-                      <ul className="achievements-overview-tooltip-list">
-                        {achievers.map((a) => (
-                          <li key={a.name}>
-                            <span className="achievements-overview-tooltip-name">
-                              {a.name}
-                            </span>
-                            <span className="achievements-overview-tooltip-elo">
-                              {Math.round(a.elo)}
-                            </span>
-                          </li>
-                        ))}
-                      </ul>
+                    {isCommon ? (
+                      !earnedByAll &&
+                      achievers.length > 0 && (
+                        <>
+                          <div className="achievements-overview-tooltip-subtitle">
+                            But not yet by
+                          </div>
+                          <ul className="achievements-overview-tooltip-list">
+                            {nonAchievers.map((p) => (
+                              <li key={p.id}>
+                                <span className="achievements-overview-tooltip-name">
+                                  {p.name}
+                                </span>
+                              </li>
+                            ))}
+                          </ul>
+                        </>
+                      )
+                    ) : (
+                      achievers.length > 0 && (
+                        <ul className="achievements-overview-tooltip-list">
+                          {achievers.map((a) => (
+                            <li key={a.name}>
+                              <span className="achievements-overview-tooltip-name">
+                                {a.name}
+                              </span>
+                              <span className="achievements-overview-tooltip-elo">
+                                {Math.round(a.elo)}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      )
                     )}
                   </div>
                 </div>

@@ -170,6 +170,35 @@ describe("computeTeamStats", () => {
     const cdKey = teamKey("ccc", "ddd");
     expect(ab.rivals[ab.rivals.length - 1].key).toBe(cdKey);
   });
+
+  it("reports the trailing win streak and clears the lose streak", () => {
+    const matches: Match[] = [
+      match("aaa", "bbb", "ccc", "ddd", "B"), // AB loses
+      match("aaa", "bbb", "ccc", "ddd", "A"), // AB wins
+      match("aaa", "bbb", "ccc", "ddd", "A"), // AB wins
+      match("aaa", "bbb", "ccc", "ddd", "A"), // AB wins (trailing 3 wins)
+    ];
+    const teams = computeTeamStats(matches, [alice, bob, carl, dave], []);
+    const ab = teams.find((t) => t.player_id_lo === "aaa")!;
+    expect(ab.currentStreak).toBe(3);
+    expect(ab.currentLoseStreak).toBe(0);
+  });
+
+  it("reports the trailing lose streak and clears the win streak", () => {
+    const matches: Match[] = [
+      match("aaa", "bbb", "ccc", "ddd", "A"), // AB wins
+      match("aaa", "bbb", "ccc", "ddd", "B"), // AB loses
+      match("aaa", "bbb", "ccc", "ddd", "B"), // AB loses (trailing 2 losses)
+    ];
+    const teams = computeTeamStats(matches, [alice, bob, carl, dave], []);
+    const ab = teams.find((t) => t.player_id_lo === "aaa")!;
+    expect(ab.currentLoseStreak).toBe(2);
+    expect(ab.currentStreak).toBe(0);
+    // The opposing team CD has the mirrored win streak.
+    const cd = teams.find((t) => t.player_id_lo === "ccc")!;
+    expect(cd.currentStreak).toBe(2);
+    expect(cd.currentLoseStreak).toBe(0);
+  });
 });
 
 // ── teamColor ─────────────────────────────────────────────────────────────────
@@ -185,6 +214,7 @@ describe("teamColor", () => {
     winRate: 1,
     combinedElo: 3000,
     currentStreak: 0,
+    currentLoseStreak: 0,
     rivals: [],
   };
 
@@ -226,6 +256,7 @@ describe("getTeamDisplayName", () => {
     winRate: 1,
     combinedElo: 3000,
     currentStreak: 0,
+    currentLoseStreak: 0,
     rivals: [],
     nameRow: null,
   };
