@@ -1330,6 +1330,58 @@ td.winrate {
 }
 
 /* ── GitHub-style daily activity heatmap ──────────────────────────── */
+.heatmap-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.heatmap-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  align-self: flex-end;
+  font-size: 0.7rem;
+  color: var(--color-text-light);
+  cursor: pointer;
+  user-select: none;
+}
+.heatmap-switch {
+  position: relative;
+  display: inline-flex;
+}
+.heatmap-switch input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.heatmap-switch-track {
+  display: inline-block;
+  width: 30px;
+  height: 16px;
+  border-radius: 999px;
+  background: var(--color-border);
+  transition: background 0.18s ease;
+}
+.heatmap-switch-thumb {
+  display: block;
+  width: 12px;
+  height: 12px;
+  margin: 2px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+  transition: transform 0.18s ease;
+}
+.heatmap-switch input:checked + .heatmap-switch-track {
+  background: var(--color-primary);
+}
+.heatmap-switch input:checked + .heatmap-switch-track .heatmap-switch-thumb {
+  transform: translateX(14px);
+}
+.heatmap-switch input:focus-visible + .heatmap-switch-track {
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary) 40%, transparent);
+}
 .heatmap-wrap {
   display: flex;
   gap: 0.35rem;
@@ -1338,7 +1390,7 @@ td.winrate {
 }
 .heatmap-weekdays {
   display: grid;
-  grid-template-rows: repeat(7, 12px);
+  grid-template-rows: repeat(5, 12px);
   gap: 3px;
   padding-top: 16px; /* clears the month-label row */
   flex-shrink: 0;
@@ -1370,7 +1422,7 @@ td.winrate {
 .heatmap-grid {
   display: grid;
   grid-auto-flow: column;
-  grid-template-rows: repeat(7, 12px);
+  grid-template-rows: repeat(5, 12px);
   grid-auto-columns: 12px;
   gap: 3px;
 }
@@ -1389,8 +1441,9 @@ td.winrate {
   z-index: 2;
 }
 .heatmap-cell-empty {
-  background: transparent;
+  background: color-mix(in srgb, var(--color-border) 35%, transparent);
   border-color: transparent;
+  cursor: default;
 }
 .heatmap-cell[data-level="1"] {
   background: color-mix(in srgb, var(--color-primary) 30%, transparent);

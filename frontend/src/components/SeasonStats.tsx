@@ -80,13 +80,19 @@ export function SeasonStats({
   const season = seasonId ? seasons.find((s) => s.id === seasonId) : null;
   const today = new Date().toISOString().slice(0, 10);
   const range = season
-    ? { start: season.started_at.slice(0, 10), end: (season.ended_at ?? today).slice(0, 10) }
+    ? {
+        start: season.started_at.slice(0, 10),
+        end: (season.ended_at ?? today).slice(0, 10),
+      }
     : stats.dateRange;
 
   // The heatmap runs up to the most recent relevant day (today for all-time and
   // ongoing seasons; the season's end otherwise) so current days sit far-right.
   const heatmapRange = range
-    ? { start: range.start, end: season ? (season.ended_at ?? today).slice(0, 10) : today }
+    ? {
+        start: range.start,
+        end: season ? (season.ended_at ?? today).slice(0, 10) : today,
+      }
     : null;
 
   return (
@@ -110,7 +116,7 @@ export function SeasonStats({
       {range && (
         <div className="season-stats-daterange">
           📅 {formatDay(range.start)} – {formatDay(range.end)}
-          {season && !season.ended_at ? " (ongoing)" : ""}
+          {season && !season.ended_at ? " (active)" : ""}
         </div>
       )}
 
@@ -303,7 +309,7 @@ export function SeasonStats({
 
           {heatmapRange && (
             <div className="season-stats-chart">
-              <div className="season-stats-subhead">Daily activity</div>
+              <div className="season-stats-subhead">Daily Activity Heatmap</div>
               <ActivityHeatmap
                 activity={stats.activity}
                 start={heatmapRange.start}
