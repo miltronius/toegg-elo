@@ -128,7 +128,9 @@ function AchievementRow({
   // Show up to 5 unlocked badge icons as highlights, rarest first
   const highlights = statuses
     .filter((s) => s.unlocked)
-    .sort((a, b) => (a.rarityPercent ?? Infinity) - (b.rarityPercent ?? Infinity))
+    .sort(
+      (a, b) => (a.rarityPercent ?? Infinity) - (b.rarityPercent ?? Infinity),
+    )
     .slice(0, 5);
 
   return (
@@ -310,10 +312,14 @@ function AchievementsOverview({
                       : undefined
                   }
                 >
-                  <div className="achievements-overview-icon">{isNone ? "🔒" : def.icon}</div>
+                  <div className="achievements-overview-icon">
+                    {isNone ? "🔒" : def.icon}
+                  </div>
                   <div className="achievements-overview-info">
                     <div className="achievements-overview-name">{def.name}</div>
-                    <div className="achievements-overview-desc">{def.description}</div>
+                    <div className="achievements-overview-desc">
+                      {def.description}
+                    </div>
                   </div>
                   <div>
                     <div className="achievements-progress-bar achievements-overview-bar">
@@ -342,40 +348,41 @@ function AchievementsOverview({
                           ? `Earned by all ${achievers.length} player${achievers.length === 1 ? "" : "s"} 🎉`
                           : `Earned by ${achievers.length} player${achievers.length === 1 ? "" : "s"}`}
                     </div>
-                    {isCommon ? (
-                      !earnedByAll &&
-                      achievers.length > 0 && (
-                        <>
-                          <div className="achievements-overview-tooltip-subtitle">
-                            But not yet by
-                          </div>
+                    {isCommon
+                      ? !earnedByAll &&
+                        achievers.length > 0 && (
+                          <>
+                            <div className="achievements-overview-tooltip-subtitle">
+                              But not yet by
+                            </div>
+                            <ul className="achievements-overview-tooltip-list">
+                              {nonAchievers.map((p) => (
+                                <li key={p.id}>
+                                  <span className="achievements-overview-tooltip-name">
+                                    {p.name}
+                                  </span>
+                                  <span className="achievements-overview-tooltip-elo">
+                                    {p.current_elo}
+                                  </span>
+                                </li>
+                              ))}
+                            </ul>
+                          </>
+                        )
+                      : achievers.length > 0 && (
                           <ul className="achievements-overview-tooltip-list">
-                            {nonAchievers.map((p) => (
-                              <li key={p.id}>
+                            {achievers.map((a) => (
+                              <li key={a.name}>
                                 <span className="achievements-overview-tooltip-name">
-                                  {p.name}
+                                  {a.name}
+                                </span>
+                                <span className="achievements-overview-tooltip-elo">
+                                  {a.elo}
                                 </span>
                               </li>
                             ))}
                           </ul>
-                        </>
-                      )
-                    ) : (
-                      achievers.length > 0 && (
-                        <ul className="achievements-overview-tooltip-list">
-                          {achievers.map((a) => (
-                            <li key={a.name}>
-                              <span className="achievements-overview-tooltip-name">
-                                {a.name}
-                              </span>
-                              <span className="achievements-overview-tooltip-elo">
-                                {Math.round(a.elo)}
-                              </span>
-                            </li>
-                          ))}
-                        </ul>
-                      )
-                    )}
+                        )}
                   </div>
                 </div>
               );
@@ -452,17 +459,28 @@ export function AchievementGallery({
           <div className="achievement-section-heading">Next Up</div>
           <div className="achievement-nextup-list">
             {nextUp.map((p) => {
-              const def = ACHIEVEMENT_DEFINITIONS.find((d) => d.id === p.achievementId)!;
-              const status = statuses.find((s) => s.definition.id === p.achievementId);
-              const color = rarityColorForTier(status?.rarityTier ?? "legendary");
+              const def = ACHIEVEMENT_DEFINITIONS.find(
+                (d) => d.id === p.achievementId,
+              )!;
+              const status = statuses.find(
+                (s) => s.definition.id === p.achievementId,
+              );
+              const color = rarityColorForTier(
+                status?.rarityTier ?? "legendary",
+              );
               const pct = Math.min(100, (p.current / p.target) * 100);
               return (
                 <div key={p.achievementId} className="achievement-nextup-row">
                   <div className="achievement-nextup-icon">{def.icon}</div>
                   <div className="achievement-nextup-body">
                     <div className="achievement-nextup-top">
-                      <span className="achievement-nextup-name">{def.name}</span>
-                      <span className="achievement-nextup-count" style={{ color }}>
+                      <span className="achievement-nextup-name">
+                        {def.name}
+                      </span>
+                      <span
+                        className="achievement-nextup-count"
+                        style={{ color }}
+                      >
                         {p.current} / {p.target}
                       </span>
                     </div>
@@ -556,7 +574,11 @@ function AchievementCard({ status, playerMap, locked }: AchievementCardProps) {
   }
 
   const unlockedLabel = unlockedAt
-    ? unlockedAt.toLocaleDateString("de-CH", { day: "2-digit", month: "2-digit", year: "numeric" })
+    ? unlockedAt.toLocaleDateString("de-CH", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+      })
     : undefined;
 
   return (
@@ -569,9 +591,7 @@ function AchievementCard({ status, playerMap, locked }: AchievementCardProps) {
       }
       data-unlocked={!locked && unlockedLabel ? unlockedLabel : undefined}
     >
-      <div className="achievement-icon">
-        {locked ? "🔒" : definition.icon}
-      </div>
+      <div className="achievement-icon">{locked ? "🔒" : definition.icon}</div>
       <div className="achievement-name">{definition.name}</div>
       <div className="achievement-desc">{definition.description}</div>
       {subtext && <div className="achievement-sub">{subtext}</div>}
@@ -581,7 +601,8 @@ function AchievementCard({ status, playerMap, locked }: AchievementCardProps) {
           style={{ color, borderColor: color }}
         >
           {tierInfo.label}
-          {rarityPercent !== undefined && ` · ${rarityPercent.toFixed(0)}% of players`}
+          {rarityPercent !== undefined &&
+            ` · ${rarityPercent.toFixed(0)}% of players`}
         </span>
       )}
     </div>
