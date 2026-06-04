@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Player, Match, EloHistory, Season } from "../lib/supabase";
 import type { PlayerAchievementRow } from "../lib/achievements";
 import { ACHIEVEMENT_DEFINITIONS } from "../lib/achievements";
@@ -410,6 +410,34 @@ export function Timeline({
     [players, matches, eloHistory, allAchievementRows, seasons],
   );
 
+  // Render only the most recent day-sections; the full timeline is still
+  // computed above (correctness). We start small and append more batches via
+  // infinite scroll as a sentinel near the bottom comes into view.
+  const INITIAL_DAYS = 7;
+  const BATCH_DAYS = 7;
+  const [visibleCount, setVisibleCount] = useState(INITIAL_DAYS);
+  const visibleDays = daySections.slice(0, visibleCount);
+  const hasMore = daySections.length > visibleCount;
+
+  // Load the next batch shortly before the sentinel reaches the viewport, so
+  // content is attached to the bottom without the user hitting a hard stop.
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!hasMore) return;
+    const el = sentinelRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          setVisibleCount((c) => c + BATCH_DAYS);
+        }
+      },
+      { rootMargin: "600px 0px" },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [hasMore, visibleCount]);
+
   if (daySections.length === 0) {
     return (
       <div className="card">
@@ -423,7 +451,7 @@ export function Timeline({
     <div className="card">
       <h2>Timeline</h2>
       <div className="dashboard-timeline">
-        {daySections.map((day) => (
+        {visibleDays.map((day) => (
           <div key={day.date} className="dashboard-day">
             <div className="dashboard-day-header">{formatDay(day.date)}</div>
             <div className="dashboard-groups">
@@ -555,6 +583,11 @@ export function Timeline({
           </div>
         ))}
       </div>
+      {hasMore && (
+        <div ref={sentinelRef} className="flex justify-center py-6 text-text-light text-sm">
+          Loading older entries…
+        </div>
+      )}
     </div>
   );
 }

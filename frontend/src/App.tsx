@@ -1,13 +1,13 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   getPlayers,
   getMatches,
-  getEloHistory,
+  getAllEloHistory,
   getTeamNames,
   getAllPlayerAchievements,
   getActiveSeason,
   getSeasons,
-  getPlayerSeasonStats,
   getAllPlayerSeasonStats,
   deleteMatch,
   Player,
@@ -20,6 +20,8 @@ import {
 import type { PlayerAchievementRow } from "./lib/achievements";
 import { useAuth } from "./contexts/AuthContext";
 import { useTheme } from "./contexts/ThemeContext";
+import { useToast } from "./contexts/ToastContext";
+import { useRealtimeSync } from "./hooks/useRealtimeSync";
 import { AuthScreen } from "./components/AuthScreen";
 import { CreatePlayerModal } from "./components/PlayerModal";
 import { MatchForm } from "./components/MatchForm";
@@ -35,29 +37,141 @@ import { SeasonDialog } from "./components/SeasonDialog";
 import { ThemeToggle } from "./components/ThemeToggle";
 import { Win95Shell } from "./components/Win95Shell";
 import { computeTeamStats, TeamStats } from "./lib/teamUtils";
+import { AppSkeleton } from "./components/AppSkeleton";
 import "./App.css";
+
+interface AppData {
+  players: Player[];
+  matches: Match[];
+  eloHistory: Map<string, EloHistory[]>;
+  teamNames: TeamNameRow[];
+  allAchievementRows: PlayerAchievementRow[];
+  activeSeason: Season | null;
+  seasons: Season[];
+  allPlayerSeasonStats: PlayerSeasonStats[];
+}
+
+// Single parallel fetch for everything the dashboard needs. Replaces the old
+// per-player elo_history loop (N sequential round-trips) with one
+// getAllEloHistory() call grouped client-side, and derives season stats from
+// the all-seasons batch instead of a second filtered query.
+async function fetchAppData(): Promise<AppData> {
+  const [
+    players,
+    matches,
+    teamNames,
+    allAchievementRows,
+    activeSeason,
+    seasons,
+    allPlayerSeasonStats,
+    allHistory,
+  ] = await Promise.all([
+    getPlayers(),
+    getMatches(),
+    getTeamNames(),
+    getAllPlayerAchievements(),
+    getActiveSeason(),
+    getSeasons(),
+    getAllPlayerSeasonStats(),
+    getAllEloHistory(),
+  ]);
+
+  // Group the flat history by player. Pre-seed every known player so each has
+  // an entry (matching the old loop), and ignore orphaned rows for unknown
+  // players. getAllEloHistory() returns ascending; reverse each group to the
+  // descending order the per-player query previously returned.
+  const eloHistory = new Map<string, EloHistory[]>();
+  for (const p of players) eloHistory.set(p.id, []);
+  for (const entry of allHistory) {
+    const list = eloHistory.get(entry.player_id);
+    if (list) list.push(entry);
+  }
+  for (const list of eloHistory.values()) list.reverse();
+
+  return {
+    players,
+    matches,
+    eloHistory,
+    teamNames,
+    allAchievementRows,
+    activeSeason,
+    seasons,
+    allPlayerSeasonStats,
+  };
+}
+
+// Stable empty fallbacks so prop identity doesn't churn before data loads.
+const EMPTY_PLAYERS: Player[] = [];
+const EMPTY_MATCHES: Match[] = [];
+const EMPTY_TEAM_NAMES: TeamNameRow[] = [];
+const EMPTY_ACHIEVEMENTS: PlayerAchievementRow[] = [];
+const EMPTY_SEASONS: Season[] = [];
+const EMPTY_SEASON_STATS: PlayerSeasonStats[] = [];
+const EMPTY_ELO_HISTORY = new Map<string, EloHistory[]>();
 
 function App() {
   const { user, role, loading: authLoading, signOut } = useAuth();
   const { theme } = useTheme();
-  const [players, setPlayers] = useState<Player[]>([]);
-  const [matches, setMatches] = useState<Match[]>([]);
-  const [eloHistory, setEloHistory] = useState<Map<string, EloHistory[]>>(
-    new Map(),
-  );
-  const [teamNames, setTeamNames] = useState<TeamNameRow[]>([]);
-  const [allAchievementRows, setAllAchievementRows] = useState<PlayerAchievementRow[]>([]);
-  const [activeSeason, setActiveSeason] = useState<Season | null>(null);
-  const [seasons, setSeasons] = useState<Season[]>([]);
-  const [selectedSeason, setSelectedSeason] = useState<Season | null>(null);
-  const [playerSeasonStats, setPlayerSeasonStats] = useState<PlayerSeasonStats[]>([]);
-  const [allPlayerSeasonStats, setAllPlayerSeasonStats] = useState<PlayerSeasonStats[]>([]);
+  const { showToast } = useToast();
+  const queryClient = useQueryClient();
+
+  // Single cached query for all dashboard data. Keyed by user/role because the
+  // get_players RPC returns role-dependent names, so logging in/out refetches.
+  const { data, isLoading, isFetching } = useQuery({
+    queryKey: ["appData", user?.id ?? null, role],
+    queryFn: fetchAppData,
+    enabled: !authLoading,
+  });
+
+  // Flash a colorful moving border under the header for 2s whenever data is
+  // (re)loaded, so the user gets a clear "it really updated" signal.
+  const [updatePulse, setUpdatePulse] = useState(false);
+  const pulseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pulseUpdate = () => {
+    setUpdatePulse(true);
+    if (pulseTimerRef.current) clearTimeout(pulseTimerRef.current);
+    pulseTimerRef.current = setTimeout(() => setUpdatePulse(false), 2000);
+  };
+  useEffect(() => () => {
+    if (pulseTimerRef.current) clearTimeout(pulseTimerRef.current);
+  }, []);
+
+  // Background refresh after a mutation — keeps the current UI on screen. The
+  // self-vs-remote stamp lives in the data layer (markLocalMutation), set at the
+  // start of each mutation so realtime echoes of our own writes don't toast us.
+  const refresh = () => {
+    pulseUpdate();
+    return queryClient.invalidateQueries({ queryKey: ["appData"] });
+  };
+
+  // Push changes from other users: refetch the cache, toast, and flash the
+  // update border on remote edits.
+  useRealtimeSync({
+    queryClient,
+    onRemoteChange: () => {
+      showToast("Data updated by another user");
+      pulseUpdate();
+    },
+  });
+
+  const players = data?.players ?? EMPTY_PLAYERS;
+  const matches = data?.matches ?? EMPTY_MATCHES;
+  const eloHistory = data?.eloHistory ?? EMPTY_ELO_HISTORY;
+  const teamNames = data?.teamNames ?? EMPTY_TEAM_NAMES;
+  const allAchievementRows = data?.allAchievementRows ?? EMPTY_ACHIEVEMENTS;
+  const activeSeason = data?.activeSeason ?? null;
+  const seasons = data?.seasons ?? EMPTY_SEASONS;
+  const allPlayerSeasonStats = data?.allPlayerSeasonStats ?? EMPTY_SEASON_STATS;
+
+  // `undefined` means "no explicit choice yet" → fall back to the active
+  // season. A user choice (including `null` = all seasons) overrides it. This
+  // derives the default during render instead of via an effect.
+  const [selectedSeason, setSelectedSeason] = useState<Season | null | undefined>(undefined);
   const [selectedTeam, setSelectedTeam] = useState<TeamStats | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [authOpen, setAuthOpen] = useState(false);
-  const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
+  const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
   const [playerDetailInitialTab, setPlayerDetailInitialTab] = useState<"stats" | "achievements">("stats");
-  const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<
     "leaderboard" | "history" | "match" | "users" | "teams" | "achievements" | "timeline"
   >("leaderboard");
@@ -67,25 +181,19 @@ function App() {
   const canSeeFullHistory = role === "user" || role === "admin";
   const visibleMatches = canSeeFullHistory ? matches : matches.slice(0, 5);
 
-  // Load (and reload) data once auth state is known and whenever the user/role
-  // changes — the get_players RPC returns different names per role, so logging
-  // in or out must refetch to avoid showing stale (anonymous vs real) names.
-  useEffect(() => {
-    if (authLoading) return;
-    loadData();
-  }, [authLoading, user?.id, role]);
+  const effectiveSeason = selectedSeason === undefined ? activeSeason : selectedSeason;
 
-  // Keep the open player detail in sync with refreshed data (e.g. after an
-  // inline edit) so it never shows a stale snapshot.
-  useEffect(() => {
-    setSelectedPlayer((prev) =>
-      prev ? (players.find((p) => p.id === prev.id) ?? prev) : prev,
-    );
-  }, [players]);
+  // Always reflect the freshest player data (e.g. after an inline edit) by
+  // deriving the open player from the loaded list rather than holding a copy.
+  const selectedPlayer = selectedPlayerId
+    ? (players.find((p) => p.id === selectedPlayerId) ?? null)
+    : null;
 
-  // Close auth modal on successful login; switch to timeline on first login
+  // Close auth modal on successful login; switch to timeline on first login.
+  // This synchronizes UI state with the external auth system on login/logout.
   useEffect(() => {
     if (user) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- syncing UI to external auth state
       setAuthOpen(false);
       setActiveTab((prev) => prev === "leaderboard" ? "timeline" : prev);
     } else {
@@ -93,64 +201,30 @@ function App() {
     }
   }, [user]);
 
-  const loadData = async () => {
-    setLoading(true);
-    try {
-      const [playersData, matchesData, teamNamesData, achievementRows, seasonData, seasonsData, allSeasonStats] =
-        await Promise.all([
-          getPlayers(),
-          getMatches(),
-          getTeamNames(),
-          getAllPlayerAchievements(),
-          getActiveSeason(),
-          getSeasons(),
-          getAllPlayerSeasonStats(),
-        ]);
-      setAllPlayerSeasonStats(allSeasonStats);
-      setPlayers(playersData);
-      setMatches(matchesData);
-      setTeamNames(teamNamesData);
-      setAllAchievementRows(achievementRows);
-      setActiveSeason(seasonData);
-      setSeasons(seasonsData);
-      setSelectedSeason((prev) => prev ?? seasonData);
-      const targetSeason = seasonData;
-      if (targetSeason) {
-        const statsData = await getPlayerSeasonStats(targetSeason.id);
-        setPlayerSeasonStats(statsData);
-      }
-      const historyMap = new Map<string, EloHistory[]>();
-      for (const player of playersData) {
-        const history = await getEloHistory(player.id);
-        historyMap.set(player.id, history);
-      }
-      setEloHistory(historyMap);
-    } catch (error) {
-      console.error("Failed to load data:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const allEloHistory = useMemo(
+    () => Array.from(eloHistory.values()).flat(),
+    [eloHistory],
+  );
 
-  const allEloHistory: EloHistory[] = Array.from(eloHistory.values()).flat();
+  // Season-normalized stats for the selected season, derived from the
+  // all-seasons batch (no extra round-trip). Falls back to the active season
+  // when "all seasons" is selected, matching the previous behavior.
+  const playerSeasonStats = useMemo(() => {
+    const targetId = (effectiveSeason ?? activeSeason)?.id;
+    return targetId
+      ? allPlayerSeasonStats.filter((s) => s.season_id === targetId)
+      : EMPTY_SEASON_STATS;
+  }, [allPlayerSeasonStats, effectiveSeason, activeSeason]);
 
-  const handleSeasonSelect = async (season: Season | null) => {
-    setSelectedSeason(season);
-    const targetId = season?.id ?? activeSeason?.id;
-    if (targetId) {
-      const statsData = await getPlayerSeasonStats(targetId);
-      setPlayerSeasonStats(statsData);
-    } else {
-      setPlayerSeasonStats([]);
-    }
-  };
+  const handleSeasonSelect = (season: Season | null) => setSelectedSeason(season);
+
   const teams = useMemo(
     () => computeTeamStats(matches, players, teamNames),
     [matches, players, teamNames],
   );
 
-  if (authLoading || loading) {
-    return <div className="flex items-center justify-center h-screen text-lg text-text-light">Loading...</div>;
+  if (authLoading || isLoading) {
+    return <AppSkeleton />;
   }
 
   const tabCls = (tab: typeof activeTab) =>
@@ -162,12 +236,15 @@ function App() {
 
   const appContent = (
     <div className="min-h-screen flex flex-col">
+      {isFetching && !isLoading && (
+        <div className="app-refetch-bar" role="progressbar" aria-label="Refreshing data" />
+      )}
       <header className="bg-white border-b border-border px-8 py-6 flex justify-between items-center shadow-sm flex-wrap gap-3">
         <h1 className="text-[1.875rem] font-bold">TöggElo⚽</h1>
         <SeasonDialog
           activeSeason={activeSeason}
           isAdmin={isAdmin}
-          onSeasonChanged={loadData}
+          onSeasonChanged={refresh}
           seasons={seasons}
           matches={matches}
           history={allEloHistory}
@@ -197,6 +274,10 @@ function App() {
           </div>
         </div>
       </header>
+      <div
+        className={`data-update-pulse${updatePulse ? " active" : ""}`}
+        aria-hidden="true"
+      />
       <nav className="flex gap-1 bg-white border-b border-border px-6 overflow-x-auto">
         {user && (
           <button className={tabCls("timeline")} onClick={() => setActiveTab("timeline")}>
@@ -236,21 +317,28 @@ function App() {
             players={players}
             history={allEloHistory}
             seasons={seasons}
-            selectedSeason={selectedSeason}
+            selectedSeason={effectiveSeason}
             onSeasonSelect={handleSeasonSelect}
             playerSeasonStats={playerSeasonStats}
             onPlayerClick={
               canEdit
                 ? (player) => {
                     setPlayerDetailInitialTab("stats");
-                    setSelectedPlayer(player);
+                    setSelectedPlayerId(player.id);
                   }
                 : undefined
             }
           />
         )}
         {activeTab === "match" && canEdit && (
-          <MatchForm players={players} onMatchRecorded={loadData} playerSeasonStats={playerSeasonStats} />
+          <MatchForm
+            players={players}
+            onMatchRecorded={() => {
+              refresh();
+              setActiveTab("timeline");
+            }}
+            playerSeasonStats={playerSeasonStats}
+          />
         )}
         {activeTab === "history" && (
           <MatchHistory
@@ -262,7 +350,7 @@ function App() {
             isAdmin={isAdmin}
             onDeleteMatch={async (matchId) => {
               await deleteMatch(matchId);
-              await loadData();
+              await refresh();
             }}
           />
         )}
@@ -281,7 +369,7 @@ function App() {
             players={players}
             teamNames={teamNames}
             seasons={seasons}
-            selectedSeason={selectedSeason}
+            selectedSeason={effectiveSeason}
             onSeasonSelect={handleSeasonSelect}
             onTeamClick={setSelectedTeam}
             playerSeasonStats={playerSeasonStats}
@@ -297,21 +385,21 @@ function App() {
               canEdit
                 ? (player) => {
                     setPlayerDetailInitialTab("achievements");
-                    setSelectedPlayer(player);
+                    setSelectedPlayerId(player.id);
                   }
                 : () => {}
             }
           />
         )}
         {activeTab === "users" && isAdmin && (
-          <UserManagement onRecomputed={loadData} />
+          <UserManagement onRecomputed={refresh} />
         )}
       </main>
       {canEdit && (
         <CreatePlayerModal
           isOpen={modalOpen}
           onClose={() => setModalOpen(false)}
-          onPlayerCreated={loadData}
+          onPlayerCreated={refresh}
           players={players}
         />
       )}
@@ -323,17 +411,17 @@ function App() {
           allAchievementRows={allAchievementRows}
           eloHistory={allEloHistory}
           seasons={seasons}
-          selectedSeason={selectedSeason}
+          selectedSeason={effectiveSeason}
           onSeasonSelect={handleSeasonSelect}
           playerSeasonStats={playerSeasonStats}
           initialTab={playerDetailInitialTab}
-          onClose={() => setSelectedPlayer(null)}
+          onClose={() => setSelectedPlayerId(null)}
           onPlayerUpdated={() => {
-            loadData();
-            setSelectedPlayer(null);
+            refresh();
+            setSelectedPlayerId(null);
           }}
-          onPlayerRefresh={loadData}
-          onNavigate={setSelectedPlayer}
+          onPlayerRefresh={refresh}
+          onNavigate={(p) => setSelectedPlayerId(p.id)}
         />
       )}
       {selectedTeam && (
@@ -344,7 +432,7 @@ function App() {
           canEdit={canEdit}
           onClose={() => setSelectedTeam(null)}
           onNamesUpdated={() => {
-            loadData();
+            refresh();
             setSelectedTeam(null);
           }}
         />

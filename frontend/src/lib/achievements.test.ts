@@ -418,3 +418,34 @@ describe("carrying_hard and deadweight achievements", () => {
     expect(r.find((a) => a.achievementId === "deadweight")).toBeUndefined();
   });
 });
+
+// ---------------------------------------------------------------------------
+// Party Pooper (end an opponent's 3+ win streak)
+// ---------------------------------------------------------------------------
+
+describe("party_pooper achievement", () => {
+  // p1Loss = team B wins, so the opponents p3/p4 rack up the wins.
+  it("unlocks when beating an opponent who came in on a 3-win streak", () => {
+    const r = computeAchievementsForPlayer("p1", makePlayer(), [
+      p1Loss(1), p1Loss(2), p1Loss(3), p1Win(4),
+    ]);
+    const pp = r.find((a) => a.achievementId === "party_pooper");
+    expect(pp).toBeDefined();
+    expect(pp!.meta?.opponentId).toBe("p3");
+    expect(pp!.unlockedAt.toISOString()).toBe(onDay(0, 4));
+  });
+
+  it("does not unlock when the opponent's streak was only 2", () => {
+    const r = computeAchievementsForPlayer("p1", makePlayer(), [
+      p1Loss(1), p1Loss(2), p1Win(3),
+    ]);
+    expect(r.find((a) => a.achievementId === "party_pooper")).toBeUndefined();
+  });
+
+  it("does not unlock if you lose to the streaking opponent", () => {
+    const r = computeAchievementsForPlayer("p1", makePlayer(), [
+      p1Loss(1), p1Loss(2), p1Loss(3), p1Loss(4),
+    ]);
+    expect(r.find((a) => a.achievementId === "party_pooper")).toBeUndefined();
+  });
+});
