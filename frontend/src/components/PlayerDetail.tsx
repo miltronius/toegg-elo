@@ -14,7 +14,6 @@ import {
   LabelList,
 } from "recharts";
 import {
-  getEloHistory,
   updatePlayerName,
   updatePlayerAnonymousName,
   EloHistory,
@@ -188,26 +187,18 @@ export function PlayerDetail({
     return () => window.removeEventListener("keydown", handleKey);
   }, [onNavigate, prevPlayer, nextPlayer, isEditingName]);
 
+  // Derive this player's history from the already-loaded app data instead of
+  // refetching it — App holds every player's history in the eloHistory prop.
   useEffect(() => {
-    const loadPlayerData = async () => {
-      setLoading(true);
-      try {
-        const history = await getEloHistory(player.id);
-        setRawHistory(
-          history.sort(
-            (a, b) =>
-              new Date(a.created_at).getTime() -
-              new Date(b.created_at).getTime(),
-          ),
-        );
-      } catch (error) {
-        console.error("Failed to load player data:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    loadPlayerData();
-  }, [player.id]);
+    const history = eloHistory
+      .filter((h) => h.player_id === player.id)
+      .sort(
+        (a, b) =>
+          new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+      );
+    setRawHistory(history);
+    setLoading(false);
+  }, [player.id, eloHistory]);
 
   const chartData = useMemo(() => {
     const filtered = selectedSeason

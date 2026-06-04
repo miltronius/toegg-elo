@@ -48,7 +48,9 @@ export type AchievementId =
   | "rock_bottom"
   | "carrying_hard"
   | "deadweight"
-  | "completionist";
+  | "party_pooper"
+  | "completionist"
+  | "completionist_30";
 
 interface Player {
   id: string;
@@ -673,6 +675,73 @@ function computeAchievementsForPlayer(
     }
   }
 
+  // party_pooper — win a match against an opponent who came in on a win streak
+  // of 3 or more, ending their run. The streak is the opponent's own consecutive
+  // match wins immediately before this match, across all their games.
+  {
+    const involvesPlayer = (m: Match, pid: string) =>
+      m.team_a_player_1_id === pid ||
+      m.team_a_player_2_id === pid ||
+      m.team_b_player_1_id === pid ||
+      m.team_b_player_2_id === pid;
+    // Cache each opponent's chronological win/loss results.
+    const resultsCache = new Map<string, { id: string; won: boolean }[]>();
+    const opponentResults = (oppId: string) => {
+      let cached = resultsCache.get(oppId);
+      if (!cached) {
+        cached = matches
+          .filter((m) => involvesPlayer(m, oppId))
+          .sort(
+            (a, b) =>
+              new Date(a.created_at).getTime() -
+              new Date(b.created_at).getTime(),
+          )
+          .map((m) => {
+            const inA =
+              m.team_a_player_1_id === oppId || m.team_a_player_2_id === oppId;
+            return {
+              id: m.id,
+              won:
+                (inA && m.winning_team === "A") ||
+                (!inA && m.winning_team === "B"),
+            };
+          });
+        resultsCache.set(oppId, cached);
+      }
+      return cached;
+    };
+    let done = false;
+    for (const m of sorted) {
+      if (done) break;
+      const inA =
+        m.team_a_player_1_id === playerId || m.team_a_player_2_id === playerId;
+      const won =
+        (inA && m.winning_team === "A") || (!inA && m.winning_team === "B");
+      if (!won) continue;
+      const opponents = inA
+        ? [m.team_b_player_1_id, m.team_b_player_2_id]
+        : [m.team_a_player_1_id, m.team_a_player_2_id];
+      for (const oppId of opponents) {
+        // Count the opponent's consecutive wins right up to (not incl.) this match.
+        let streak = 0;
+        for (const r of opponentResults(oppId)) {
+          if (r.id === m.id) break;
+          if (r.won) streak++;
+          else streak = 0;
+        }
+        if (streak >= 3) {
+          unlocked.push({
+            achievementId: "party_pooper",
+            unlockedAt: new Date(m.created_at),
+            meta: { opponentId: oppId, streak },
+          });
+          done = true;
+          break;
+        }
+      }
+    }
+  }
+
   // achievement_hunter — unlockedAt = date the 10th achievement was earned
   if (unlocked.length >= 10) {
     const tenth = [...unlocked].sort(
@@ -692,6 +761,18 @@ function computeAchievementsForPlayer(
     unlocked.push({
       achievementId: "completionist",
       unlockedAt: twentieth.unlockedAt,
+    });
+  }
+
+  // completionist_30 — unlockedAt = date the 30th achievement was earned
+  // (counted after the lower meta-achievements so they are included)
+  if (unlocked.length >= 30) {
+    const thirtieth = [...unlocked].sort(
+      (a, b) => a.unlockedAt.getTime() - b.unlockedAt.getTime(),
+    )[29];
+    unlocked.push({
+      achievementId: "completionist_30",
+      unlockedAt: thirtieth.unlockedAt,
     });
   }
 

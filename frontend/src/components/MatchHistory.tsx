@@ -22,8 +22,13 @@ export function MatchHistory({
   onDeleteMatch,
 }: MatchHistoryProps) {
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const PAGE_SIZE = 20;
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const playerMap = new Map(players.map((p) => [p.id, p]));
   const seasonMap = new Map(seasons.map((s) => [s.id, s]));
+
+  const visibleMatches = matches.slice(0, visibleCount);
+  const hasMore = matches.length > visibleCount;
 
   const seasonStatsMap = new Map(
     playerSeasonStats.map((s) => [`${s.player_id}-${s.season_id}`, s.elo_at_start]),
@@ -40,7 +45,7 @@ export function MatchHistory({
         </p>
       ) : (
         <div className="flex flex-col gap-6">
-          {matches.map((match, index) => {
+          {visibleMatches.map((match, index) => {
             const teamA1 = playerMap.get(match.team_a_player_1_id);
             const teamA2 = playerMap.get(match.team_a_player_2_id);
             const teamB1 = playerMap.get(match.team_b_player_1_id);
@@ -144,6 +149,16 @@ export function MatchHistory({
               </div>
             );
           })}
+          {hasMore && (
+            <div className="flex justify-center">
+              <button
+                className="btn-secondary"
+                onClick={() => setVisibleCount((c) => c + PAGE_SIZE)}
+              >
+                Show more
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>

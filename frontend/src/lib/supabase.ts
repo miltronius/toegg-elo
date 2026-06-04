@@ -8,6 +8,19 @@ const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || "";
 
 export const supabase = createClient(supabaseUrl, supabaseKey);
 
+// Timestamp of the most recent mutation initiated by THIS browser tab. Stamped
+// at the *start* of each mutation (the edge-function / DB write emits realtime
+// events while the call is still in flight, so a post-success stamp can race
+// the echo). The realtime sync reads this to avoid toasting us about our own
+// changes. See useRealtimeSync.
+let lastLocalMutationAt = 0;
+export function markLocalMutation(): void {
+  lastLocalMutationAt = Date.now();
+}
+export function getLastLocalMutationAt(): number {
+  return lastLocalMutationAt;
+}
+
 export type Role = "viewer" | "user" | "admin";
 
 export type Profile = {
@@ -94,6 +107,7 @@ export async function createPlayer(
   name: string,
   anonymousName: string,
 ): Promise<Player> {
+  markLocalMutation();
   const { data, error } = await supabase
     .from("players")
     .insert({ name, anonymous_name: anonymousName })
@@ -111,6 +125,7 @@ export async function recordMatch(
   teamBPlayer2Id: string,
   winningTeam: "A" | "B",
 ) {
+  markLocalMutation();
   const response = await supabase.functions.invoke("calculate-elo", {
     body: {
       teamAPlayer1Id,
@@ -147,6 +162,7 @@ export async function getEloHistory(playerId: string): Promise<EloHistory[]> {
 }
 
 export async function deleteMatch(matchId: string) {
+  markLocalMutation();
   // First, get the match to know which players and season were involved
   const { data: matchData } = await supabase
     .from("matches")
@@ -248,6 +264,7 @@ export async function deleteMatch(matchId: string) {
 }
 
 export async function deletePlayer(playerId: string) {
+  markLocalMutation();
   // Delete all elo_history for this player
   await supabase.from("elo_history").delete().eq("player_id", playerId);
 
@@ -272,6 +289,7 @@ export async function deletePlayer(playerId: string) {
 }
 
 export async function updatePlayerName(playerId: string, newName: string) {
+  markLocalMutation();
   const { error } = await supabase
     .from("players")
     .update({ name: newName })
@@ -284,6 +302,7 @@ export async function updatePlayerAnonymousName(
   playerId: string,
   anonymousName: string,
 ) {
+  markLocalMutation();
   const { error } = await supabase
     .from("players")
     .update({ anonymous_name: anonymousName })
@@ -357,6 +376,7 @@ export async function endSeasonAndStartNew(
   newKFactor: number,
   newPenaltyPercent: number,
 ): Promise<void> {
+  markLocalMutation();
   const { error } = await supabase.rpc("end_season_and_start_new", {
     new_season_name: newSeasonName,
     new_k_factor: newKFactor,
@@ -389,6 +409,7 @@ export async function upsertTeamName(
   alias2: string | null,
   color: string | null,
 ): Promise<void> {
+  markLocalMutation();
   const { error } = await supabase.from("team_names").upsert(
     {
       player_id_lo: playerIdLo,

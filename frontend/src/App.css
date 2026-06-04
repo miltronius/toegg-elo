@@ -589,6 +589,131 @@ td.winrate {
   animation: skeleton-shimmer 1.4s ease-in-out infinite;
 }
 
+/* ── Background refetch indicator ────────────────────────────────── */
+@keyframes refetch-slide {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(400%);
+  }
+}
+.app-refetch-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  z-index: 1000;
+  overflow: hidden;
+  background: transparent;
+}
+.app-refetch-bar::before {
+  content: "";
+  display: block;
+  width: 25%;
+  height: 100%;
+  background: var(--color-primary);
+  animation: refetch-slide 1s ease-in-out infinite;
+}
+
+/* ── Loading spinner ─────────────────────────────────────────────── */
+@keyframes app-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.app-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid var(--color-border);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: app-spin 0.8s linear infinite;
+}
+
+/* ── Data update pulse (border under header) ─────────────────────── */
+.data-update-pulse {
+  height: 0;
+  overflow: hidden;
+  transition: height 0.15s ease-out;
+}
+.data-update-pulse.active {
+  height: 3px;
+  background-image: linear-gradient(
+    90deg,
+    #f43f5e,
+    #f59e0b,
+    #facc15,
+    #10b981,
+    #3b82f6,
+    #a855f7,
+    #f43f5e
+  );
+  background-size: 200% 100%;
+  animation: data-pulse-slide 0.8s linear infinite;
+}
+@keyframes data-pulse-slide {
+  from {
+    background-position: 0% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+/* ── Toasts ──────────────────────────────────────────────────────── */
+.toaster {
+  position: fixed;
+  bottom: 1.25rem;
+  right: 1.25rem;
+  z-index: 1100;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  pointer-events: none;
+}
+.toast {
+  pointer-events: auto;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  max-width: 22rem;
+  text-align: left;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  border-left: 4px solid var(--color-primary);
+  background: var(--color-bg-light);
+  color: var(--color-text);
+  font-size: 0.9rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+  animation: toast-in 0.2s ease-out;
+}
+.toast-icon {
+  flex-shrink: 0;
+  font-size: 1rem;
+  line-height: 1;
+}
+.toast-close {
+  margin-left: auto;
+  flex-shrink: 0;
+  font-size: 0.8rem;
+  line-height: 1;
+  color: var(--color-text-light);
+}
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.5rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 /* ── Team tooltip ────────────────────────────────────────────────── */
 .team-tooltip {
   display: flex;
@@ -1733,6 +1858,18 @@ td.winrate {
 [data-theme="win95"] .btn-delete,
 [data-theme="win95"] .btn-danger {
   border-radius: 0;
+}
+
+[data-theme="win95"] .toast {
+  background: #d4d0c8;
+  color: #000000;
+  border-radius: 0;
+  border: none;
+  border-left: none;
+  box-shadow:
+    inset 0.5px 0.5px 0px 0.5px #ffffff,
+    inset 0 0 0 1px #868a8e,
+    2px 2px 0 0px #000000;
 }
 
 [data-theme="win95"] .form-group input,
