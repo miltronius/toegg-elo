@@ -49,7 +49,9 @@ K-factor is configurable per season (default 32).
 - **Backend:** Supabase (PostgreSQL, Auth, Row-Level Security)
 - **ELO calculation:** Deno edge function
 
-## Setup
+## Supabase Setup & Deployment
+
+> https://supabase.com/docs/guides/functions/deploy
 
 1. Create a [Supabase](https://supabase.com) project and run the migrations in `supabase/migrations/` in order.
 
@@ -81,10 +83,13 @@ K-factor is configurable per season (default 32).
 
    ```bash
    supabase login
+   supabase projects list
    supabase link --project-ref <your-project-ref>
    ```
 
 4. Deploy the edge function:
+
+   > Run the command from the root of the project!
 
    ```bash
    supabase functions deploy calculate-elo --project-ref <your-project-ref>
