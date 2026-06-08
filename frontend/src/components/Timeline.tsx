@@ -524,7 +524,7 @@ export function Timeline({
                             <span className="dashboard-event-body">
                               <span className="dashboard-match-winner">{playerName}</span>
                               {t("timeline.earned")}
-                              <span className="dashboard-achievement-name">"{def?.name ?? event.row.achievement_id}"</span>
+                              <span className="dashboard-achievement-name">"{def ? t(`achievementDefs.${def.id}.name`, def.name) : event.row.achievement_id}"</span>
                             </span>
                           </div>
                         );

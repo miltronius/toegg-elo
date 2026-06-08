@@ -161,7 +161,7 @@ function AchievementRow({
             <span
               key={s.definition.id}
               className="achievements-highlight-badge"
-              title={s.definition.name}
+              title={t(`achievementDefs.${s.definition.id}.name`, s.definition.name)}
               style={
                 s.rarityTier
                   ? {
@@ -320,9 +320,9 @@ function AchievementsOverview({
                     {isNone ? "🔒" : def.icon}
                   </div>
                   <div className="achievements-overview-info">
-                    <div className="achievements-overview-name">{def.name}</div>
+                    <div className="achievements-overview-name">{t(`achievementDefs.${def.id}.name`, def.name)}</div>
                     <div className="achievements-overview-desc">
-                      {def.description}
+                      {t(`achievementDefs.${def.id}.description`, def.description)}
                     </div>
                   </div>
                   <div>
@@ -480,7 +480,7 @@ export function AchievementGallery({
                   <div className="achievement-nextup-body">
                     <div className="achievement-nextup-top">
                       <span className="achievement-nextup-name">
-                        {def.name}
+                        {t(`achievementDefs.${def.id}.name`, def.name)}
                       </span>
                       <span
                         className="achievement-nextup-count"
@@ -598,8 +598,8 @@ function AchievementCard({ status, playerMap, locked }: AchievementCardProps) {
       data-unlocked={!locked && unlockedLabel ? unlockedLabel : undefined}
     >
       <div className="achievement-icon">{locked ? "🔒" : definition.icon}</div>
-      <div className="achievement-name">{definition.name}</div>
-      <div className="achievement-desc">{definition.description}</div>
+      <div className="achievement-name">{t(`achievementDefs.${definition.id}.name`, definition.name)}</div>
+      <div className="achievement-desc">{t(`achievementDefs.${definition.id}.description`, definition.description)}</div>
       {subtext && <div className="achievement-sub">{subtext}</div>}
       {tierInfo && !locked && (
         <span
