@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { createPortal } from "react-dom";
 import { Match, Player, PlayerSeasonStats, Season, TeamNameRow } from "../lib/supabase";
 import {
@@ -81,6 +82,7 @@ type SortKey = "rank" | "elo" | "winrate" | "matches" | "name";
 const STORAGE_KEY = "teams-view";
 
 export function Teams({ matches, players, teamNames, seasons, selectedSeason, onSeasonSelect, onTeamClick, playerSeasonStats }: TeamsProps) {
+  const { t } = useTranslation();
   const [view, setView] = useState<"table" | "card">(
     () => (localStorage.getItem(STORAGE_KEY) as "table" | "card") ?? "table",
   );
@@ -185,7 +187,7 @@ export function Teams({ matches, players, teamNames, seasons, selectedSeason, on
   return (
     <div className="card">
       <div className="flex items-center justify-between flex-wrap gap-2.5 mb-4">
-        <h2 className="m-0">Teams</h2>
+        <h2 className="m-0">{t("teams.title")}</h2>
         <div className="flex items-center gap-3 flex-wrap">
           <select
             className="season-select"
@@ -195,7 +197,7 @@ export function Teams({ matches, players, teamNames, seasons, selectedSeason, on
               onSeasonSelect(s);
             }}
           >
-            <option value="">All-Time</option>
+            <option value="">{t("teams.allTime")}</option>
             {seasons.map((s) => (
               <option key={s.id} value={s.id}>
                 S{s.number} · {s.name}
@@ -207,7 +209,7 @@ export function Teams({ matches, players, teamNames, seasons, selectedSeason, on
             value={filterPlayerId}
             onChange={(e) => setFilterPlayerId(e.target.value)}
           >
-            <option value="">All players</option>
+            <option value="">{t("teams.allPlayers")}</option>
             {[...players]
               .sort((a, b) => b.current_elo - a.current_elo)
               .map((p) => (
@@ -221,25 +223,25 @@ export function Teams({ matches, players, teamNames, seasons, selectedSeason, on
               className={`lb-toggle-btn ${view === "table" ? "active" : ""}`}
               onClick={() => setViewAndStore("table")}
             >
-              Table
+              {t("teams.table")}
             </button>
             <button
               className={`lb-toggle-btn ${view === "card" ? "active" : ""}`}
               onClick={() => setViewAndStore("card")}
             >
-              Cards
+              {t("teams.cards")}
             </button>
           </div>
         </div>
       </div>
 
-      <p className="text-[0.78rem] text-text-light -mt-2 mb-3">Only teams with ≥ 2 matches are shown.</p>
+      <p className="text-[0.78rem] text-text-light -mt-2 mb-3">{t("teams.minMatchesNote")}</p>
 
       {sorted.length === 0 && (
         <div className="text-center py-12 px-4 text-text-light text-[0.95rem]">
           {teams.length === 0
-            ? "No matches recorded yet."
-            : "No teams found for this player."}
+            ? t("teams.noMatches")
+            : t("teams.noTeamsForPlayer")}
         </div>
       )}
       {sorted.length > 0 && view === "table" ? (
@@ -250,18 +252,18 @@ export function Teams({ matches, players, teamNames, seasons, selectedSeason, on
                 # {sortBy === "rank" && (sortAsc ? "▴" : "▾")}
               </th>
               <th style={{ cursor: "pointer" }} onClick={() => handleSort("name")}>
-                Team {sortBy === "name" && (sortAsc ? "▴" : "▾")}
+                {t("teams.team")} {sortBy === "name" && (sortAsc ? "▴" : "▾")}
               </th>
               <th className="elo" style={{ cursor: "pointer" }} onClick={() => handleSort("elo")}>
-                Combined ELO {sortBy === "elo" && (sortAsc ? "▴" : "▾")}
+                {t("teams.combinedElo")} {sortBy === "elo" && (sortAsc ? "▴" : "▾")}
               </th>
               <th className="record" style={{ cursor: "pointer" }} onClick={() => handleSort("matches")}>
-                W – L {sortBy === "matches" && (sortAsc ? "▴" : "▾")}
+                {t("teams.record")} {sortBy === "matches" && (sortAsc ? "▴" : "▾")}
               </th>
               <th className="winrate" style={{ cursor: "pointer" }} onClick={() => handleSort("winrate")}>
-                Win Rate {sortBy === "winrate" && (sortAsc ? "▴" : "▾")}
+                {t("teams.winRate")} {sortBy === "winrate" && (sortAsc ? "▴" : "▾")}
               </th>
-              <th>Top Rival</th>
+              <th>{t("teams.topRival")}</th>
             </tr>
           </thead>
           <tbody>
@@ -292,10 +294,10 @@ export function Teams({ matches, players, teamNames, seasons, selectedSeason, on
                       <div>
                         {getTeamDisplayName(team, players)}
                         {team.currentStreak > 0 && (
-                          <span className="streak-badge" title="Winstreak">🔥{team.currentStreak}</span>
+                          <span className="streak-badge" title={t("teams.winstreak")}>🔥{team.currentStreak}</span>
                         )}
                         {team.currentLoseStreak > 0 && (
-                          <span className="streak-badge lose" title="Losestreak">🥶{team.currentLoseStreak}</span>
+                          <span className="streak-badge lose" title={t("teams.losestreak")}>🥶{team.currentLoseStreak}</span>
                         )}
                       </div>
                       {(team.nameRow?.alias_1 || team.nameRow?.alias_2) && (
@@ -325,7 +327,7 @@ export function Teams({ matches, players, teamNames, seasons, selectedSeason, on
                           <span style={{ display: "flex", alignItems: "center", gap: "0.4rem", padding: "1rem" }}>
                             <span className="inline-block w-2 h-2 rounded-full shrink-0" style={{ background: color }} />
                             <span className="text-text-light">
-                              {name} ({team.rivals[0].matchesPlayed}×)
+                              {t("teams.rivalCount", { name, count: team.rivals[0].matchesPlayed })}
                             </span>
                           </span>
                         </TeamTooltip>
@@ -358,10 +360,10 @@ export function Teams({ matches, players, teamNames, seasons, selectedSeason, on
                   )}
                   {getTeamDisplayName(team, players)}
                   {team.currentStreak > 0 && (
-                    <span className="streak-badge" title="Winstreak">🔥{team.currentStreak}</span>
+                    <span className="streak-badge" title={t("teams.winstreak")}>🔥{team.currentStreak}</span>
                   )}
                   {team.currentLoseStreak > 0 && (
-                    <span className="streak-badge lose" title="Losestreak">🥶{team.currentLoseStreak}</span>
+                    <span className="streak-badge lose" title={t("teams.losestreak")}>🥶{team.currentLoseStreak}</span>
                   )}
                 </div>
                 {(team.nameRow?.alias_1 || team.nameRow?.alias_2) && (
@@ -385,7 +387,7 @@ export function Teams({ matches, players, teamNames, seasons, selectedSeason, on
                     <TeamTooltip tooltipPlayers={rPlayers} color={color}>
                       <div className="flex items-center gap-1.5 mt-3 text-[0.75rem] text-text-light border-t border-border-light pt-2">
                         <span className="inline-block w-2 h-2 rounded-full shrink-0" style={{ background: color }} />
-                        {name} ({team.rivals[0].matchesPlayed}×)
+                        {t("teams.rivalCount", { name, count: team.rivals[0].matchesPlayed })}
                       </div>
                     </TeamTooltip>
                   );

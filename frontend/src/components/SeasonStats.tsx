@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ResponsiveContainer,
   BarChart,
@@ -12,6 +13,7 @@ import {
 import type { Season, Match, Player, EloHistory } from "../lib/supabase";
 import type { PlayerAchievementRow } from "../lib/achievements";
 import { computeSeasonStats } from "../lib/seasonStats";
+import { DATE_LOCALE } from "../lib/i18n";
 import { ActivityHeatmap } from "./ActivityHeatmap";
 
 interface SeasonStatsProps {
@@ -35,7 +37,7 @@ function formatDuration(totalMinutes: number): string {
 }
 
 function formatDay(day: string): string {
-  return new Date(day + "T12:00:00Z").toLocaleDateString("de-CH", {
+  return new Date(day + "T12:00:00Z").toLocaleDateString(DATE_LOCALE, {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
@@ -51,6 +53,8 @@ export function SeasonStats({
   players,
   achievements,
 }: SeasonStatsProps) {
+  const { t } = useTranslation();
+  const fmtDay = (day: string) => formatDay(day);
   const orderedSeasons = useMemo(
     () => [...seasons].sort((a, b) => b.number - a.number),
     [seasons],
@@ -98,13 +102,13 @@ export function SeasonStats({
   return (
     <div className="season-stats">
       <div className="season-stats-head">
-        <span className="season-stats-title">📊 Statistics</span>
+        <span className="season-stats-title">{t("seasonStats.title")}</span>
         <select
           className="season-stats-select"
           value={scope}
           onChange={(e) => setScope(e.target.value)}
         >
-          <option value="all">All-time</option>
+          <option value="all">{t("seasonStats.allTime")}</option>
           {orderedSeasons.map((s) => (
             <option key={s.id} value={s.id}>
               S{s.number} · {s.name}
@@ -115,25 +119,25 @@ export function SeasonStats({
 
       {range && (
         <div className="season-stats-daterange">
-          📅 {formatDay(range.start)} – {formatDay(range.end)}
-          {season && !season.ended_at ? " (active)" : ""}
+          📅 {fmtDay(range.start)} – {fmtDay(range.end)}
+          {season && !season.ended_at ? t("seasonStats.active") : ""}
         </div>
       )}
 
       {stats.gamesPlayed === 0 ? (
         <p className="text-text-light text-[0.85rem] py-3 text-center">
-          No matches recorded {scope === "all" ? "yet" : "this season"}.
+          {scope === "all" ? t("seasonStats.noMatchesYet") : t("seasonStats.noMatchesSeason")}
         </p>
       ) : (
         <>
           <div className="season-stats-grid">
             <div className="season-stat-tile">
               <div className="season-stat-value">{stats.gamesPlayed}</div>
-              <div className="season-stat-label">Games played</div>
+              <div className="season-stat-label">{t("seasonStats.gamesPlayed")}</div>
             </div>
             <div className="season-stat-tile">
               <div className="season-stat-value">{stats.activePlayers}</div>
-              <div className="season-stat-label">Active players</div>
+              <div className="season-stat-label">{t("seasonStats.activePlayers")}</div>
             </div>
             {stats.topStreak && (
               <div className="season-stat-tile">
@@ -141,7 +145,7 @@ export function SeasonStats({
                   🔥 {stats.topStreak.streak}
                 </div>
                 <div className="season-stat-label">
-                  Longest win streak · {stats.topStreak.name}
+                  {t("seasonStats.longestWinStreak", { name: stats.topStreak.name })}
                 </div>
               </div>
             )}
@@ -151,7 +155,7 @@ export function SeasonStats({
                   🥶 {stats.topLoseStreak.streak}
                 </div>
                 <div className="season-stat-label">
-                  Longest lose streak · {stats.topLoseStreak.name}
+                  {t("seasonStats.longestLoseStreak", { name: stats.topLoseStreak.name })}
                 </div>
               </div>
             )}
@@ -162,8 +166,7 @@ export function SeasonStats({
                   <span className="season-stat-unit"> Elo</span>
                 </div>
                 <div className="season-stat-label">
-                  Best day · {stats.bestDayGain.name} ·{" "}
-                  {formatDay(stats.bestDayGain.day)}
+                  {t("seasonStats.bestDay", { name: stats.bestDayGain.name, day: fmtDay(stats.bestDayGain.day) })}
                 </div>
               </div>
             )}
@@ -174,7 +177,7 @@ export function SeasonStats({
                   <span className="season-stat-unit"> Elo</span>
                 </div>
                 <div className="season-stat-label">
-                  Biggest single win · {stats.biggestWin.name}
+                  {t("seasonStats.biggestWin", { name: stats.biggestWin.name })}
                 </div>
               </div>
             )}
@@ -185,7 +188,7 @@ export function SeasonStats({
                   <span className="season-stat-unit"> Elo</span>
                 </div>
                 <div className="season-stat-label">
-                  Biggest single loss · {stats.biggestLoss.name}
+                  {t("seasonStats.biggestLoss", { name: stats.biggestLoss.name })}
                 </div>
               </div>
             )}
@@ -196,8 +199,7 @@ export function SeasonStats({
                   <span className="season-stat-unit"> Elo</span>
                 </div>
                 <div className="season-stat-label">
-                  Worst day · {stats.worstDayDrop.name} ·{" "}
-                  {formatDay(stats.worstDayDrop.day)}
+                  {t("seasonStats.worstDay", { name: stats.worstDayDrop.name, day: fmtDay(stats.worstDayDrop.day) })}
                 </div>
               </div>
             )}
@@ -207,7 +209,7 @@ export function SeasonStats({
                   📈 {stats.highestElo.elo}
                 </div>
                 <div className="season-stat-label">
-                  Highest Elo · {stats.highestElo.name}
+                  {t("seasonStats.highestElo", { name: stats.highestElo.name })}
                 </div>
               </div>
             )}
@@ -217,7 +219,7 @@ export function SeasonStats({
                   📉 {stats.lowestElo.elo}
                 </div>
                 <div className="season-stat-label">
-                  Lowest Elo · {stats.lowestElo.name}
+                  {t("seasonStats.lowestElo", { name: stats.lowestElo.name })}
                 </div>
               </div>
             )}
@@ -226,11 +228,11 @@ export function SeasonStats({
                 <div className="season-stat-value">
                   {stats.busiestDay.games}
                   <span className="season-stat-unit">
-                    {stats.busiestDay.games === 1 ? " game" : " games"}
+                    {t("seasonStats.game", { count: stats.busiestDay.games })}
                   </span>
                 </div>
                 <div className="season-stat-label">
-                  Busiest day · {formatDay(stats.busiestDay.day)}
+                  {t("seasonStats.busiestDay", { day: fmtDay(stats.busiestDay.day) })}
                 </div>
               </div>
             )}
@@ -240,8 +242,7 @@ export function SeasonStats({
                   {stats.winRateLeader.winrate.toFixed(0)}%
                 </div>
                 <div className="season-stat-label">
-                  Win-rate leader ({stats.winRateLeader.minGames}+ games) ·{" "}
-                  {stats.winRateLeader.name}
+                  {t("seasonStats.winRateLeader", { minGames: stats.winRateLeader.minGames, name: stats.winRateLeader.name })}
                 </div>
               </div>
             )}
@@ -251,8 +252,8 @@ export function SeasonStats({
               </div>
               <div className="season-stat-label">
                 {scope === "all"
-                  ? "Achievements unlocked in total"
-                  : "Achievements unlocked this season"}
+                  ? t("seasonStats.achievementsTotal")
+                  : t("seasonStats.achievementsSeason")}
               </div>
             </div>
             <div className="season-stat-tile">
@@ -260,13 +261,13 @@ export function SeasonStats({
                 {formatDuration(stats.gamesPlayed * MINUTES_PER_GAME)}
               </div>
               <div className="season-stat-label">
-                Est. time played · ~{MINUTES_PER_GAME}min/game
+                {t("seasonStats.estTimePlayed", { minutes: MINUTES_PER_GAME })}
               </div>
             </div>
           </div>
 
           <div className="season-stats-chart">
-            <div className="season-stats-subhead">Games by weekday</div>
+            <div className="season-stats-subhead">{t("seasonStats.gamesByWeekday")}</div>
             <ResponsiveContainer width="100%" height={170}>
               <BarChart
                 data={stats.weekday}
@@ -286,11 +287,11 @@ export function SeasonStats({
                   }}
                   labelStyle={{ color: "var(--color-text)" }}
                   itemStyle={{ color: "var(--color-text)" }}
-                  formatter={(v) => [v as number, "Games"]}
+                  formatter={(v) => [v as number, t("seasonStats.gamesTooltip")]}
                 />
                 <Bar
                   dataKey="games"
-                  name="Games"
+                  name={t("seasonStats.gamesTooltip")}
                   fill="var(--color-primary)"
                   radius={[4, 4, 0, 0]}
                   maxBarSize={48}
@@ -309,7 +310,7 @@ export function SeasonStats({
 
           {heatmapRange && (
             <div className="season-stats-chart">
-              <div className="season-stats-subhead">Daily Activity Heatmap</div>
+              <div className="season-stats-subhead">{t("seasonStats.dailyActivity")}</div>
               <ActivityHeatmap
                 activity={stats.activity}
                 start={heatmapRange.start}

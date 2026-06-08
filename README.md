@@ -4,15 +4,15 @@ A dashboard to track 2v2 table soccer (foosball) matches and rank players using 
 
 ## Features
 
-- Record 2v2 matches and automatically recalculate ELO ratings
-- **Timeline** — reverse-chronological daily activity feed showing match results (with per-player ELO deltas), achievements earned, rank changes, and season transitions; shown first to logged-in users
-- **Leaderboard** with player rankings, sortable by ELO / name / winrate, with ELO history charts; season-filtered
-- **Player detail modal** with ELO progression, winrate chart, Top Enemy & Nemesis stats, season dropdown, and ‹ › keyboard navigation (← → / A D)
-- **Teams tab** — all player pairs (≥ 2 matches) with combined ELO, win rate, nemesis rival, custom names/colors; season-filtered
+- Record 2v2 matches and automatically recalculate Elo ratings
+- **Timeline** — reverse-chronological daily activity feed showing match results (with per-player Elo deltas), achievements earned, rank changes, and season transitions; shown first to logged-in users
+- **Leaderboard** with player rankings, sortable by Elo / name / winrate, with Elo history charts; season-filtered
+- **Player detail modal** with Elo progression, winrate chart, Top Enemy & Nemesis stats, season dropdown, and ‹ › keyboard navigation (← → / A D)
+- **Teams tab** — all player pairs (≥ 2 matches) with combined Elo, win rate, nemesis rival, custom names/colors; season-filtered
 - **Statistics** — headline season/all-time stats: games played, active players, longest win streak 🔥 and lose streak 🥶, best/worst day, biggest single win/loss, highest/lowest Elo, busiest day, win-rate leader, season start/end dates, a games-by-weekday chart, and a GitHub-style daily-activity heatmap (spans at least the last ~3 months, with the first official day marked in purple)
 - **Achievements tab** — per-player achievement tracking; the overview's hover tooltip lists who earned each achievement, and for common ones flips to show who hasn't earned it yet (users/admins only)
 - **Admin tab** — user role management and one-click achievement recompute (admins only)
-- Match history with per-match ELO changes and season badge
+- Match history with per-match Elo changes and season badge
 - Season support: all views filter by season; each season has its own K-factor
 
 #### Miscellaneous
@@ -20,10 +20,11 @@ A dashboard to track 2v2 table soccer (foosball) matches and rank players using 
 - Role-based access: viewers (read-only), users (record matches, edit, achievements), admins (full control)
 - Magic link login
 - Themes: Light mode, Dark mode, Windows 95 mode
+- Languages: English and German, switchable via an EN/DE toggle in the header; choice is saved in a cookie. Dates always render in Swiss/German format (dd.mm.yyyy) regardless of language
 
-## ELO Calculation
+## Elo Calculation
 
-Each player starts at **1500 ELO**. After every match, ratings are updated using the standard ELO formula with **K = 32**.
+Each player starts at **1500 Elo**. After every match, ratings are updated using the standard Elo formula with **K = 32**.
 
 In a 2v2 match, each player is evaluated individually against both opponents. The expected score for a player is averaged across both opponents:
 
@@ -31,7 +32,7 @@ In a 2v2 match, each player is evaluated individually against both opponents. Th
 E = ( 1/(1 + 10^((Ra - P)/400)) + 1/(1 + 10^((Rb - P)/400)) ) / 2
 ```
 
-Where `P` is the player's current ELO and `Ra`, `Rb` are the two opponents' ELOs.
+Where `P` is the player's current Elo and `Ra`, `Rb` are the two opponents' ELOs.
 
 The new rating is then:
 
@@ -39,15 +40,16 @@ The new rating is then:
 newELO = oldELO + K * (actual - expected)
 ```
 
-Where `actual` is `1` for a win and `0` for a loss. All four players in a match are updated this way, and the changes are recorded in the ELO history for trend visualization.
+Where `actual` is `1` for a win and `0` for a loss. All four players in a match are updated this way, and the changes are recorded in the Elo history for trend visualization.
 
 K-factor is configurable per season (default 32).
 
 ## Tech Stack
 
 - **Frontend:** React 19 + Vite + TypeScript
+- **i18n:** react-i18next (English + German)
 - **Backend:** Supabase (PostgreSQL, Auth, Row-Level Security)
-- **ELO calculation:** Deno edge function
+- **Elo calculation:** Deno edge function
 
 ## Supabase Setup & Deployment
 

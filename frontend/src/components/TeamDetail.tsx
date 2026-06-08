@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Player, upsertTeamName } from "../lib/supabase";
 import {
   TeamStats,
@@ -25,6 +26,7 @@ export function TeamDetail({
   onClose,
   onNamesUpdated,
 }: TeamDetailProps) {
+  const { t } = useTranslation();
   const [name, setName] = useState(team.nameRow?.name ?? "");
   const [alias1, setAlias1] = useState(team.nameRow?.alias_1 ?? "");
   const [alias2, setAlias2] = useState(team.nameRow?.alias_2 ?? "");
@@ -55,7 +57,7 @@ export function TeamDetail({
     const toCheck = [name, alias1, alias2].map((v) => v.trim()).filter(Boolean);
     const duplicate = toCheck.find((v) => takenNames.has(v.toLowerCase()));
     if (duplicate) {
-      setError(`"${duplicate}" is already used by another team.`);
+      setError(t("teamDetail.duplicateName", { name: duplicate }));
       return;
     }
 
@@ -71,7 +73,7 @@ export function TeamDetail({
       );
       onNamesUpdated();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to save");
+      setError(e instanceof Error ? e.message : t("teamDetail.saveError"));
       setSaving(false);
     }
   };
@@ -92,10 +94,10 @@ export function TeamDetail({
           <div className="flex items-center gap-2 min-w-0">
             <h2 className="text-2xl font-bold text-text m-0">{getTeamDisplayName(team, players)}</h2>
             {team.currentStreak > 0 && (
-              <span className="streak-badge" title="Winstreak">🔥{team.currentStreak}</span>
+              <span className="streak-badge" title={t("teamDetail.winstreak")}>🔥{team.currentStreak}</span>
             )}
             {team.currentLoseStreak > 0 && (
-              <span className="streak-badge lose" title="Losestreak">🥶{team.currentLoseStreak}</span>
+              <span className="streak-badge lose" title={t("teamDetail.losestreak")}>🥶{team.currentLoseStreak}</span>
             )}
           </div>
           <button className="close-btn" onClick={onClose}>
@@ -118,21 +120,21 @@ export function TeamDetail({
 
         <div className="player-stats-grid">
           <div className="stat-card">
-            <div className="stat-label">Combined ELO</div>
+            <div className="stat-label">{t("teamDetail.combinedElo")}</div>
             <div className="stat-value">{team.combinedElo}</div>
           </div>
           <div className="stat-card">
-            <div className="stat-label">Matches</div>
+            <div className="stat-label">{t("teamDetail.matches")}</div>
             <div className="stat-value">{team.matchesPlayed}</div>
           </div>
           <div className="stat-card">
-            <div className="stat-label">Win Rate</div>
+            <div className="stat-label">{t("teamDetail.winRate")}</div>
             <div className="stat-value">
               {(team.winRate * 100).toFixed(0)}%
             </div>
           </div>
           <div className="stat-card">
-            <div className="stat-label">Record</div>
+            <div className="stat-label">{t("teamDetail.record")}</div>
             <div className="stat-value" style={{ fontSize: "1.1rem" }}>
               {team.wins} – {team.losses}
             </div>
@@ -142,7 +144,7 @@ export function TeamDetail({
         {canEdit && (
           <div className="flex flex-col gap-3 mt-4 pt-4 border-t border-border">
             <div className="flex items-center justify-between">
-              <div className="stat-label mb-0">Team Color</div>
+              <div className="stat-label mb-0">{t("teamDetail.teamColor")}</div>
               <div className="flex items-center gap-2">
                 <input
                   type="color"
@@ -157,12 +159,12 @@ export function TeamDetail({
                   onClick={() => setColor(teamColor({ ...team, nameRow: null }))}
                   disabled={saving}
                 >
-                  Reset
+                  {t("teamDetail.reset")}
                 </button>
               </div>
             </div>
             <div className="form-group">
-              <div className="stat-label">Team Name</div>
+              <div className="stat-label">{t("teamDetail.teamName")}</div>
               <input
                 type="text"
                 value={name}
@@ -172,22 +174,22 @@ export function TeamDetail({
               />
             </div>
             <div className="form-group">
-              <div className="stat-label">Alias 1</div>
+              <div className="stat-label">{t("teamDetail.alias1")}</div>
               <input
                 type="text"
                 value={alias1}
                 onChange={(e) => setAlias1(e.target.value)}
-                placeholder="Alternative name"
+                placeholder={t("teamDetail.aliasPlaceholder")}
                 disabled={saving}
               />
             </div>
             <div className="form-group">
-              <div className="stat-label">Alias 2</div>
+              <div className="stat-label">{t("teamDetail.alias2")}</div>
               <input
                 type="text"
                 value={alias2}
                 onChange={(e) => setAlias2(e.target.value)}
-                placeholder="Alternative name"
+                placeholder={t("teamDetail.aliasPlaceholder")}
                 disabled={saving}
               />
             </div>
@@ -201,14 +203,14 @@ export function TeamDetail({
               onClick={handleSave}
               disabled={saving}
             >
-              {saving ? "Saving…" : "Save Names"}
+              {saving ? t("teamDetail.saving") : t("teamDetail.saveNames")}
             </button>
           </div>
         )}
 
         {team.rivals.length > 0 && (
           <div className="mt-4 pt-4 border-t border-border">
-            <h3 className="text-base font-semibold text-text mb-3">Top Rivals</h3>
+            <h3 className="text-base font-semibold text-text mb-3">{t("teamDetail.topRivals")}</h3>
             <div className="flex flex-col">
               {team.rivals.map((rival) => (
                 <div key={rival.key} className="flex items-center justify-between py-2 border-b border-border-light last:border-b-0">

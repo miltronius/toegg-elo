@@ -1,9 +1,12 @@
 // First-load placeholder that mirrors the real app chrome (header, tab nav,
 // and a leaderboard-style table) so the initial load doesn't blank to a bare
 // 'Loading...'. Reuses the .chart-skeleton shimmer defined in App.css.
+import { useTranslation } from "react-i18next";
+
 export function AppSkeleton() {
+  const { t } = useTranslation();
   return (
-    <div className="min-h-screen flex flex-col" aria-busy="true" aria-label="Loading">
+    <div className="min-h-screen flex flex-col" aria-busy="true" aria-label={t("common.loading")}>
       <header className="bg-white border-b border-border px-8 py-6 flex justify-between items-center shadow-sm flex-wrap gap-3">
         <div className="chart-skeleton h-8 w-40" />
         <div className="flex items-center gap-3">
@@ -22,7 +25,7 @@ export function AppSkeleton() {
       </nav>
       <main className="flex-1 p-8 max-w-300 mx-auto w-full">
         <div className="flex justify-center mb-8">
-          <div className="app-spinner" role="status" aria-label="Loading" />
+          <div className="app-spinner" role="status" aria-label={t("common.loading")} />
         </div>
         <div className="card">
           <div className="chart-skeleton h-7 w-48 mb-6" />

@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import {
   LineChart,
   Line,
@@ -23,6 +24,7 @@ import {
   PlayerSeasonStats,
 } from "../lib/supabase";
 import { generateAnonymousName } from "../lib/anonymousNames";
+import { DATE_LOCALE } from "../lib/i18n";
 import {
   computeTeammateCounts,
   buildAchievementStatuses,
@@ -105,6 +107,8 @@ export function PlayerDetail({
   onNavigate,
   initialTab = "stats",
 }: PlayerDetailProps) {
+  const { t } = useTranslation();
+  const winrateLabel = t("playerDetail.winratePct");
   const playerMap = new Map(players.map((p) => [p.id, p]));
   const sortedPlayers = [...players].sort(
     (a, b) => b.current_elo - a.current_elo,
@@ -225,7 +229,7 @@ export function PlayerDetail({
           ? 1500 + (entry.elo_after - eloAtStart)
           : entry.elo_after;
       return {
-        date: new Date(entry.created_at).toLocaleDateString("de-CH", {
+        date: new Date(entry.created_at).toLocaleDateString(DATE_LOCALE, {
           day: "2-digit",
           month: "2-digit",
           year: "numeric",
@@ -322,8 +326,8 @@ export function PlayerDetail({
       setIsEditingName(false);
     } catch (error) {
       alert(
-        "Failed to update name: " +
-          (error instanceof Error ? error.message : "Unknown error"),
+        t("playerDetail.updateNameError") +
+          (error instanceof Error ? error.message : t("playerDetail.unknownError")),
       );
       setNewName(player.name);
     } finally {
@@ -349,8 +353,8 @@ export function PlayerDetail({
       onPlayerRefresh?.();
     } catch (error) {
       alert(
-        "Failed to update anonymous name: " +
-          (error instanceof Error ? error.message : "Unknown error"),
+        t("playerDetail.updateAnonError") +
+          (error instanceof Error ? error.message : t("playerDetail.unknownError")),
       );
       setNewAnon(anonName);
     } finally {
@@ -425,12 +429,12 @@ export function PlayerDetail({
                 {player.name}
               </h2>
               {currentStreak > 0 && (
-                <span className="streak-badge" title="Winstreak">
+                <span className="streak-badge" title={t("playerDetail.winstreak")}>
                   🔥{currentStreak}
                 </span>
               )}
               {currentLoseStreak > 0 && (
-                <span className="streak-badge lose" title="Losestreak">
+                <span className="streak-badge lose" title={t("playerDetail.losestreak")}>
                   🥶{currentLoseStreak}
                 </span>
               )}
@@ -466,7 +470,7 @@ export function PlayerDetail({
         <div className="flex items-center gap-2 mb-4 text-sm text-text-light">
           {isEditingAnon ? (
             <>
-              <span title="Name shown to viewers / logged-out users">🎭</span>
+              <span title={t("playerDetail.anonTitle")}>🎭</span>
               <input
                 type="text"
                 value={newAnon}
@@ -485,7 +489,7 @@ export function PlayerDetail({
               <button
                 onClick={handleRegenerateAnon}
                 disabled={isSavingAnon}
-                title="Generate a new anonymous name"
+                title={t("playerDetail.regenerate")}
                 className="btn-small"
               >
                 🔁
@@ -515,9 +519,9 @@ export function PlayerDetail({
                 setIsEditingAnon(true);
               }}
               className="cursor-pointer hover:text-primary transition-colors"
-              title="Anonymous name shown to viewers / logged-out users — click to edit"
+              title={t("playerDetail.anonEditHint")}
             >
-              🎭 {anonName || "Set anonymous name"}
+              🎭 {anonName || t("playerDetail.setAnonName")}
             </span>
           )}
         </div>
@@ -532,7 +536,7 @@ export function PlayerDetail({
               onSeasonSelect(s);
             }}
           >
-            <option value="">All-Time</option>
+            <option value="">{t("playerDetail.allTime")}</option>
             {seasons.map((s) => (
               <option key={s.id} value={s.id}>
                 S{s.number} · {s.name}
@@ -544,12 +548,12 @@ export function PlayerDetail({
         <div className="player-stats-grid">
           <div className="stat-card">
             <div className="stat-label">
-              {selectedSeason ? "Season ELO" : "Current ELO"}
+              {selectedSeason ? t("playerDetail.seasonElo") : t("playerDetail.currentElo")}
             </div>
             <div className="stat-value">{effectiveStats.elo}</div>
           </div>
           <div className="stat-card">
-            <div className="stat-label">Winrate</div>
+            <div className="stat-label">{t("playerDetail.winrate")}</div>
             <div className="stat-value">
               {effectiveStats.played > 0
                 ? ((effectiveStats.wins / effectiveStats.played) * 100).toFixed(
@@ -560,14 +564,14 @@ export function PlayerDetail({
             </div>
           </div>
           <div className="stat-card">
-            <div className="stat-label">W - L</div>
+            <div className="stat-label">{t("playerDetail.winLoss")}</div>
             <div className="stat-value" style={{ fontSize: "1.1rem" }}>
               {effectiveStats.wins} - {effectiveStats.losses}
             </div>
           </div>
           {topEnemy && (
             <div className="stat-card">
-              <div className="stat-label">Favorite Enemy</div>
+              <div className="stat-label">{t("playerDetail.favoriteEnemy")}</div>
               <div className="stat-value stat-value--name">
                 {playerMap.get(topEnemy.playerId)?.name ?? "?"}
               </div>
@@ -578,7 +582,7 @@ export function PlayerDetail({
           )}
           {nemesis && (
             <div className="stat-card">
-              <div className="stat-label">Nemesis</div>
+              <div className="stat-label">{t("playerDetail.nemesis")}</div>
               <div className="stat-value stat-value--name">
                 {playerMap.get(nemesis.playerId)?.name ?? "?"}
               </div>
@@ -598,13 +602,13 @@ export function PlayerDetail({
             className={`lb-toggle-btn${detailTab === "stats" ? " active" : ""}`}
             onClick={() => setDetailTab("stats")}
           >
-            📊 Stats
+            {t("playerDetail.statsTab")}
           </button>
           <button
             className={`lb-toggle-btn${detailTab === "achievements" ? " active" : ""}`}
             onClick={() => setDetailTab("achievements")}
           >
-            🏅 Achievements
+            {t("playerDetail.achievementsTab")}
           </button>
         </div>
 
@@ -618,7 +622,7 @@ export function PlayerDetail({
               </>
             ) : chartData.perGame.length === 0 ? (
               <div className="text-center text-text-light py-8">
-                No match history yet
+                {t("playerDetail.noMatchHistory")}
               </div>
             ) : (
               <>
@@ -627,18 +631,18 @@ export function PlayerDetail({
                     className={`lb-toggle-btn${xAxisMode === "date" ? " active" : ""}`}
                     onClick={() => setXAxisMode("date")}
                   >
-                    Per Date
+                    {t("playerDetail.perDate")}
                   </button>
                   <button
                     className={`lb-toggle-btn${xAxisMode === "game" ? " active" : ""}`}
                     onClick={() => setXAxisMode("game")}
                   >
-                    Per Game
+                    {t("playerDetail.perGame")}
                   </button>
                 </div>
 
                 <div className="mb-6">
-                  <h3>ELO &amp; Winrate Over Time</h3>
+                  <h3>{t("playerDetail.eloWinrateOverTime")}</h3>
                   <ResponsiveContainer width="100%" height={320}>
                     <LineChart
                       data={
@@ -662,7 +666,7 @@ export function PlayerDetail({
                       <Tooltip
                         {...tooltipStyle}
                         formatter={(value, name) =>
-                          name === "Winrate %"
+                          name === winrateLabel
                             ? `${(value as number).toFixed(1)}%`
                             : value
                         }
@@ -687,7 +691,7 @@ export function PlayerDetail({
                         type="monotone"
                         dataKey="elo"
                         stroke="#3b82f6"
-                        name="ELO Rating"
+                        name={t("playerDetail.eloRating")}
                         dot={false}
                         strokeWidth={2}
                       />
@@ -696,7 +700,7 @@ export function PlayerDetail({
                         type="monotone"
                         dataKey="winrate"
                         stroke="#10b981"
-                        name="Winrate %"
+                        name={winrateLabel}
                         dot={false}
                         strokeWidth={2}
                       />
@@ -705,7 +709,7 @@ export function PlayerDetail({
                 </div>
 
                 <div className="mb-6">
-                  <h3>Games by Weekday</h3>
+                  <h3>{t("playerDetail.gamesByWeekday")}</h3>
                   <ResponsiveContainer width="100%" height={300}>
                     <ComposedChart data={weekdayStats}>
                       <CartesianGrid strokeDasharray="3 3" />
@@ -714,7 +718,7 @@ export function PlayerDetail({
                         yAxisId="games"
                         allowDecimals={false}
                         label={{
-                          value: "Games",
+                          value: t("playerDetail.games"),
                           angle: -90,
                           position: "insideLeft",
                         }}
@@ -728,7 +732,7 @@ export function PlayerDetail({
                       <Tooltip
                         {...tooltipStyle}
                         formatter={(value, name) =>
-                          name === "Winrate %"
+                          name === winrateLabel
                             ? [
                                 value == null
                                   ? "—"
@@ -742,7 +746,7 @@ export function PlayerDetail({
                       <Bar
                         yAxisId="games"
                         dataKey="games"
-                        name="Games"
+                        name={t("playerDetail.games")}
                         fill="#3b82f6"
                         radius={[4, 4, 0, 0]}
                         maxBarSize={56}
@@ -751,7 +755,7 @@ export function PlayerDetail({
                         yAxisId="winrate"
                         type="monotone"
                         dataKey="winrate"
-                        name="Winrate %"
+                        name={winrateLabel}
                         stroke="#10b981"
                         strokeWidth={2}
                         connectNulls={false}
@@ -776,7 +780,7 @@ export function PlayerDetail({
               <div className="grid grid-cols-2 gap-4 mt-4">
                 {topFriends.length > 0 && (
                   <div>
-                    <h3>Top Friends</h3>
+                    <h3>{t("playerDetail.topFriends")}</h3>
                     <ol className="fe-list">
                       {topFriends.map((f) => (
                         <li key={f.playerId}>
@@ -793,7 +797,7 @@ export function PlayerDetail({
                 )}
                 {topEnemies.length > 0 && (
                   <div>
-                    <h3>Top Enemies</h3>
+                    <h3>{t("playerDetail.topEnemies")}</h3>
                     <ol className="fe-list">
                       {topEnemies.map((e) => (
                         <li key={e.playerId}>

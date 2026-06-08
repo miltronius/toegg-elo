@@ -2,7 +2,12 @@ import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Leaderboard } from "./Leaderboard";
-import type { Player, EloHistory, Season, PlayerSeasonStats } from "../lib/supabase";
+import type {
+  Player,
+  EloHistory,
+  Season,
+  PlayerSeasonStats,
+} from "../lib/supabase";
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -34,22 +39,20 @@ const NO_HISTORY: EloHistory[] = [];
 
 describe("Leaderboard — unauthenticated (no onPlayerClick)", () => {
   it("renders all players", () => {
-    render(
-      <Leaderboard players={PLAYERS} history={NO_HISTORY} />,
-    );
+    render(<Leaderboard players={PLAYERS} history={NO_HISTORY} />);
     expect(screen.getByText("Alice")).toBeInTheDocument();
     expect(screen.getByText("Bob")).toBeInTheDocument();
     expect(screen.getByText("Carl")).toBeInTheDocument();
   });
 
-  it("shows ELO values", () => {
+  it("shows Elo values", () => {
     render(<Leaderboard players={PLAYERS} history={NO_HISTORY} />);
     expect(screen.getByText("1700")).toBeInTheDocument();
     expect(screen.getByText("1500")).toBeInTheDocument();
     expect(screen.getByText("1300")).toBeInTheDocument();
   });
 
-  it("shows rank #1 for top player by ELO", () => {
+  it("shows rank #1 for top player by Elo", () => {
     render(<Leaderboard players={PLAYERS} history={NO_HISTORY} />);
     const rows = screen.getAllByRole("row").slice(1); // skip header
     expect(rows[0]).toHaveTextContent("#1");
@@ -65,7 +68,7 @@ describe("Leaderboard — unauthenticated (no onPlayerClick)", () => {
 // ── sorting ───────────────────────────────────────────────────────────────────
 
 describe("Leaderboard — sorting", () => {
-  it("sorts by ELO descending by default", () => {
+  it("sorts by Elo descending by default", () => {
     render(<Leaderboard players={PLAYERS} history={NO_HISTORY} />);
     const rows = screen.getAllByRole("row").slice(1);
     expect(rows[0]).toHaveTextContent("Alice");
@@ -85,24 +88,24 @@ describe("Leaderboard — sorting", () => {
 
   it("reverses sort order on second click of same column", async () => {
     render(<Leaderboard players={PLAYERS} history={NO_HISTORY} />);
-    // Use role+name to target the th header, not the "ELO Chart" toggle button
+    // Use role+name to target the th header, not the "Elo Chart" toggle button
     const eloHeader = screen.getByRole("columnheader", { name: /ELO/ });
     // First click: same column (elo), toggles to asc
     await userEvent.click(eloHeader);
     const rows = screen.getAllByRole("row").slice(1);
-    expect(rows[0]).toHaveTextContent("Carl"); // lowest ELO first
+    expect(rows[0]).toHaveTextContent("Carl"); // lowest Elo first
     expect(rows[2]).toHaveTextContent("Alice");
   });
 
-  it("breaks ELO ties by winrate descending", () => {
+  it("breaks Elo ties by winrate descending", () => {
     const tied = [
       player("aaa", "Alice", 1600, 8, 2), // 80% winrate
-      player("bbb", "Bob",   1600, 5, 5), // 50% winrate
-      player("ccc", "Carl",  1300, 2, 8),
+      player("bbb", "Bob", 1600, 5, 5), // 50% winrate
+      player("ccc", "Carl", 1300, 2, 8),
     ];
     render(<Leaderboard players={tied} history={NO_HISTORY} />);
     const rows = screen.getAllByRole("row").slice(1);
-    expect(rows[0]).toHaveTextContent("Alice"); // same ELO, higher winrate → #1
+    expect(rows[0]).toHaveTextContent("Alice"); // same Elo, higher winrate → #1
     expect(rows[1]).toHaveTextContent("Bob");
     expect(rows[0]).toHaveTextContent("#1");
     expect(rows[1]).toHaveTextContent("#2");
@@ -329,4 +332,3 @@ describe("Leaderboard — season view participation", () => {
     expect(clicked.losses).toBe(2);
   });
 });
-

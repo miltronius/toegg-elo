@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
+import type { TFunction } from "i18next";
 import { Player, Match, EloHistory, Season } from "../lib/supabase";
+import { DATE_LOCALE } from "../lib/i18n";
 import type { PlayerAchievementRow } from "../lib/achievements";
 import { ACHIEVEMENT_DEFINITIONS } from "../lib/achievements";
 
@@ -312,13 +315,13 @@ function buildTimeline(
   return daySections;
 }
 
-function formatDay(date: string): string {
+function formatDay(date: string, t: TFunction): string {
   const d = new Date(date + "T12:00:00Z");
   const today = new Date().toISOString().slice(0, 10);
   const yesterday = new Date(Date.now() - 864e5).toISOString().slice(0, 10);
-  if (date === today) return "Today";
-  if (date === yesterday) return "Yesterday";
-  return d.toLocaleDateString("de-CH", {
+  if (date === today) return t("timeline.today");
+  if (date === yesterday) return t("timeline.yesterday");
+  return d.toLocaleDateString(DATE_LOCALE, {
     weekday: "long",
     day: "2-digit",
     month: "long",
@@ -328,7 +331,7 @@ function formatDay(date: string): string {
 }
 
 function formatTime(iso: string): string {
-  return new Date(iso).toLocaleTimeString("de-CH", { hour: "2-digit", minute: "2-digit" });
+  return new Date(iso).toLocaleTimeString(DATE_LOCALE, { hour: "2-digit", minute: "2-digit" });
 }
 
 const PLACE_MEDALS: Record<number, string> = { 1: "🥇", 2: "🥈", 3: "🥉" };
@@ -337,10 +340,12 @@ function SeasonPodium({
   standings,
   endedSeason,
   playerMap,
+  t,
 }: {
   standings: SeasonStanding[];
   endedSeason: Season;
   playerMap: Map<string, Player>;
+  t: TFunction;
 }) {
   if (standings.length === 0) return null;
 
@@ -353,7 +358,7 @@ function SeasonPodium({
   return (
     <div className="season-podium">
       <div className="season-podium-title">
-        🏆 Season {endedSeason.number} final standings
+        {t("timeline.finalStandings", { number: endedSeason.number })}
       </div>
       <div className="season-podium-pedestals">
         {pedestal.map((s) => (
@@ -389,13 +394,6 @@ function SeasonPodium({
   );
 }
 
-const GROUP_LABELS: Record<EventGroup["kind"], string> = {
-  season: "",
-  matches: "Matches",
-  achievements: "Achievements",
-  rankings: "Rankings",
-};
-
 export function Timeline({
   players,
   matches,
@@ -403,6 +401,13 @@ export function Timeline({
   allAchievementRows,
   seasons,
 }: DashboardProps) {
+  const { t } = useTranslation();
+  const GROUP_LABELS: Record<EventGroup["kind"], string> = {
+    season: "",
+    matches: t("timeline.groupMatches"),
+    achievements: t("timeline.groupAchievements"),
+    rankings: t("timeline.groupRankings"),
+  };
   const playerMap = useMemo(() => new Map(players.map((p) => [p.id, p])), [players]);
 
   const daySections = useMemo(
@@ -441,19 +446,19 @@ export function Timeline({
   if (daySections.length === 0) {
     return (
       <div className="card">
-        <h2>Timeline</h2>
-        <p className="text-center text-text-light py-8">No matches recorded yet. Record a match to get started!</p>
+        <h2>{t("timeline.title")}</h2>
+        <p className="text-center text-text-light py-8">{t("timeline.empty")}</p>
       </div>
     );
   }
 
   return (
     <div className="card">
-      <h2>Timeline</h2>
+      <h2>{t("timeline.title")}</h2>
       <div className="dashboard-timeline">
         {visibleDays.map((day) => (
           <div key={day.date} className="dashboard-day">
-            <div className="dashboard-day-header">{formatDay(day.date)}</div>
+            <div className="dashboard-day-header">{formatDay(day.date, t)}</div>
             <div className="dashboard-groups">
               {day.groups.map((group) => (
                 <div key={group.kind}>
@@ -497,7 +502,7 @@ export function Timeline({
                                   {renderPlayer(id, true)}
                                 </span>
                               ))}
-                              <span className="dashboard-match-vs"> won vs </span>
+                              <span className="dashboard-match-vs">{t("timeline.wonVs")}</span>
                               {losers.map((id, j) => (
                                 <span key={id}>
                                   {j > 0 && <span className="dashboard-match-sep"> & </span>}
@@ -519,8 +524,8 @@ export function Timeline({
                             <span className="dashboard-event-time">{formatTime(event.time)}</span>
                             <span className="dashboard-event-body">
                               <span className="dashboard-match-winner">{playerName}</span>
-                              {" earned "}
-                              <span className="dashboard-achievement-name">"{def?.name ?? event.row.achievement_id}"</span>
+                              {t("timeline.earned")}
+                              <span className="dashboard-achievement-name">"{def ? t(`achievementDefs.${def.id}.name`, def.name) : event.row.achievement_id}"</span>
                             </span>
                           </div>
                         );
@@ -532,15 +537,16 @@ export function Timeline({
                           <span className="dashboard-event-icon">🏆</span>
                           <span className="dashboard-event-time" />
                           <span className="dashboard-event-body">
-                            <span className="dashboard-season-label">S{group.event.endedSeason.number} · {group.event.endedSeason.name} ended</span>
+                            <span className="dashboard-season-label">{t("timeline.seasonEnded", { number: group.event.endedSeason.number, name: group.event.endedSeason.name })}</span>
                             <span className="dashboard-match-sep"> · </span>
-                            <span className="dashboard-season-label">S{group.event.startedSeason.number} · {group.event.startedSeason.name} started</span>
+                            <span className="dashboard-season-label">{t("timeline.seasonStarted", { number: group.event.startedSeason.number, name: group.event.startedSeason.name })}</span>
                           </span>
                         </div>
                         <SeasonPodium
                           standings={group.event.standings}
                           endedSeason={group.event.endedSeason}
                           playerMap={playerMap}
+                          t={t}
                         />
                       </>
                     )}
@@ -555,7 +561,7 @@ export function Timeline({
                               <span className="dashboard-event-time" />
                               <span className="dashboard-event-body">
                                 <span className="dashboard-match-winner">{playerName}</span>
-                                {" had their first game this season! Ranked "}
+                                {t("timeline.firstGame")}
                                 <span className="dashboard-rank">#{event.rank}</span>
                               </span>
                             </div>
@@ -568,9 +574,9 @@ export function Timeline({
                             <span className="dashboard-event-time" />
                             <span className="dashboard-event-body">
                               <span className="dashboard-match-winner">{playerName}</span>
-                              {movedUp ? " moved up from " : " dropped from "}
+                              {movedUp ? t("timeline.movedUp") : t("timeline.dropped")}
                               <span className="dashboard-rank">#{event.fromRank}</span>
-                              {" to "}
+                              {t("timeline.to")}
                               <span className="dashboard-rank">#{event.toRank}</span>
                             </span>
                           </div>
@@ -585,7 +591,7 @@ export function Timeline({
       </div>
       {hasMore && (
         <div ref={sentinelRef} className="flex justify-center py-6 text-text-light text-sm">
-          Loading older entries…
+          {t("timeline.loadingOlder")}
         </div>
       )}
     </div>

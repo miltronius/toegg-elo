@@ -1,3 +1,5 @@
+import { useTranslation } from "react-i18next";
+
 export type Toast = {
   id: number;
   message: string;
@@ -10,6 +12,7 @@ type ToasterProps = {
 
 // Pure presentational toast stack pinned to the bottom-right corner.
 export function Toaster({ toasts, onDismiss }: ToasterProps) {
+  const { t } = useTranslation();
   if (toasts.length === 0) return null;
 
   return (
@@ -19,7 +22,7 @@ export function Toaster({ toasts, onDismiss }: ToasterProps) {
           key={toast.id}
           type="button"
           className="toast"
-          title="Click to dismiss"
+          title={t("common.dismiss")}
           onClick={() => onDismiss(toast.id)}
         >
           <span className="toast-icon" aria-hidden="true">

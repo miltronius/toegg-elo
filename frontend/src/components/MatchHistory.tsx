@@ -1,6 +1,8 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import clsx from "clsx";
 import { Match, Player, EloHistory, Season, PlayerSeasonStats } from "../lib/supabase";
+import { DATE_LOCALE } from "../lib/i18n";
 
 interface MatchHistoryProps {
   matches: Match[];
@@ -21,6 +23,7 @@ export function MatchHistory({
   isAdmin = false,
   onDeleteMatch,
 }: MatchHistoryProps) {
+  const { t } = useTranslation();
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const PAGE_SIZE = 20;
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
@@ -38,10 +41,10 @@ export function MatchHistory({
 
   return (
     <div className="card">
-      <h2>Match History</h2>
+      <h2>{t("matchHistory.title")}</h2>
       {matches.length === 0 ? (
         <p className="text-center py-12 px-4 text-text-light text-[0.95rem]">
-          No matches recorded yet. Record a match to get started!
+          {t("matchHistory.empty")}
         </p>
       ) : (
         <div className="flex flex-col gap-6">
@@ -100,7 +103,7 @@ export function MatchHistory({
               <div key={match.id} className="bg-bg border border-border rounded-lg p-6 transition-all hover:shadow-md">
                 <div className="flex items-center gap-6 mb-4 max-sm:flex-col max-sm:gap-4">
                   <div className={clsx("flex-1 p-4 rounded-md border-2", teamAWon ? "bg-success-light border-success" : "bg-error-light border-error opacity-70")}>
-                    <div className="font-semibold mb-3 text-text">Team A {teamAWon && "✓"}</div>
+                    <div className="font-semibold mb-3 text-text">{t("matchHistory.teamA")} {teamAWon && "✓"}</div>
                     <div className="flex flex-col gap-2">
                       {renderPlayerEloDetails(match.team_a_player_1_id, teamA1?.name)}
                       {renderPlayerEloDetails(match.team_a_player_2_id, teamA2?.name)}
@@ -108,11 +111,11 @@ export function MatchHistory({
                   </div>
 
                   <div className="flex items-center justify-center w-15 font-semibold text-text-light shrink-0 max-sm:w-full">
-                    vs
+                    {t("matchHistory.vs")}
                   </div>
 
                   <div className={clsx("flex-1 p-4 rounded-md border-2", !teamAWon ? "bg-success-light border-success" : "bg-error-light border-error opacity-70")}>
-                    <div className="font-semibold mb-3 text-text">Team B {!teamAWon && "✓"}</div>
+                    <div className="font-semibold mb-3 text-text">{t("matchHistory.teamB")} {!teamAWon && "✓"}</div>
                     <div className="flex flex-col gap-2">
                       {renderPlayerEloDetails(match.team_b_player_1_id, teamB1?.name)}
                       {renderPlayerEloDetails(match.team_b_player_2_id, teamB2?.name)}
@@ -121,7 +124,7 @@ export function MatchHistory({
                 </div>
                 <div className="flex justify-between items-center mt-4 pt-4 border-t border-border-light">
                   <div className="text-[0.85rem] text-text-light text-right">
-                    {new Date(match.created_at).toLocaleString("de-CH", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                    {new Date(match.created_at).toLocaleString(DATE_LOCALE, { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}
                   </div>
                   {season && (
                     <div className="match-season-badge">
@@ -133,7 +136,7 @@ export function MatchHistory({
                       className="btn-danger btn-small"
                       disabled={deletingId === match.id}
                       onClick={async () => {
-                        if (!confirm("Delete this match? ELO changes will be reversed.")) return;
+                        if (!confirm(t("matchHistory.confirmDelete"))) return;
                         setDeletingId(match.id);
                         try {
                           await onDeleteMatch(match.id);
@@ -142,7 +145,7 @@ export function MatchHistory({
                         }
                       }}
                     >
-                      {deletingId === match.id ? "Deleting…" : "Delete"}
+                      {deletingId === match.id ? t("matchHistory.deleting") : t("matchHistory.delete")}
                     </button>
                   )}
                 </div>
@@ -155,7 +158,7 @@ export function MatchHistory({
                 className="btn-secondary"
                 onClick={() => setVisibleCount((c) => c + PAGE_SIZE)}
               >
-                Show more
+                {t("matchHistory.showMore")}
               </button>
             </div>
           )}
