@@ -8,6 +8,7 @@ import {
   type EloHistory,
 } from "../lib/supabase";
 import type { PlayerAchievementRow } from "../lib/achievements";
+import { DATE_LOCALE } from "../lib/i18n";
 import { SeasonStats } from "./SeasonStats";
 
 interface SeasonDialogProps {
@@ -31,7 +32,7 @@ export function SeasonDialog({
   players,
   achievements,
 }: SeasonDialogProps) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   // Ending a season is temporarily disabled for everyone. Flip to re-enable
   // (the new-season flow is gated on admin role below).
   const ALLOW_END_SEASON = false;
@@ -78,7 +79,7 @@ export function SeasonDialog({
   };
 
   const formatDate = (iso: string) =>
-    new Date(iso).toLocaleDateString(i18n.language, {
+    new Date(iso).toLocaleDateString(DATE_LOCALE, {
       day: "2-digit",
       month: "2-digit",
       year: "numeric",

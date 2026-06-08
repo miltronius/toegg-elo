@@ -8,11 +8,12 @@ import {
   type Role,
 } from "../lib/supabase";
 import { useAuth } from "../contexts/AuthContext";
+import { DATE_LOCALE } from "../lib/i18n";
 
 const ROLES: Role[] = ["viewer", "user", "admin"];
 
 export function UserManagement({ onRecomputed }: { onRecomputed?: () => void }) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const { user } = useAuth();
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
@@ -95,7 +96,7 @@ export function UserManagement({ onRecomputed }: { onRecomputed?: () => void }) 
                 {saving === profile.id && <span className="text-text-light text-[0.8rem] ml-2">{t("userManagement.saving")}</span>}
               </td>
               <td className="px-3 py-2.5 border-b border-border-light text-text-light">
-                {new Date(profile.created_at).toLocaleDateString(i18n.language, { day: "2-digit", month: "2-digit", year: "numeric" })}
+                {new Date(profile.created_at).toLocaleDateString(DATE_LOCALE, { day: "2-digit", month: "2-digit", year: "numeric" })}
               </td>
             </tr>
           ))}

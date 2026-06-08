@@ -15,6 +15,7 @@ import {
   type AchievementStatus,
 } from "../lib/achievements";
 import type { Player, Match, EloHistory } from "../lib/supabase";
+import { DATE_LOCALE } from "../lib/i18n";
 
 interface AchievementsProps {
   players: Player[];
@@ -560,7 +561,7 @@ interface AchievementCardProps {
 }
 
 function AchievementCard({ status, playerMap, locked }: AchievementCardProps) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const { definition, rarityTier, rarityPercent, meta, unlockedAt } = status;
 
   const color = rarityTier ? rarityColorForTier(rarityTier) : undefined;
@@ -580,7 +581,7 @@ function AchievementCard({ status, playerMap, locked }: AchievementCardProps) {
   }
 
   const unlockedLabel = unlockedAt
-    ? unlockedAt.toLocaleDateString(i18n.language, {
+    ? unlockedAt.toLocaleDateString(DATE_LOCALE, {
         day: "2-digit",
         month: "2-digit",
         year: "numeric",

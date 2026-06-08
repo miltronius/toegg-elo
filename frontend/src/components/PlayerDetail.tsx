@@ -24,6 +24,7 @@ import {
   PlayerSeasonStats,
 } from "../lib/supabase";
 import { generateAnonymousName } from "../lib/anonymousNames";
+import { DATE_LOCALE } from "../lib/i18n";
 import {
   computeTeammateCounts,
   buildAchievementStatuses,
@@ -106,7 +107,7 @@ export function PlayerDetail({
   onNavigate,
   initialTab = "stats",
 }: PlayerDetailProps) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const winrateLabel = t("playerDetail.winratePct");
   const playerMap = new Map(players.map((p) => [p.id, p]));
   const sortedPlayers = [...players].sort(
@@ -228,7 +229,7 @@ export function PlayerDetail({
           ? 1500 + (entry.elo_after - eloAtStart)
           : entry.elo_after;
       return {
-        date: new Date(entry.created_at).toLocaleDateString(i18n.language, {
+        date: new Date(entry.created_at).toLocaleDateString(DATE_LOCALE, {
           day: "2-digit",
           month: "2-digit",
           year: "numeric",
@@ -244,7 +245,7 @@ export function PlayerDetail({
     for (const entry of data) byDate.set(entry.date, entry);
 
     return { perGame: data, perDate: Array.from(byDate.values()) };
-  }, [player.id, playerSeasonStats, rawHistory, selectedSeason, i18n.language]);
+  }, [player.id, playerSeasonStats, rawHistory, selectedSeason]);
 
   const effectiveMatches = useMemo(
     () =>

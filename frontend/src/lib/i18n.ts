@@ -7,6 +7,12 @@ import de from '../locales/de.json';
 export const SUPPORTED_LANGUAGES = ['en', 'de'] as const;
 export type Language = (typeof SUPPORTED_LANGUAGES)[number];
 
+// Dates are always rendered in Swiss/German style (dd.mm.yyyy, dots, 24h),
+// independent of the selected UI language — the league is Swiss, so a US-style
+// date in English mode would be confusing. Centralized here so every
+// toLocale*String call shares one source of truth.
+export const DATE_LOCALE = 'de-CH';
+
 // Persist the choice in a cookie the same way the theme is stored
 // (toegg-theme), so language survives reloads and is sent with SSR-less
 // requests. The detector reads/writes this cookie automatically.

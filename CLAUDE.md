@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-TöggELO (Töggeli ELO) — a dashboard to track 2v2 table soccer (foosball) matches and rank players using the Elo ranking system.
+TöggELO (Töggeli Elo) — a dashboard to track 2v2 table soccer (foosball) matches and rank players using the Elo ranking system.
 
 ## Commands
 
@@ -35,22 +35,23 @@ Copy `frontend/.env.example` to `frontend/.env.local` and fill in:
 ## Architecture
 
 ### Stack
-- **Frontend:** React 19 + Vite + TypeScript, Recharts for ELO history charts, `@react95/core` for Win95 theme chrome
+- **Frontend:** React 19 + Vite + TypeScript, Recharts for Elo history charts, `@react95/core` for Win95 theme chrome, `react-i18next` for translations
 - **Backend:** Supabase (PostgreSQL + Auth + RLS)
-- **Edge Function:** Deno (`supabase/functions/calculate-elo/`) for ELO computation
+- **Edge Function:** Deno (`supabase/functions/calculate-elo/`) for Elo computation
 - **Package manager:** pnpm
 
 ### Frontend Structure
 - `frontend/src/lib/supabase.ts` — all Supabase queries and mutations; single source of truth for data access
 - `frontend/src/contexts/AuthContext.tsx` — wraps the app, exposes `useAuth()` with user, role, and auth methods
 - `frontend/src/contexts/ThemeContext.tsx` — exposes `useTheme()` with `theme` (`"light" | "dark" | "win95"`) and `setTheme()`; persists selection in cookie `toegg-theme` (1-year); sets `data-theme` on `<html>` synchronously to avoid flash
+- `frontend/src/lib/i18n.ts` — i18next init (imported once in `main.tsx`); components call `useTranslation()` for `t()`. English (`en`, fallback) + German (`de`), with strings in `frontend/src/locales/{en,de}.json`; language persisted in cookie `toegg-lang` via `i18next-browser-languagedetector` (detection order cookie → browser, `de-CH` normalized to `de`). Also exports `DATE_LOCALE` (`'de-CH'`) — the fixed locale every `toLocale*String` date/time call uses, so dates stay Swiss-formatted (dd.mm.yyyy) regardless of UI language. Achievement names/descriptions are translated at the display layer under the `achievementDefs.<id>` keys (the `ACHIEVEMENT_DEFINITIONS` in `achievements.ts` stay English as the shared backend source + fallback)
 - `frontend/src/App.tsx` — main orchestrator; owns `loadData()` for refetching all state, passes data + callbacks to children; manages `selectedSeason` shared across Leaderboard, Teams, and PlayerDetail
 - `frontend/src/lib/teamUtils.ts` — pure team stat computation (`computeTeamStats`, `teamColor`, `teamKey`); no DB calls
 - `frontend/src/lib/achievements.ts` — `ACHIEVEMENT_DEFINITIONS` array; shared between frontend and the `_shared` edge function
 - `frontend/src/lib/seasonStats.ts` — pure headline-stat computation (`computeSeasonStats`): games played, active players, longest win/lose streak, best/worst day, biggest win/loss, highest/lowest Elo (season-normalized for a season, raw all-time otherwise), busiest day, win-rate leader, achievements unlocked, games-by-weekday, per-day activity + date range; no DB calls
 - `frontend/src/components/ActivityHeatmap.tsx` — pure presentational GitHub-style contribution graph (weeks as columns, Mon→Sun rows, oldest left → most recent right) of per-day match counts; pads the window backwards to `minWeeks` (default 13 ≈ 3 months) and highlights the `firstDay` cell in purple; used by SeasonStats
-- `frontend/src/components/` — tab-based UI: Timeline, Leaderboard, Teams, TeamDetail, MatchForm, MatchHistory, PlayerDetail/Modal, SeasonStats, ActivityHeatmap, Achievements, UserManagement, SeasonDialog, ThemeToggle, Win95Shell
-- `frontend/src/test/setup.ts` — Vitest setup (jest-dom matchers, ResizeObserver mock)
+- `frontend/src/components/` — tab-based UI: Timeline, Leaderboard, Teams, TeamDetail, MatchForm, MatchHistory, PlayerDetail/Modal, SeasonStats, ActivityHeatmap, Achievements, UserManagement, SeasonDialog, ThemeToggle, LanguageSwitcher, Win95Shell
+- `frontend/src/test/setup.ts` — Vitest setup (jest-dom matchers, ResizeObserver mock, i18n init so components render real strings in tests)
 
 **Tab visibility rules:**
 
@@ -76,18 +77,18 @@ A `handle_new_user()` trigger auto-creates a `viewer` profile in the `profiles` 
 ### Database Schema (key tables)
 - `players` — name, current_elo (default 1500), matches_played, wins, losses
 - `matches` — team_a/team_b player IDs (2v2), winning_team, season_id
-- `elo_history` — per-match ELO snapshots (elo_before, elo_after, elo_change, match_id, season_id); inactivity penalty rows have match_id = null
+- `elo_history` — per-match Elo snapshots (elo_before, elo_after, elo_change, match_id, season_id); inactivity penalty rows have match_id = null
 - `seasons` — number, name, is_active, k_factor, ended_at; only one active season at a time
 - `player_achievements` — player_id, achievement_id, unlocked_at; recomputed on every match by the shared achievements function
 - `profiles` — linked to `auth.users`, stores role
 - `team_names` — optional name + 2 aliases + color per canonical player pair (player_id_lo < player_id_hi); stats derived at runtime in `teamUtils.ts`, not stored; only teams with ≥ 2 matches are shown
 
-### ELO Calculation (Deno function)
+### Elo Calculation (Deno function)
 
-- Standard ELO with K configurable per season (default 32)
+- Standard Elo with K configurable per season (default 32)
 - In 2v2: each player's expected score averages against both opponents
-- **Season ELO used for math**: the function fetches `player_season_stats.current_season_elo` for the 4 players and uses those values for `calculateNewElo()`. The resulting delta is then applied to `players.current_elo` (all-time). This ensures all players start equal (1500) at the beginning of each season.
-- `elo_history` always stores all-time ELO values (`elo_before`/`elo_after`); season-normalized display is derived in the frontend using `1500 + (alltime - elo_at_start)`
+- **Season Elo used for math**: the function fetches `player_season_stats.current_season_elo` for the 4 players and uses those values for `calculateNewElo()`. The resulting delta is then applied to `players.current_elo` (all-time). This ensures all players start equal (1500) at the beginning of each season.
+- `elo_history` always stores all-time Elo values (`elo_before`/`elo_after`); season-normalized display is derived in the frontend using `1500 + (alltime - elo_at_start)`
 - On match record: updates player ELOs, writes to `elo_history`, then calls `recomputeAllAchievements` from `supabase/functions/_shared/achievements.ts`
 - Shared achievements logic lives in `_shared/` so it can be imported by both the edge function and tests
 
@@ -98,7 +99,7 @@ Two GitHub Actions workflows run on push/PR to main:
 
 ### Testing
 - **Frontend:** Vitest + React Testing Library; test files colocated with source (`*.test.ts(x)`)
-- **Edge function:** Deno test runner; `elo_test.ts` covers pure ELO math (`getExpectedScore`, `calculateNewElo`)
+- **Edge function:** Deno test runner; `elo_test.ts` covers pure Elo math (`getExpectedScore`, `calculateNewElo`)
 - Imports for the edge function declared in `deno.json` (not inline `jsr:`/`https:` specifiers — enforced by linter)
 
 ### Theming

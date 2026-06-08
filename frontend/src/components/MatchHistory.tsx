@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import clsx from "clsx";
 import { Match, Player, EloHistory, Season, PlayerSeasonStats } from "../lib/supabase";
+import { DATE_LOCALE } from "../lib/i18n";
 
 interface MatchHistoryProps {
   matches: Match[];
@@ -22,7 +23,7 @@ export function MatchHistory({
   isAdmin = false,
   onDeleteMatch,
 }: MatchHistoryProps) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const PAGE_SIZE = 20;
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
@@ -123,7 +124,7 @@ export function MatchHistory({
                 </div>
                 <div className="flex justify-between items-center mt-4 pt-4 border-t border-border-light">
                   <div className="text-[0.85rem] text-text-light text-right">
-                    {new Date(match.created_at).toLocaleString(i18n.language, { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                    {new Date(match.created_at).toLocaleString(DATE_LOCALE, { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}
                   </div>
                   {season && (
                     <div className="match-season-badge">

@@ -12,6 +12,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { Player, EloHistory, Season, PlayerSeasonStats } from "../lib/supabase";
+import { DATE_LOCALE } from "../lib/i18n";
 
 interface LeaderboardProps {
   players: Player[];
@@ -313,7 +314,7 @@ export function Leaderboard({
   playerSeasonStats,
   onPlayerClick,
 }: LeaderboardProps) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const [view, setView] = useState<"table" | "bump" | "elo">("table");
 
   // null selectedSeason = All-Time view
@@ -418,7 +419,7 @@ export function Leaderboard({
   });
   const snapshots = buildSnapshots(visiblePlayers, effectiveHistory, isSeasonView);
   const eloData = buildEloProgressionData(visiblePlayers, effectiveHistory, isSeasonView);
-  const eloDateData = buildEloProgressionDataByDate(visiblePlayers, effectiveHistory, isSeasonView, i18n.language);
+  const eloDateData = buildEloProgressionDataByDate(visiblePlayers, effectiveHistory, isSeasonView, DATE_LOCALE);
 
   // Season background ranges for the all-time ELO chart
   const seasonGameRanges = useMemo(() => {
@@ -461,7 +462,7 @@ export function Leaderboard({
     const seenDates = new Set<string>();
     const dateSeason: Record<string, string> = {};
     for (const h of sorted) {
-      const date = new Date(h.created_at).toLocaleDateString(i18n.language, {
+      const date = new Date(h.created_at).toLocaleDateString(DATE_LOCALE, {
         day: "2-digit", month: "2-digit", year: "numeric",
       });
       if (!seenDates.has(date)) {
@@ -483,7 +484,7 @@ export function Leaderboard({
     });
     if (cur) ranges.push(cur);
     return ranges;
-  }, [history, seasons, isSeasonView, i18n.language]);
+  }, [history, seasons, isSeasonView]);
   const matchIndices = [...new Set(snapshots.map((s) => s.match_index))].sort(
     (a, b) => a - b,
   );

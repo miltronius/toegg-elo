@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
 import { Player, Match, EloHistory, Season } from "../lib/supabase";
+import { DATE_LOCALE } from "../lib/i18n";
 import type { PlayerAchievementRow } from "../lib/achievements";
 import { ACHIEVEMENT_DEFINITIONS } from "../lib/achievements";
 
@@ -314,13 +315,13 @@ function buildTimeline(
   return daySections;
 }
 
-function formatDay(date: string, t: TFunction, locale: string): string {
+function formatDay(date: string, t: TFunction): string {
   const d = new Date(date + "T12:00:00Z");
   const today = new Date().toISOString().slice(0, 10);
   const yesterday = new Date(Date.now() - 864e5).toISOString().slice(0, 10);
   if (date === today) return t("timeline.today");
   if (date === yesterday) return t("timeline.yesterday");
-  return d.toLocaleDateString(locale, {
+  return d.toLocaleDateString(DATE_LOCALE, {
     weekday: "long",
     day: "2-digit",
     month: "long",
@@ -329,8 +330,8 @@ function formatDay(date: string, t: TFunction, locale: string): string {
   });
 }
 
-function formatTime(iso: string, locale: string): string {
-  return new Date(iso).toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" });
+function formatTime(iso: string): string {
+  return new Date(iso).toLocaleTimeString(DATE_LOCALE, { hour: "2-digit", minute: "2-digit" });
 }
 
 const PLACE_MEDALS: Record<number, string> = { 1: "🥇", 2: "🥈", 3: "🥉" };
@@ -400,7 +401,7 @@ export function Timeline({
   allAchievementRows,
   seasons,
 }: DashboardProps) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const GROUP_LABELS: Record<EventGroup["kind"], string> = {
     season: "",
     matches: t("timeline.groupMatches"),
@@ -457,7 +458,7 @@ export function Timeline({
       <div className="dashboard-timeline">
         {visibleDays.map((day) => (
           <div key={day.date} className="dashboard-day">
-            <div className="dashboard-day-header">{formatDay(day.date, t, i18n.language)}</div>
+            <div className="dashboard-day-header">{formatDay(day.date, t)}</div>
             <div className="dashboard-groups">
               {day.groups.map((group) => (
                 <div key={group.kind}>
@@ -493,7 +494,7 @@ export function Timeline({
                         return (
                           <div key={i} className="dashboard-event">
                             <span className="dashboard-event-icon">⚽</span>
-                            <span className="dashboard-event-time">{formatTime(event.time, i18n.language)}</span>
+                            <span className="dashboard-event-time">{formatTime(event.time)}</span>
                             <span className="dashboard-event-body">
                               {winners.map((id, j) => (
                                 <span key={id}>
@@ -520,7 +521,7 @@ export function Timeline({
                         return (
                           <div key={i} className="dashboard-event">
                             <span className="dashboard-event-icon">{def?.icon ?? "🏅"}</span>
-                            <span className="dashboard-event-time">{formatTime(event.time, i18n.language)}</span>
+                            <span className="dashboard-event-time">{formatTime(event.time)}</span>
                             <span className="dashboard-event-body">
                               <span className="dashboard-match-winner">{playerName}</span>
                               {t("timeline.earned")}

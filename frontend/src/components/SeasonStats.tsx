@@ -13,6 +13,7 @@ import {
 import type { Season, Match, Player, EloHistory } from "../lib/supabase";
 import type { PlayerAchievementRow } from "../lib/achievements";
 import { computeSeasonStats } from "../lib/seasonStats";
+import { DATE_LOCALE } from "../lib/i18n";
 import { ActivityHeatmap } from "./ActivityHeatmap";
 
 interface SeasonStatsProps {
@@ -35,8 +36,8 @@ function formatDuration(totalMinutes: number): string {
   return `${hours}h ${minutes}m`;
 }
 
-function formatDay(day: string, locale: string): string {
-  return new Date(day + "T12:00:00Z").toLocaleDateString(locale, {
+function formatDay(day: string): string {
+  return new Date(day + "T12:00:00Z").toLocaleDateString(DATE_LOCALE, {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
@@ -52,8 +53,8 @@ export function SeasonStats({
   players,
   achievements,
 }: SeasonStatsProps) {
-  const { t, i18n } = useTranslation();
-  const fmtDay = (day: string) => formatDay(day, i18n.language);
+  const { t } = useTranslation();
+  const fmtDay = (day: string) => formatDay(day);
   const orderedSeasons = useMemo(
     () => [...seasons].sort((a, b) => b.number - a.number),
     [seasons],
