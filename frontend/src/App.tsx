@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   getPlayers,
@@ -35,6 +36,7 @@ import { Achievements } from "./components/Achievements";
 import { Timeline } from "./components/Timeline";
 import { SeasonDialog } from "./components/SeasonDialog";
 import { ThemeToggle } from "./components/ThemeToggle";
+import { LanguageSwitcher } from "./components/LanguageSwitcher";
 import { Win95Shell } from "./components/Win95Shell";
 import { computeTeamStats, TeamStats } from "./lib/teamUtils";
 import { AppSkeleton } from "./components/AppSkeleton";
@@ -113,6 +115,7 @@ function App() {
   const { user, role, loading: authLoading, signOut } = useAuth();
   const { theme } = useTheme();
   const { showToast } = useToast();
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
 
   // Single cached query for all dashboard data. Keyed by user/role because the
@@ -149,7 +152,7 @@ function App() {
   useRealtimeSync({
     queryClient,
     onRemoteChange: () => {
-      showToast("Data updated by another user");
+      showToast(t("app.dataUpdated"));
       pulseUpdate();
     },
   });
@@ -237,10 +240,10 @@ function App() {
   const appContent = (
     <div className="min-h-screen flex flex-col">
       {isFetching && !isLoading && (
-        <div className="app-refetch-bar" role="progressbar" aria-label="Refreshing data" />
+        <div className="app-refetch-bar" role="progressbar" aria-label={t("app.refreshing")} />
       )}
       <header className="bg-white border-b border-border px-8 py-6 flex justify-between items-center shadow-sm flex-wrap gap-3">
-        <h1 className="text-[1.875rem] font-bold">TöggElo⚽</h1>
+        <h1 className="text-[1.875rem] font-bold">{t("app.title")}</h1>
         <SeasonDialog
           activeSeason={activeSeason}
           isAdmin={isAdmin}
@@ -253,9 +256,10 @@ function App() {
         />
         <div className="flex items-center gap-3">
           <ThemeToggle />
+          <LanguageSwitcher />
           {canEdit && (
             <button className="btn-primary" onClick={() => setModalOpen(true)}>
-              + New Player
+              {t("app.newPlayer")}
             </button>
           )}
           <div className="flex items-center gap-2">
@@ -263,12 +267,12 @@ function App() {
               <>
                 <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-bg-light border border-border text-text-light uppercase tracking-wide">{role}</span>
                 <button className="btn-secondary" onClick={signOut}>
-                  Sign out
+                  {t("app.signOut")}
                 </button>
               </>
             ) : (
               <button className="btn-secondary" onClick={() => setAuthOpen(true)}>
-                Sign in
+                {t("app.signIn")}
               </button>
             )}
           </div>
@@ -281,33 +285,33 @@ function App() {
       <nav className="flex gap-1 bg-white border-b border-border px-6 overflow-x-auto">
         {user && (
           <button className={tabCls("timeline")} onClick={() => setActiveTab("timeline")}>
-            Timeline
+            {t("tabs.timeline")}
           </button>
         )}
         <button className={tabCls("leaderboard")} onClick={() => setActiveTab("leaderboard")}>
-          Leaderboard
+          {t("tabs.leaderboard")}
         </button>
         {user && (
           <button className={tabCls("teams")} onClick={() => setActiveTab("teams")}>
-            Teams
+            {t("tabs.teams")}
           </button>
         )}
         {canEdit && (
           <button className={tabCls("match")} onClick={() => setActiveTab("match")}>
-            Record Match
+            {t("tabs.match")}
           </button>
         )}
         <button className={tabCls("history")} onClick={() => setActiveTab("history")}>
-          History
+          {t("tabs.history")}
         </button>
         {canEdit && (
           <button className={tabCls("achievements")} onClick={() => setActiveTab("achievements")}>
-            🏅 Achievements
+            {t("tabs.achievements")}
           </button>
         )}
         {isAdmin && (
           <button className={tabCls("users")} onClick={() => setActiveTab("users")}>
-            Admin
+            {t("tabs.admin")}
           </button>
         )}
       </nav>

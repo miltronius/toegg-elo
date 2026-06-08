@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 interface ActivityHeatmapProps {
   /** Per-day match counts (days with ≥1 match). */
@@ -11,15 +12,6 @@ interface ActivityHeatmapProps {
   /** Render at least this many week columns before width-based expansion. */
   minWeeks?: number;
 }
-
-// Weekends are hidden by default — foosball happens on workdays — but can be
-// toggled on. Mon→Fri (5 rows) or Mon→Sun (7 rows).
-const WEEKDAY_LABELS_WORKDAYS = ['Mon', '', 'Wed', '', 'Fri'];
-const WEEKDAY_LABELS_FULL = [...WEEKDAY_LABELS_WORKDAYS, '', 'Sun'];
-const MONTH_LABELS = [
-  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
-];
 
 // Geometry, kept in sync with .heatmap-cell / .heatmap-grid in App.css.
 const CELL = 12;
@@ -55,6 +47,13 @@ export function ActivityHeatmap({
   firstDay,
   minWeeks = 13,
 }: ActivityHeatmapProps) {
+  const { t } = useTranslation();
+  // Weekends are hidden by default — foosball happens on workdays — but can be
+  // toggled on. Mon→Fri (5 rows) or Mon→Sun (7 rows).
+  const allWeekdayLabels = t("heatmap.weekdays", { returnObjects: true }) as string[];
+  const WEEKDAY_LABELS_FULL = allWeekdayLabels;
+  const WEEKDAY_LABELS_WORKDAYS = allWeekdayLabels.slice(0, 5);
+  const MONTH_LABELS = t("heatmap.months", { returnObjects: true }) as string[];
   const wrapRef = useRef<HTMLDivElement>(null);
   const labelsRef = useRef<HTMLDivElement>(null);
   // Number of week columns that fit the widget's full width (0 until measured).
@@ -131,6 +130,7 @@ export function ActivityHeatmap({
     if (week.length) weeks.push(week);
 
     return { weeks, monthLabels, maxGames: max };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- MONTH_LABELS is stable per language; re-deriving on identity churn is unnecessary
   }, [activity, start, end, minWeeks, fitWeeks, rows]);
 
   // When the grid is wider than the widget, keep the most recent week in view.
@@ -154,7 +154,7 @@ export function ActivityHeatmap({
   return (
     <div className="heatmap-container">
       <label className="heatmap-toggle">
-        <span>Show weekends</span>
+        <span>{t("heatmap.showWeekends")}</span>
         <span className="heatmap-switch">
           <input
             type="checkbox"
@@ -194,8 +194,8 @@ export function ActivityHeatmap({
                   className="heatmap-cell"
                   data-level={level(cell.games)}
                   data-first={cell.day === firstDay?.slice(0, 10) ? "true" : undefined}
-                  title={`${cell.day} · ${cell.games} ${cell.games === 1 ? "game" : "games"}${
-                    cell.day === firstDay?.slice(0, 10) ? " · first day" : ""
+                  title={`${t("heatmap.cellTitle", { day: cell.day, count: cell.games })}${
+                    cell.day === firstDay?.slice(0, 10) ? t("heatmap.firstDaySuffix") : ""
                   }`}
                 />
               ) : (

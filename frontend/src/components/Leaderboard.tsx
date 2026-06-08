@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import {
   LineChart,
   Line,
@@ -235,6 +236,7 @@ function buildEloProgressionDataByDate(
   players: Player[],
   history: EloHistory[],
   isSeasonView = false,
+  locale = "en",
 ): Record<string, number | string>[] {
   if (!history.length) return [];
   const sorted = [...history].sort(
@@ -279,7 +281,7 @@ function buildEloProgressionDataByDate(
   const dateOrder: string[] = [];
   const byDate: Record<string, EloHistory[]> = {};
   for (const h of sorted) {
-    const date = new Date(h.created_at).toLocaleDateString("de-CH", {
+    const date = new Date(h.created_at).toLocaleDateString(locale, {
       day: "2-digit",
       month: "2-digit",
       year: "numeric",
@@ -311,6 +313,7 @@ export function Leaderboard({
   playerSeasonStats,
   onPlayerClick,
 }: LeaderboardProps) {
+  const { t, i18n } = useTranslation();
   const [view, setView] = useState<"table" | "bump" | "elo">("table");
 
   // null selectedSeason = All-Time view
@@ -415,7 +418,7 @@ export function Leaderboard({
   });
   const snapshots = buildSnapshots(visiblePlayers, effectiveHistory, isSeasonView);
   const eloData = buildEloProgressionData(visiblePlayers, effectiveHistory, isSeasonView);
-  const eloDateData = buildEloProgressionDataByDate(visiblePlayers, effectiveHistory, isSeasonView);
+  const eloDateData = buildEloProgressionDataByDate(visiblePlayers, effectiveHistory, isSeasonView, i18n.language);
 
   // Season background ranges for the all-time ELO chart
   const seasonGameRanges = useMemo(() => {
@@ -458,7 +461,7 @@ export function Leaderboard({
     const seenDates = new Set<string>();
     const dateSeason: Record<string, string> = {};
     for (const h of sorted) {
-      const date = new Date(h.created_at).toLocaleDateString("de-CH", {
+      const date = new Date(h.created_at).toLocaleDateString(i18n.language, {
         day: "2-digit", month: "2-digit", year: "numeric",
       });
       if (!seenDates.has(date)) {
@@ -480,7 +483,7 @@ export function Leaderboard({
     });
     if (cur) ranges.push(cur);
     return ranges;
-  }, [history, seasons, isSeasonView]);
+  }, [history, seasons, isSeasonView, i18n.language]);
   const matchIndices = [...new Set(snapshots.map((s) => s.match_index))].sort(
     (a, b) => a - b,
   );
@@ -522,9 +525,9 @@ export function Leaderboard({
   if (players.length === 0) {
     return (
       <div className="card">
-        <h2>Leaderboard</h2>
+        <h2>{t("leaderboard.title")}</h2>
         <p className="text-center text-text-light py-8">
-          No players yet. Create a player to get started!
+          {t("leaderboard.empty")}
         </p>
       </div>
     );
@@ -536,7 +539,7 @@ export function Leaderboard({
     >
       {/* ── Header ── */}
       <div className="flex items-center justify-between mb-6 flex-wrap gap-2">
-        <h2 className="m-0">Leaderboard</h2>
+        <h2 className="m-0">{t("leaderboard.title")}</h2>
         <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
           {(seasons ?? []).length > 0 && (
             <select
@@ -551,7 +554,7 @@ export function Leaderboard({
                 }
               }}
             >
-              <option value="alltime">All-Time</option>
+              <option value="alltime">{t("leaderboard.allTime")}</option>
               {(seasons ?? []).map((s) => (
                 <option key={s.id} value={s.id}>
                   S{s.number} · {s.name}{s.is_active ? " ★" : ""}
@@ -565,7 +568,7 @@ export function Leaderboard({
                 className={`lb-toggle-btn${show1500Sep ? " active" : ""}`}
                 onClick={() => setShow1500Sep((v) => !v)}
               >
-                Starting Elo Line
+                {t("leaderboard.startingEloLine")}
               </button>
             </div>
           )}
@@ -574,7 +577,7 @@ export function Leaderboard({
               className={`lb-toggle-btn${showOnlyActive ? " active" : ""}`}
               onClick={() => setShowOnlyActive((v) => !v)}
             >
-              Active only
+              {t("leaderboard.activeOnly")}
             </button>
           </div>
           <div className="lb-toggle">
@@ -582,23 +585,23 @@ export function Leaderboard({
               className={`lb-toggle-btn${view === "table" ? " active" : ""}`}
               onClick={() => setView("table")}
             >
-              <TableIcon /> Table
+              <TableIcon /> {t("leaderboard.table")}
             </button>
             <button
               className={`lb-toggle-btn${view === "elo" ? " active" : ""}`}
               onClick={() => setView("elo")}
               disabled={eloData.length === 0}
-              title={eloData.length === 0 ? "No match history yet" : undefined}
+              title={eloData.length === 0 ? t("leaderboard.noMatchHistory") : undefined}
             >
-              <EloIcon /> ELO Chart
+              <EloIcon /> {t("leaderboard.eloChart")}
             </button>
             <button
               className={`lb-toggle-btn${view === "bump" ? " active" : ""}`}
               onClick={() => setView("bump")}
               disabled={snapshots.length === 0}
-              title={snapshots.length === 0 ? "No match history yet" : undefined}
+              title={snapshots.length === 0 ? t("leaderboard.noMatchHistory") : undefined}
             >
-              <BumpIcon /> Bump Chart (rank)
+              <BumpIcon /> {t("leaderboard.bumpChart")}
             </button>
           </div>
         </div>
@@ -609,15 +612,15 @@ export function Leaderboard({
         <table className="leaderboard-table">
           <thead>
             <tr>
-              <th>Rank</th>
+              <th>{t("leaderboard.rank")}</th>
               <th style={{ cursor: "pointer" }} onClick={() => handleSort("name")}>
-                Name {sortBy === "name" && (sortAsc ? "▴" : "▾")}
+                {t("leaderboard.name")} {sortBy === "name" && (sortAsc ? "▴" : "▾")}
               </th>
               <th style={{ cursor: "pointer" }} onClick={() => handleSort("elo")}>
-                ELO {sortBy === "elo" && (sortAsc ? "▴" : "▾")}
+                {t("leaderboard.elo")} {sortBy === "elo" && (sortAsc ? "▴" : "▾")}
               </th>
               <th className="winrate" style={{ cursor: "pointer" }} onClick={() => handleSort("winrate")}>
-                Winrate {sortBy === "winrate" && (sortAsc ? "▴" : "▾")}
+                {t("leaderboard.winrate")} {sortBy === "winrate" && (sortAsc ? "▴" : "▾")}
               </th>
             </tr>
           </thead>
@@ -643,10 +646,10 @@ export function Leaderboard({
                     <td className="name">
                       {player.name}
                       {playerStreaks.get(player.id) && (
-                        <span className="streak-badge" title="Winstreak">🔥{playerStreaks.get(player.id)}</span>
+                        <span className="streak-badge" title={t("leaderboard.winstreak")}>🔥{playerStreaks.get(player.id)}</span>
                       )}
                       {playerLoseStreaks.get(player.id) && (
-                        <span className="streak-badge lose" title="Losestreak">🥶{playerLoseStreaks.get(player.id)}</span>
+                        <span className="streak-badge lose" title={t("leaderboard.losestreak")}>🥶{playerLoseStreaks.get(player.id)}</span>
                       )}
                     </td>
                     <td className="elo">{player.current_elo}</td>
@@ -909,8 +912,7 @@ export function Leaderboard({
                           fill="var(--tooltip-sub)"
                           fontSize={11}
                         >
-                          ELO {tooltip.snap.elo} · Rank #{tooltip.snap.rank} · M
-                          {tooltip.snap.match_index + 1}
+                          {t("leaderboard.tooltipStats", { elo: tooltip.snap.elo, rank: tooltip.snap.rank, match: tooltip.snap.match_index + 1 })}
                         </text>
                       </g>
                     );
@@ -921,8 +923,8 @@ export function Leaderboard({
 
           <p className="bump-hint">
             {isMobile
-              ? "Tap a line to highlight"
-              : "Hover a line or dot to highlight · click a name to view player"}
+              ? t("leaderboard.hintTapLine")
+              : t("leaderboard.hintBump")}
           </p>
         </div>
       )}
@@ -934,13 +936,13 @@ export function Leaderboard({
               className={`lb-toggle-btn${eloXAxis === "date" ? " active" : ""}`}
               onClick={() => setEloXAxis("date")}
             >
-              Per Date
+              {t("leaderboard.perDate")}
             </button>
             <button
               className={`lb-toggle-btn${eloXAxis === "game" ? " active" : ""}`}
               onClick={() => setEloXAxis("game")}
             >
-              Per Game
+              {t("leaderboard.perGame")}
             </button>
           </div>
           <div className="bump-legend">
@@ -1058,8 +1060,8 @@ export function Leaderboard({
 
           <p className="bump-hint">
             {isMobile
-              ? "Tap a line to highlight"
-              : "Hover a line to highlight · click a name to view player"}
+              ? t("leaderboard.hintTapLine")
+              : t("leaderboard.hintElo")}
           </p>
         </div>
       )}

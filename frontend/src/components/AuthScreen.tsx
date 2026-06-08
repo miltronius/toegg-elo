@@ -1,7 +1,9 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "../contexts/AuthContext";
 
 export function AuthScreen({ onClose }: { onClose?: () => void }) {
+  const { t } = useTranslation();
   const { signIn, signInWithMagicLink, signUp } = useAuth();
   const [mode, setMode] = useState<"login" | "signup">("login");
   const [loginMethod, setLoginMethod] = useState<"password" | "magic">("password");
@@ -28,7 +30,7 @@ export function AuthScreen({ onClose }: { onClose?: () => void }) {
         setSignedUp(true);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong");
+      setError(err instanceof Error ? err.message : t("auth.genericError"));
     } finally {
       setLoading(false);
     }
@@ -38,11 +40,11 @@ export function AuthScreen({ onClose }: { onClose?: () => void }) {
     return (
       <div className="auth-screen">
         <div className="relative bg-white border border-border rounded-xl p-10 w-full max-w-[400px] shadow-[0_8px_40px_rgba(0,0,0,0.35)]">
-          <h1 className="text-[2rem] font-bold mb-2">TöggElo⚽</h1>
+          <h1 className="text-[2rem] font-bold mb-2">{t("app.title")}</h1>
           <div className="flex flex-col gap-4 text-center text-text-light">
-            <p>Magic link sent! Check your email and click the link to sign in.</p>
+            <p>{t("auth.magicLinkSent")}</p>
             <button className="btn-primary btn-full" onClick={() => { setMagicLinkSent(false); setError(null); }}>
-              Back to login
+              {t("auth.backToLogin")}
             </button>
           </div>
         </div>
@@ -54,11 +56,11 @@ export function AuthScreen({ onClose }: { onClose?: () => void }) {
     return (
       <div className="auth-screen">
         <div className="relative bg-white border border-border rounded-xl p-10 w-full max-w-[400px] shadow-[0_8px_40px_rgba(0,0,0,0.35)]">
-          <h1 className="text-[2rem] font-bold mb-2">TöggElo⚽</h1>
+          <h1 className="text-[2rem] font-bold mb-2">{t("app.title")}</h1>
           <div className="flex flex-col gap-4 text-center text-text-light">
-            <p>Account created! Check your email to confirm your address, then log in.</p>
+            <p>{t("auth.accountCreated")}</p>
             <button className="btn-primary btn-full" onClick={() => { setMode("login"); setSignedUp(false); }}>
-              Back to login
+              {t("auth.backToLogin")}
             </button>
           </div>
         </div>
@@ -77,9 +79,9 @@ export function AuthScreen({ onClose }: { onClose?: () => void }) {
             ✕
           </button>
         )}
-        <h1 className="text-[2rem] font-bold mb-2">TöggElo⚽</h1>
+        <h1 className="text-[2rem] font-bold mb-2">{t("app.title")}</h1>
         <h2 className="text-[1.25rem] font-semibold text-text-light mb-6">
-          {mode === "login" ? "Sign in" : "Create account"}
+          {mode === "login" ? t("auth.signIn") : t("auth.createAccount")}
         </h2>
         {mode === "login" && (
           <div className="auth-method-toggle lb-toggle" data-method={loginMethod}>
@@ -88,20 +90,20 @@ export function AuthScreen({ onClose }: { onClose?: () => void }) {
               className={`lb-toggle-btn${loginMethod === "password" ? " active" : ""}`}
               onClick={() => { setLoginMethod("password"); setError(null); }}
             >
-              Password
+              {t("auth.password")}
             </button>
             <button
               type="button"
               className={`lb-toggle-btn${loginMethod === "magic" ? " active" : ""}`}
               onClick={() => { setLoginMethod("magic"); setError(null); }}
             >
-              Magic link
+              {t("auth.magicLink")}
             </button>
           </div>
         )}
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="form-group">
-            <label>Email</label>
+            <label>{t("auth.email")}</label>
             <input
               type="email"
               value={email}
@@ -113,7 +115,7 @@ export function AuthScreen({ onClose }: { onClose?: () => void }) {
           </div>
           <div className={`form-group-collapsible${mode === "login" && loginMethod === "magic" ? " collapsed" : ""}`}>
             <div className="form-group">
-              <label>Password</label>
+              <label>{t("auth.password")}</label>
               <input
                 type="password"
                 value={password}
@@ -130,21 +132,21 @@ export function AuthScreen({ onClose }: { onClose?: () => void }) {
             </div>
           )}
           <button type="submit" className="btn-primary btn-full" disabled={loading}>
-            {loading ? "..." : mode === "login" && loginMethod === "magic" ? "Send magic link" : mode === "login" ? "Sign in" : "Sign up"}
+            {loading ? "..." : mode === "login" && loginMethod === "magic" ? t("auth.sendMagicLink") : mode === "login" ? t("auth.signIn") : t("auth.signUp")}
           </button>
         </form>
         <p className="mt-5 text-center text-text-light text-sm">
-          {mode === "login" ? "No account yet?" : "Already have an account?"}{" "}
+          {mode === "login" ? t("auth.noAccountYet") : t("auth.alreadyHaveAccount")}{" "}
           <button
             className="btn-link"
             onClick={() => { setMode(mode === "login" ? "signup" : "login"); setError(null); }}
           >
-            {mode === "login" ? "Sign up" : "Sign in"}
+            {mode === "login" ? t("auth.signUp") : t("auth.signIn")}
           </button>
         </p>
         {mode === "signup" && (
           <p className="mt-4 text-[0.8rem] text-text-light text-center">
-            New accounts start as viewers. An admin needs to grant you access.
+            {t("auth.viewerNote")}
           </p>
         )}
       </div>

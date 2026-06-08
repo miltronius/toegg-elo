@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { createPlayer, Player } from "../lib/supabase";
 import { generateAnonymousName } from "../lib/anonymousNames";
 
@@ -15,6 +16,7 @@ export function CreatePlayerModal({
   onPlayerCreated,
   players,
 }: CreatePlayerModalProps) {
+  const { t } = useTranslation();
   const [name, setName] = useState("");
   const [anonymousName, setAnonymousName] = useState("");
   // True once the user manually edits the anonymous name, so we stop auto-prefilling it.
@@ -57,7 +59,7 @@ export function CreatePlayerModal({
       onPlayerCreated();
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create player");
+      setError(err instanceof Error ? err.message : t("playerModal.createError"));
     } finally {
       setLoading(false);
     }
@@ -68,11 +70,11 @@ export function CreatePlayerModal({
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[1000]" onClick={onClose}>
       <div className="bg-white rounded-lg p-8 max-w-[400px] w-[90%] shadow-[0_20px_25px_-5px_rgba(0,0,0,0.1)]" onClick={(e) => e.stopPropagation()}>
-        <h2 className="text-2xl font-semibold mb-6 text-text">Create New Player</h2>
+        <h2 className="text-2xl font-semibold mb-6 text-text">{t("playerModal.createTitle")}</h2>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <input
             type="text"
-            placeholder="Player name"
+            placeholder={t("playerModal.playerName")}
             value={name}
             onChange={(e) => handleNameChange(e.target.value)}
             required
@@ -81,12 +83,12 @@ export function CreatePlayerModal({
           />
           <div className="flex flex-col gap-1">
             <label className="text-xs text-text-light">
-              Anonymous name (shown to viewers)
+              {t("playerModal.anonymousLabel")}
             </label>
             <div className="flex gap-2">
               <input
                 type="text"
-                placeholder="Anonymous name"
+                placeholder={t("playerModal.anonymousName")}
                 value={anonymousName}
                 onChange={(e) => {
                   setAnonymousName(e.target.value);
@@ -99,7 +101,7 @@ export function CreatePlayerModal({
                 type="button"
                 onClick={handleRegenerate}
                 disabled={loading || !name.trim()}
-                title="Generate a new anonymous name"
+                title={t("playerModal.regenerate")}
                 className="btn-secondary px-3"
               >
                 🔁
@@ -113,10 +115,10 @@ export function CreatePlayerModal({
           )}
           <div className="flex gap-4 justify-end mt-2">
             <button type="button" className="btn-secondary" onClick={onClose} disabled={loading}>
-              Cancel
+              {t("playerModal.cancel")}
             </button>
             <button type="submit" className="btn-primary" disabled={loading}>
-              {loading ? "Creating..." : "Create"}
+              {loading ? t("playerModal.creating") : t("playerModal.create")}
             </button>
           </div>
         </form>
@@ -144,6 +146,7 @@ export function PlayerDropdown({
   excludeIds = [],
   seasonEloMap,
 }: PlayerDropdownProps) {
+  const { t } = useTranslation();
   const filteredPlayers = players.filter((p) => !excludeIds.includes(p.id));
 
   return (
@@ -154,7 +157,7 @@ export function PlayerDropdown({
         onChange={(e) => onChange(e.target.value)}
         disabled={disabled}
       >
-        <option value="">-- Select player --</option>
+        <option value="">{t("playerModal.selectPlayer")}</option>
         {filteredPlayers.map((player) => {
           const elo = seasonEloMap?.get(player.id) ?? player.current_elo;
           return (

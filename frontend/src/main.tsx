@@ -5,6 +5,7 @@ import App from './App.tsx';
 import { AuthProvider } from './contexts/AuthContext.tsx';
 import { ThemeProvider } from './contexts/ThemeContext.tsx';
 import { ToastProvider } from './contexts/ToastContext.tsx';
+import './lib/i18n.ts';
 
 const queryClient = new QueryClient({
   defaultOptions: {

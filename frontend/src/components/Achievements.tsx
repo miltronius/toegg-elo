@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import type { CSSProperties } from "react";
 import {
   ACHIEVEMENT_DEFINITIONS,
@@ -30,6 +31,7 @@ export function Achievements({
   eloHistory,
   onSelectPlayer,
 }: AchievementsProps) {
+  const { t } = useTranslation();
   const [view, setView] = useState<"overview" | "players">("overview");
   const total = ACHIEVEMENT_DEFINITIONS.length;
 
@@ -52,19 +54,19 @@ export function Achievements({
   return (
     <div className="card">
       <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-        <h2 className="m-0">🏅 Achievements</h2>
+        <h2 className="m-0">{t("achievements.title")}</h2>
         <div className="lb-toggle">
           <button
             className={`lb-toggle-btn${view === "overview" ? " active" : ""}`}
             onClick={() => setView("overview")}
           >
-            Overview
+            {t("achievements.overview")}
           </button>
           <button
             className={`lb-toggle-btn${view === "players" ? " active" : ""}`}
             onClick={() => setView("players")}
           >
-            Players
+            {t("achievements.players")}
           </button>
         </div>
       </div>
@@ -81,10 +83,10 @@ export function Achievements({
           <thead>
             <tr>
               <th>#</th>
-              <th>Player</th>
-              <th>Badges</th>
-              <th className="achievements-progress">Progress</th>
-              <th>Highlights</th>
+              <th>{t("achievements.player")}</th>
+              <th>{t("achievements.badges")}</th>
+              <th className="achievements-progress">{t("achievements.progress")}</th>
+              <th>{t("achievements.highlights")}</th>
             </tr>
           </thead>
           <tbody>
@@ -123,6 +125,7 @@ function AchievementRow({
   total,
   onClick,
 }: AchievementRowProps) {
+  const { t } = useTranslation();
   const pct = total > 0 ? (unlockedCount / total) * 100 : 0;
 
   // Show up to 5 unlocked badge icons as highlights, rarest first
@@ -172,7 +175,7 @@ function AchievementRow({
             </span>
           ))}
           {unlockedCount === 0 && (
-            <span className="achievements-none">None yet</span>
+            <span className="achievements-none">{t("achievements.noneYet")}</span>
           )}
         </div>
       </td>
@@ -206,6 +209,7 @@ function AchievementsOverview({
   allAchievementRows,
   eloHistory,
 }: AchievementsOverviewProps) {
+  const { t } = useTranslation();
   const rarityMap =
     allAchievementRows.length > 0
       ? computeRarityMap(allAchievementRows, players.length)
@@ -278,7 +282,7 @@ function AchievementsOverview({
           ? null
           : RARITY_TIERS.find((r) => r.tier === tier);
         const groupColor = tierInfo?.color ?? "var(--text-light)";
-        const groupLabel = tierInfo?.label ?? "Not Yet Unlocked";
+        const groupLabel = tierInfo?.label ?? t("achievements.notYetUnlockedGroup");
 
         return (
           <div key={tier} className="mb-2">
@@ -343,17 +347,17 @@ function AchievementsOverview({
                   <div className="achievements-overview-tooltip" role="tooltip">
                     <div className="achievements-overview-tooltip-title">
                       {achievers.length === 0
-                        ? "Not yet unlocked"
+                        ? t("achievements.notYetUnlocked")
                         : earnedByAll
-                          ? `Earned by all ${achievers.length} player${achievers.length === 1 ? "" : "s"} 🎉`
-                          : `Earned by ${achievers.length} player${achievers.length === 1 ? "" : "s"}`}
+                          ? t("achievements.earnedByAll", { count: achievers.length })
+                          : t("achievements.earnedBy", { count: achievers.length })}
                     </div>
                     {isCommon
                       ? !earnedByAll &&
                         achievers.length > 0 && (
                           <>
                             <div className="achievements-overview-tooltip-subtitle">
-                              But not yet by
+                              {t("achievements.butNotYetBy")}
                             </div>
                             <ul className="achievements-overview-tooltip-list">
                               {nonAchievers.map((p) => (
@@ -397,7 +401,7 @@ function AchievementsOverview({
         target="_blank"
         rel="noreferrer"
       >
-        💡 Want a new achievement? Open a GitHub issue
+        {t("achievements.requestAchievement")}
       </a>
     </div>
   );
@@ -422,6 +426,7 @@ export function AchievementGallery({
   matches,
   eloHistory,
 }: AchievementGalleryProps) {
+  const { t } = useTranslation();
   const [sortMode, setSortMode] = useState<"rarity" | "date">("rarity");
   const playerMap = new Map(players.map((p) => [p.id, p]));
 
@@ -456,7 +461,7 @@ export function AchievementGallery({
     <div className="flex flex-col gap-6">
       {nextUp.length > 0 && (
         <section>
-          <div className="achievement-section-heading">Next Up</div>
+          <div className="achievement-section-heading">{t("achievements.nextUp")}</div>
           <div className="achievement-nextup-list">
             {nextUp.map((p) => {
               const def = ACHIEVEMENT_DEFINITIONS.find(
@@ -501,20 +506,20 @@ export function AchievementGallery({
         <section>
           <div className="flex items-center justify-between mb-3">
             <div className="achievement-section-heading">
-              Unlocked ({unlocked.length})
+              {t("achievements.unlocked", { count: unlocked.length })}
             </div>
             <div className="lb-toggle">
               <button
                 className={`lb-toggle-btn${sortMode === "rarity" ? " active" : ""}`}
                 onClick={() => setSortMode("rarity")}
               >
-                By Rarity
+                {t("achievements.byRarity")}
               </button>
               <button
                 className={`lb-toggle-btn${sortMode === "date" ? " active" : ""}`}
                 onClick={() => setSortMode("date")}
               >
-                By Date
+                {t("achievements.byDate")}
               </button>
             </div>
           </div>
@@ -531,7 +536,7 @@ export function AchievementGallery({
       )}
       <section>
         <div className="achievement-section-heading">
-          Locked ({locked.length})
+          {t("achievements.locked", { count: locked.length })}
         </div>
         <div className="achievement-grid">
           {locked.map((s) => (
@@ -555,6 +560,7 @@ interface AchievementCardProps {
 }
 
 function AchievementCard({ status, playerMap, locked }: AchievementCardProps) {
+  const { t, i18n } = useTranslation();
   const { definition, rarityTier, rarityPercent, meta, unlockedAt } = status;
 
   const color = rarityTier ? rarityColorForTier(rarityTier) : undefined;
@@ -567,14 +573,14 @@ function AchievementCard({ status, playerMap, locked }: AchievementCardProps) {
     const partnerId = meta.partnerId as string | undefined;
     const opponentId = meta.opponentId as string | undefined;
     if (partnerId) {
-      subtext = `with ${playerMap.get(partnerId)?.name ?? "?"}`;
+      subtext = t("achievements.withPartner", { name: playerMap.get(partnerId)?.name ?? "?" });
     } else if (opponentId) {
-      subtext = `vs ${playerMap.get(opponentId)?.name ?? "?"}`;
+      subtext = t("achievements.vsOpponent", { name: playerMap.get(opponentId)?.name ?? "?" });
     }
   }
 
   const unlockedLabel = unlockedAt
-    ? unlockedAt.toLocaleDateString("de-CH", {
+    ? unlockedAt.toLocaleDateString(i18n.language, {
         day: "2-digit",
         month: "2-digit",
         year: "numeric",
@@ -602,7 +608,7 @@ function AchievementCard({ status, playerMap, locked }: AchievementCardProps) {
         >
           {tierInfo.label}
           {rarityPercent !== undefined &&
-            ` · ${rarityPercent.toFixed(0)}% of players`}
+            t("achievements.ofPlayers", { percent: rarityPercent.toFixed(0) })}
         </span>
       )}
     </div>

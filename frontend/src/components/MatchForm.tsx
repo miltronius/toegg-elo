@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { recordMatch, Player, PlayerSeasonStats } from "../lib/supabase";
 import { PlayerDropdown } from "./PlayerModal";
 
@@ -9,6 +10,7 @@ interface MatchFormProps {
 }
 
 export function MatchForm({ players, onMatchRecorded, playerSeasonStats = [] }: MatchFormProps) {
+  const { t } = useTranslation();
   const seasonEloMap = useMemo(
     () => new Map(playerSeasonStats.map((s) => [s.player_id, s.current_season_elo])),
     [playerSeasonStats],
@@ -37,12 +39,12 @@ export function MatchForm({ players, onMatchRecorded, playerSeasonStats = [] }: 
     setSuccess(false);
 
     if (!teamA1 || !teamA2 || !teamB1 || !teamB2 || !winner) {
-      setError("Please select all players and a winner");
+      setError(t("matchForm.selectAll"));
       return;
     }
 
     if (teamA1 === teamA2 || teamB1 === teamB2) {
-      setError("Players must be different");
+      setError(t("matchForm.playersDifferent"));
       return;
     }
 
@@ -52,7 +54,7 @@ export function MatchForm({ players, onMatchRecorded, playerSeasonStats = [] }: 
           [teamA1, teamA2, teamB1, teamB2].filter((x) => x === p).length > 1,
       )
     ) {
-      setError("Each player can only be in one team");
+      setError(t("matchForm.onePerTeam"));
       return;
     }
 
@@ -70,7 +72,7 @@ export function MatchForm({ players, onMatchRecorded, playerSeasonStats = [] }: 
 
       setTimeout(() => setSuccess(false), 3000);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to record match");
+      setError(err instanceof Error ? err.message : t("matchForm.recordError"));
     } finally {
       setLoading(false);
     }
@@ -80,11 +82,11 @@ export function MatchForm({ players, onMatchRecorded, playerSeasonStats = [] }: 
 
   return (
     <div className="card">
-      <h2>Record Match</h2>
+      <h2>{t("matchForm.title")}</h2>
       <form onSubmit={handleSubmit}>
-        <h3>Team A</h3>
+        <h3>{t("matchForm.teamA")}</h3>
         <PlayerDropdown
-          label="Player 1"
+          label={t("matchForm.player1")}
           players={sortedPlayers}
           value={teamA1}
           onChange={setTeamA1}
@@ -93,7 +95,7 @@ export function MatchForm({ players, onMatchRecorded, playerSeasonStats = [] }: 
           seasonEloMap={seasonEloMap}
         />
         <PlayerDropdown
-          label="Player 2"
+          label={t("matchForm.player2")}
           players={sortedPlayers}
           value={teamA2}
           onChange={setTeamA2}
@@ -102,9 +104,9 @@ export function MatchForm({ players, onMatchRecorded, playerSeasonStats = [] }: 
           seasonEloMap={seasonEloMap}
         />
 
-        <h3>Team B</h3>
+        <h3>{t("matchForm.teamB")}</h3>
         <PlayerDropdown
-          label="Player 1"
+          label={t("matchForm.player1")}
           players={sortedPlayers}
           value={teamB1}
           onChange={setTeamB1}
@@ -113,7 +115,7 @@ export function MatchForm({ players, onMatchRecorded, playerSeasonStats = [] }: 
           seasonEloMap={seasonEloMap}
         />
         <PlayerDropdown
-          label="Player 2"
+          label={t("matchForm.player2")}
           players={sortedPlayers}
           value={teamB2}
           onChange={setTeamB2}
@@ -123,15 +125,15 @@ export function MatchForm({ players, onMatchRecorded, playerSeasonStats = [] }: 
         />
 
         <div className="form-group">
-          <label>Winner</label>
+          <label>{t("matchForm.winner")}</label>
           <select
             value={winner}
             onChange={(e) => setWinner(e.target.value as "A" | "B" | "")}
             disabled={loading}
           >
-            <option value="" disabled>Select Team</option>
-            <option value="A">Team A</option>
-            <option value="B">Team B</option>
+            <option value="" disabled>{t("matchForm.selectTeam")}</option>
+            <option value="A">{t("matchForm.teamA")}</option>
+            <option value="B">{t("matchForm.teamB")}</option>
           </select>
         </div>
 
@@ -142,12 +144,12 @@ export function MatchForm({ players, onMatchRecorded, playerSeasonStats = [] }: 
         )}
         {success && (
           <div className="bg-success-light text-success px-4 py-3 rounded-md text-sm border-l-4 border-success mb-3">
-            Match recorded successfully!
+            {t("matchForm.recorded")}
           </div>
         )}
 
         <button type="submit" className="btn-primary w-full mt-2" disabled={loading}>
-          {loading ? "Recording..." : "Record Match"}
+          {loading ? t("matchForm.recording") : t("matchForm.title")}
         </button>
       </form>
     </div>
