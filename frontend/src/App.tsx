@@ -342,6 +342,9 @@ function App() {
               setActiveTab("timeline");
             }}
             playerSeasonStats={playerSeasonStats}
+            teamNames={teamNames}
+            kFactor={activeSeason?.k_factor ?? 32}
+            matches={matches}
           />
         )}
         {activeTab === "history" && (

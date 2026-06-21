@@ -43,14 +43,17 @@
     "teamB": "Team B",
     "player1": "Spieler 1",
     "player2": "Spieler 2",
-    "winner": "Sieger",
-    "selectTeam": "Team auswählen",
     "selectAll": "Bitte wähle alle Spieler und einen Sieger aus",
     "playersDifferent": "Spieler müssen unterschiedlich sein",
     "onePerTeam": "Jeder Spieler kann nur in einem Team sein",
     "recorded": "Spiel erfolgreich erfasst!",
     "recording": "Wird erfasst...",
-    "recordError": "Spiel konnte nicht erfasst werden"
+    "recordError": "Spiel konnte nicht erfasst werden",
+    "ifWin": "Bei Sieg →",
+    "ifLose": "Bei Niederlage →",
+    "previewHint": "Wähle alle 4 Spieler aus, um Siegwahrscheinlichkeit & ELO-Prognose zu sehen",
+    "headToHead": "Bisherige Duelle",
+    "noPriorMatches": "Diese Teams haben noch nicht gegeneinander gespielt"
   },
   "userManagement": {
     "loading": "Benutzer werden geladen...",

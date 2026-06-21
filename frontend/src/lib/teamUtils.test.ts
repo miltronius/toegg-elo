@@ -5,6 +5,7 @@ import {
   computeTeamStats,
   teamColor,
   getTeamDisplayName,
+  getHeadToHead,
 } from "./teamUtils";
 import type { Match, Player } from "./supabase";
 import type { TeamNameRow } from "./supabase";
@@ -275,5 +276,44 @@ describe("getTeamDisplayName", () => {
 
   it("uses ? for unknown player ids", () => {
     expect(getTeamDisplayName(baseTeam, [])).toBe("? & ?");
+  });
+});
+
+// ── getHeadToHead ─────────────────────────────────────────────────────────────
+
+describe("getHeadToHead", () => {
+  it("returns zero record when the pairing has never played", () => {
+    const matches: Match[] = [match("aaa", "bbb", "ccc", "ddd", "A")];
+    const result = getHeadToHead(["aaa", "bbb"], ["eee", "fff"], matches);
+    expect(result).toEqual({ teamAWins: 0, teamBWins: 0, totalMatches: 0 });
+  });
+
+  it("counts wins/losses regardless of which side each team played on", () => {
+    const matches: Match[] = [
+      match("aaa", "bbb", "ccc", "ddd", "A"), // AB (as side A) beats CD
+      match("ccc", "ddd", "aaa", "bbb", "A"), // CD (as side A) beats AB
+      match("bbb", "aaa", "ddd", "ccc", "A"), // AB (ids swapped, still side A) beats CD
+    ];
+    const result = getHeadToHead(["aaa", "bbb"], ["ccc", "ddd"], matches);
+    expect(result).toEqual({ teamAWins: 2, teamBWins: 1, totalMatches: 3 });
+  });
+
+  it("is symmetric when team order is reversed", () => {
+    const matches: Match[] = [
+      match("aaa", "bbb", "ccc", "ddd", "A"),
+      match("aaa", "bbb", "ccc", "ddd", "B"),
+      match("aaa", "bbb", "ccc", "ddd", "B"),
+    ];
+    const result = getHeadToHead(["ccc", "ddd"], ["aaa", "bbb"], matches);
+    expect(result).toEqual({ teamAWins: 2, teamBWins: 1, totalMatches: 3 });
+  });
+
+  it("ignores matches involving other pairings", () => {
+    const matches: Match[] = [
+      match("aaa", "bbb", "eee", "fff", "A"),
+      match("aaa", "ccc", "ddd", "fff", "B"),
+    ];
+    const result = getHeadToHead(["aaa", "bbb"], ["ccc", "ddd"], matches);
+    expect(result.totalMatches).toBe(0);
   });
 });

@@ -43,14 +43,17 @@
     "teamB": "Team B",
     "player1": "Player 1",
     "player2": "Player 2",
-    "winner": "Winner",
-    "selectTeam": "Select Team",
     "selectAll": "Please select all players and a winner",
     "playersDifferent": "Players must be different",
     "onePerTeam": "Each player can only be in one team",
     "recorded": "Match recorded successfully!",
     "recording": "Recording...",
-    "recordError": "Failed to record match"
+    "recordError": "Failed to record match",
+    "ifWin": "If win →",
+    "ifLose": "If lose →",
+    "previewHint": "Select all 4 players to see win probability & ELO projections",
+    "headToHead": "Head-to-head",
+    "noPriorMatches": "These teams haven't played before"
   },
   "userManagement": {
     "loading": "Loading users...",
