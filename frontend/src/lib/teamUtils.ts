@@ -1,6 +1,42 @@
 import { Match, Player } from "./supabase";
 import { TeamNameRow } from "./supabase";
 
+export type HeadToHead = {
+  teamAWins: number;
+  teamBWins: number;
+  totalMatches: number;
+};
+
+// All-time head-to-head record between two specific pairings, regardless of
+// which side ("A"/"B") each pairing played on in a given stored match.
+export function getHeadToHead(
+  teamAIds: [string, string],
+  teamBIds: [string, string],
+  matches: Match[],
+): HeadToHead {
+  const keyA = teamKey(teamAIds[0], teamAIds[1]);
+  const keyB = teamKey(teamBIds[0], teamBIds[1]);
+
+  let teamAWins = 0;
+  let teamBWins = 0;
+
+  for (const m of matches) {
+    const matchKeyA = teamKey(m.team_a_player_1_id, m.team_a_player_2_id);
+    const matchKeyB = teamKey(m.team_b_player_1_id, m.team_b_player_2_id);
+
+    const direct = matchKeyA === keyA && matchKeyB === keyB;
+    const swapped = matchKeyA === keyB && matchKeyB === keyA;
+    if (!direct && !swapped) continue;
+
+    const matchTeamAWon = m.winning_team === "A";
+    const ourTeamAWon = direct ? matchTeamAWon : !matchTeamAWon;
+    if (ourTeamAWon) teamAWins++;
+    else teamBWins++;
+  }
+
+  return { teamAWins, teamBWins, totalMatches: teamAWins + teamBWins };
+}
+
 export type TeamStats = {
   key: string;
   player_id_lo: string;
@@ -143,6 +179,20 @@ export function teamColor(team: TeamStats): string {
     return Math.round(255 * c).toString(16).padStart(2, "0");
   };
   return `#${f(0)}${f(8)}${f(4)}`;
+}
+
+// Looks up a saved team name for an arbitrary (unordered) pair of player IDs,
+// e.g. for live-previewing the team name as players are picked in MatchForm.
+// Returns null if the pair has no saved name (unlike getTeamDisplayName, which
+// falls back to "Player A & Player B").
+export function getTeamNameForPlayers(
+  idA: string,
+  idB: string,
+  teamNames: TeamNameRow[],
+): string | null {
+  const key = teamKey(idA, idB);
+  const row = teamNames.find((r) => teamKey(r.player_id_lo, r.player_id_hi) === key);
+  return row?.name ?? null;
 }
 
 export function getTeamDisplayName(

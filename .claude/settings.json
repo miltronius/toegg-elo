@@ -3,7 +3,17 @@
     "allow": [
       "Bash(find /c/dev/toegg-elo -type f \\\\\\(-name *.sql -o -name *.py -o -name Makefile -o -name docker-compose* \\\\\\))",
       "Bash(grep -E \"\\\\.\\(py|rs|sql|prisma|js|mjs\\)$\")",
-      "Bash(echo \"exit:$?\")"
+      "Bash(echo \"exit:$?\")",
+      "Bash(cd /d/dev/toegg-elo && cat README.md | head -100 && echo --- && cat frontend/package.json)",
+      "Read(//d/d/dev/toegg-elo/**)",
+      "Skill(run)",
+      "Skill(run:*)",
+      "Bash(nohup pnpm dev)",
+      "Read(//tmp/**)",
+      "Bash(chromium-cli --help)",
+      "Bash(npx --no-install playwright --version)",
+      "Read(//c/Users/milto/AppData/Local/ms-playwright/**)",
+      "Bash(curl -sf http://localhost:5174)"
     ]
   }
 }
