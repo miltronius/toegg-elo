@@ -133,7 +133,7 @@ export function MatchForm({
       <form onSubmit={handleSubmit}>
         <div className="grid grid-cols-[1fr_auto_1fr] gap-4 items-start max-sm:grid-cols-1">
           <div className={clsx(
-            "rounded-lg border-2 p-4 transition-colors",
+            "rounded-lg border-2 px-4 pb-4 pt-2 transition-colors",
             winner === "A" ? "border-success bg-success-light/30" : "border-border",
           )}>
             <h3 className="mt-0 font-bold">{teamALabel}</h3>
@@ -206,7 +206,7 @@ export function MatchForm({
           </div>
 
           <div className={clsx(
-            "rounded-lg border-2 p-4 transition-colors",
+            "rounded-lg border-2 px-4 pb-4 pt-2 transition-colors",
             winner === "B" ? "border-success bg-success-light/30" : "border-border",
           )}>
             <h3 className="mt-0 font-bold">{teamBLabel}</h3>
