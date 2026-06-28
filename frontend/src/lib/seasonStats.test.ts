@@ -61,6 +61,16 @@ describe("computeSeasonStats", () => {
     expect(r.activePlayers).toBe(4);
   });
 
+  it("counts distinct calendar days with at least one match", () => {
+    const matches = [
+      makeMatch({ created_at: "2024-01-15T10:00:00Z" }),
+      makeMatch({ created_at: "2024-01-15T12:00:00Z" }),
+      makeMatch({ created_at: "2024-01-18T09:00:00Z" }),
+    ];
+    const r = computeSeasonStats("s1", matches, [], players);
+    expect(r.gameDays).toBe(2);
+  });
+
   it("buckets matches by weekday (Mon–Fri)", () => {
     const matches = [
       makeMatch({ created_at: "2024-01-15T10:00:00Z" }), // Mon

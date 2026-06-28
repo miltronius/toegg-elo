@@ -15,6 +15,8 @@ export interface SeasonStats {
   gamesPlayed: number;
   /** Distinct players who played at least one match. */
   activePlayers: number;
+  /** Distinct calendar days on which at least one match was played. */
+  gameDays: number;
   /** Match counts per workday (Mon–Fri). */
   weekday: WeekdayGames[];
   /** Per-calendar-day match counts (days with ≥1 match), ascending by day. */
@@ -232,6 +234,7 @@ export function computeSeasonStats(
   return {
     gamesPlayed: seasonMatches.length,
     activePlayers: participants.size,
+    gameDays: perDay.size,
     weekday,
     activity,
     dateRange,
