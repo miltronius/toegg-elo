@@ -25,17 +25,6 @@ interface SeasonStatsProps {
   achievements: PlayerAchievementRow[];
 }
 
-// Rough estimate: a 2v2 match takes about this long start to finish.
-const MINUTES_PER_GAME = 17;
-
-function formatDuration(totalMinutes: number): string {
-  const hours = Math.floor(totalMinutes / 60);
-  const minutes = totalMinutes % 60;
-  if (hours === 0) return `${minutes}m`;
-  if (minutes === 0) return `${hours}h`;
-  return `${hours}h ${minutes}m`;
-}
-
 function formatDay(day: string): string {
   return new Date(day + "T12:00:00Z").toLocaleDateString(DATE_LOCALE, {
     day: "2-digit",
@@ -78,6 +67,7 @@ export function SeasonStats({
   }, [seasonId, seasons, matches, history, players, achievements]);
 
   const maxWeekday = Math.max(1, ...stats.weekday.map((w) => w.games));
+  const weekdayDomainTop = maxWeekday + Math.ceil(maxWeekday * 0.2);
 
   // Date range: for a season use its official start/end (ongoing → today);
   // for all-time fall back to the first/last day with a match.
@@ -126,26 +116,35 @@ export function SeasonStats({
 
       {stats.gamesPlayed === 0 ? (
         <p className="text-text-light text-[0.85rem] py-3 text-center">
-          {scope === "all" ? t("seasonStats.noMatchesYet") : t("seasonStats.noMatchesSeason")}
+          {scope === "all"
+            ? t("seasonStats.noMatchesYet")
+            : t("seasonStats.noMatchesSeason")}
         </p>
       ) : (
         <>
           <div className="season-stats-grid">
             <div className="season-stat-tile">
               <div className="season-stat-value">{stats.gamesPlayed}</div>
-              <div className="season-stat-label">{t("seasonStats.gamesPlayed")}</div>
+              <div className="season-stat-label">
+                {t("seasonStats.gamesPlayed")}
+              </div>
             </div>
             <div className="season-stat-tile">
               <div className="season-stat-value">{stats.activePlayers}</div>
-              <div className="season-stat-label">{t("seasonStats.activePlayers")}</div>
+              <div className="season-stat-label">
+                {t("seasonStats.activePlayers")}
+              </div>
             </div>
+
             {stats.topStreak && (
               <div className="season-stat-tile">
                 <div className="season-stat-value">
                   🔥 {stats.topStreak.streak}
                 </div>
                 <div className="season-stat-label">
-                  {t("seasonStats.longestWinStreak", { name: stats.topStreak.name })}
+                  {t("seasonStats.longestWinStreak", {
+                    name: stats.topStreak.name,
+                  })}
                 </div>
               </div>
             )}
@@ -155,7 +154,9 @@ export function SeasonStats({
                   🥶 {stats.topLoseStreak.streak}
                 </div>
                 <div className="season-stat-label">
-                  {t("seasonStats.longestLoseStreak", { name: stats.topLoseStreak.name })}
+                  {t("seasonStats.longestLoseStreak", {
+                    name: stats.topLoseStreak.name,
+                  })}
                 </div>
               </div>
             )}
@@ -166,7 +167,10 @@ export function SeasonStats({
                   <span className="season-stat-unit"> Elo</span>
                 </div>
                 <div className="season-stat-label">
-                  {t("seasonStats.bestDay", { name: stats.bestDayGain.name, day: fmtDay(stats.bestDayGain.day) })}
+                  {t("seasonStats.bestDay", {
+                    name: stats.bestDayGain.name,
+                    day: fmtDay(stats.bestDayGain.day),
+                  })}
                 </div>
               </div>
             )}
@@ -188,7 +192,9 @@ export function SeasonStats({
                   <span className="season-stat-unit"> Elo</span>
                 </div>
                 <div className="season-stat-label">
-                  {t("seasonStats.biggestLoss", { name: stats.biggestLoss.name })}
+                  {t("seasonStats.biggestLoss", {
+                    name: stats.biggestLoss.name,
+                  })}
                 </div>
               </div>
             )}
@@ -199,7 +205,10 @@ export function SeasonStats({
                   <span className="season-stat-unit"> Elo</span>
                 </div>
                 <div className="season-stat-label">
-                  {t("seasonStats.worstDay", { name: stats.worstDayDrop.name, day: fmtDay(stats.worstDayDrop.day) })}
+                  {t("seasonStats.worstDay", {
+                    name: stats.worstDayDrop.name,
+                    day: fmtDay(stats.worstDayDrop.day),
+                  })}
                 </div>
               </div>
             )}
@@ -232,7 +241,9 @@ export function SeasonStats({
                   </span>
                 </div>
                 <div className="season-stat-label">
-                  {t("seasonStats.busiestDay", { day: fmtDay(stats.busiestDay.day) })}
+                  {t("seasonStats.busiestDay", {
+                    day: fmtDay(stats.busiestDay.day),
+                  })}
                 </div>
               </div>
             )}
@@ -242,7 +253,10 @@ export function SeasonStats({
                   {stats.winRateLeader.winrate.toFixed(0)}%
                 </div>
                 <div className="season-stat-label">
-                  {t("seasonStats.winRateLeader", { minGames: stats.winRateLeader.minGames, name: stats.winRateLeader.name })}
+                  {t("seasonStats.winRateLeader", {
+                    minGames: stats.winRateLeader.minGames,
+                    name: stats.winRateLeader.name,
+                  })}
                 </div>
               </div>
             )}
@@ -257,25 +271,25 @@ export function SeasonStats({
               </div>
             </div>
             <div className="season-stat-tile">
-              <div className="season-stat-value">
-                {formatDuration(stats.gamesPlayed * MINUTES_PER_GAME)}
-              </div>
+              <div className="season-stat-value">{stats.gameDays}</div>
               <div className="season-stat-label">
-                {t("seasonStats.estTimePlayed", { minutes: MINUTES_PER_GAME })}
+                {t("seasonStats.gameDays")}
               </div>
             </div>
           </div>
 
           <div className="season-stats-chart">
-            <div className="season-stats-subhead">{t("seasonStats.gamesByWeekday")}</div>
-            <ResponsiveContainer width="100%" height={170}>
+            <div className="season-stats-subhead">
+              {t("seasonStats.gamesByWeekday")}
+            </div>
+            <ResponsiveContainer width="100%" height={190}>
               <BarChart
                 data={stats.weekday}
                 margin={{ top: 8, right: 8, bottom: 0, left: -24 }}
               >
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
                 <XAxis dataKey="day" tickLine={false} />
-                <YAxis allowDecimals={false} domain={[0, maxWeekday + 1]} />
+                <YAxis allowDecimals={false} domain={[0, weekdayDomainTop]} />
                 <Tooltip
                   cursor={{ fill: "rgba(0,0,0,0.05)" }}
                   contentStyle={{
@@ -287,7 +301,10 @@ export function SeasonStats({
                   }}
                   labelStyle={{ color: "var(--color-text)" }}
                   itemStyle={{ color: "var(--color-text)" }}
-                  formatter={(v) => [v as number, t("seasonStats.gamesTooltip")]}
+                  formatter={(v) => [
+                    v as number,
+                    t("seasonStats.gamesTooltip"),
+                  ]}
                 />
                 <Bar
                   dataKey="games"
@@ -310,7 +327,9 @@ export function SeasonStats({
 
           {heatmapRange && (
             <div className="season-stats-chart">
-              <div className="season-stats-subhead">{t("seasonStats.dailyActivity")}</div>
+              <div className="season-stats-subhead">
+                {t("seasonStats.dailyActivity")}
+              </div>
               <ActivityHeatmap
                 activity={stats.activity}
                 start={heatmapRange.start}

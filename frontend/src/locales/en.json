@@ -209,6 +209,7 @@
     "noMatchesSeason": "No matches recorded this season.",
     "gamesPlayed": "Games played",
     "activePlayers": "Active players",
+    "gameDays": "Game days",
     "longestWinStreak": "Longest win streak · {{name}}",
     "longestLoseStreak": "Longest lose streak · {{name}}",
     "bestDay": "Best day · {{name}} · {{day}}",
@@ -223,7 +224,6 @@
     "winRateLeader": "Win-rate leader ({{minGames}}+ games) · {{name}}",
     "achievementsTotal": "Achievements unlocked in total",
     "achievementsSeason": "Achievements unlocked this season",
-    "estTimePlayed": "Est. time played · ~{{minutes}}min/game",
     "gamesByWeekday": "Games by weekday",
     "gamesTooltip": "Games",
     "dailyActivity": "Daily Activity Heatmap"
