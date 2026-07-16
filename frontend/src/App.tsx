@@ -32,6 +32,7 @@ import { PlayerDetail } from "./components/PlayerDetail";
 import { UserManagement } from "./components/UserManagement";
 import { Teams } from "./components/Teams";
 import { TeamDetail } from "./components/TeamDetail";
+import { RelationshipGraph } from "./components/RelationshipGraph";
 import { Achievements } from "./components/Achievements";
 import { Timeline } from "./components/Timeline";
 import { SeasonDialog } from "./components/SeasonDialog";
@@ -176,7 +177,14 @@ function App() {
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
   const [playerDetailInitialTab, setPlayerDetailInitialTab] = useState<"stats" | "achievements">("stats");
   const [activeTab, setActiveTab] = useState<
-    "leaderboard" | "history" | "match" | "users" | "teams" | "achievements" | "timeline"
+    | "leaderboard"
+    | "history"
+    | "match"
+    | "users"
+    | "teams"
+    | "relationships"
+    | "achievements"
+    | "timeline"
   >("leaderboard");
 
   const canEdit = role === "user" || role === "admin";
@@ -296,6 +304,11 @@ function App() {
             {t("tabs.teams")}
           </button>
         )}
+        {user && (
+          <button className={tabCls("relationships")} onClick={() => setActiveTab("relationships")}>
+            {t("tabs.relationships")}
+          </button>
+        )}
         {canEdit && (
           <button className={tabCls("match")} onClick={() => setActiveTab("match")}>
             {t("tabs.match")}
@@ -315,7 +328,13 @@ function App() {
           </button>
         )}
       </nav>
-      <main className="flex-1 p-8 max-w-300 mx-auto w-full">
+      {/* The graph wants the whole viewport, so it opts out of the centred,
+          max-width column every other tab uses. */}
+      <main
+        className={`flex-1 w-full ${
+          activeTab === "relationships" ? "p-4" : "p-8 max-w-300 mx-auto"
+        }`}
+      >
         {activeTab === "leaderboard" && (
           <Leaderboard
             players={players}
@@ -380,6 +399,18 @@ function App() {
             onSeasonSelect={handleSeasonSelect}
             onTeamClick={setSelectedTeam}
             playerSeasonStats={playerSeasonStats}
+          />
+        )}
+        {activeTab === "relationships" && user && (
+          <RelationshipGraph
+            matches={matches}
+            players={players}
+            seasons={seasons}
+            onPlayerClick={(p) => {
+              setSelectedPlayerId(p.id);
+              setPlayerDetailInitialTab("stats");
+            }}
+            playerSeasonStats={allPlayerSeasonStats}
           />
         )}
         {activeTab === "achievements" && canEdit && (

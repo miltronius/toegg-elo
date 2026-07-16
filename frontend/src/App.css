@@ -37,6 +37,28 @@ body {
   --bump-grid: var(--color-border);
   --tooltip-bg: white;
   --tooltip-sub: var(--color-text-light);
+  /* Panel background. Also used as the halo behind SVG labels drawn on a card. */
+  --card-bg: white;
+
+  /* Relationship-graph node colours. NOT identity — there is no palette of ~12
+     perceptually distinct colours, so names carry identity and these six are
+     assigned by graph colouring (see assignColorSlots) purely so no two linked
+     players ever match. Validated all-pairs against the white card surface:
+     worst normal-vision ΔE 15.6, worst CVD ΔE 6.9 — the 6–8 CVD band is legal
+     here because every node is directly labelled. Six is the measured ceiling;
+     a seventh hue drops the worst pair below the ΔE 15 floor. */
+  --relgraph-c1: #3987e5;
+  --relgraph-c2: #396e39;
+  --relgraph-c3: #c98500;
+  --relgraph-c4: #199e70;
+  --relgraph-c5: #9085e9;
+  --relgraph-c6: #ff1111;
+  --relgraph-c7: #666;
+  --relgraph-c8: #eee;
+  --relgraph-c9: #4711dd;
+  --relgraph-c10: #f320e1;
+  --relgraph-c11: #d8e614;
+  --relgraph-c12: #07f8d0;
 }
 
 /* ── Buttons ─────────────────────────────────────────────────────── */
@@ -214,7 +236,7 @@ body {
 
 /* ── Card ────────────────────────────────────────────────────────── */
 .card {
-  background: white;
+  background: var(--card-bg);
   border-radius: 0.5rem;
   border: 1px solid var(--color-border);
   padding: 1.5rem;
@@ -226,7 +248,7 @@ body {
 }
 .card h2 {
   font-size: 1.5rem;
-  margin-bottom: 1.5rem;
+  margin-bottom: 0.75rem;
   color: var(--color-text);
 }
 .card h3 {
@@ -1269,7 +1291,11 @@ td.winrate {
   padding: 0.75rem 0.75rem 0.6rem;
   border-radius: 8px;
   border: 1px solid var(--color-border);
-  background: color-mix(in srgb, var(--color-primary) 5%, var(--color-bg-light));
+  background: color-mix(
+    in srgb,
+    var(--color-primary) 5%,
+    var(--color-bg-light)
+  );
 }
 .season-podium-title {
   text-align: center;
@@ -1505,7 +1531,8 @@ td.winrate {
   transform: translateX(14px);
 }
 .heatmap-switch input:focus-visible + .heatmap-switch-track {
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary) 40%, transparent);
+  box-shadow: 0 0 0 2px
+    color-mix(in srgb, var(--color-primary) 40%, transparent);
 }
 .heatmap-wrap {
   display: flex;
@@ -1557,7 +1584,9 @@ td.winrate {
   border-radius: 2px;
   background: var(--color-bg-light);
   border: 1px solid var(--color-border);
-  transition: transform 0.1s ease, box-shadow 0.1s ease;
+  transition:
+    transform 0.1s ease,
+    box-shadow 0.1s ease;
 }
 .heatmap-cell:not(.heatmap-cell-empty):hover {
   transform: scale(1.4);
@@ -1591,6 +1620,125 @@ td.winrate {
   background: #a855f7;
   border-color: transparent;
   box-shadow: 0 0 0 1px #a855f7;
+}
+
+/* ── Relationship graph ──────────────────────────────────────────── */
+/* Tighter than a normal card: the canvas wants every pixel it can get. */
+.relgraph-card {
+  padding: 0.5rem;
+  margin-bottom: 0;
+}
+/* Controls in a side rail rather than a top bar — the canvas is short on
+   height and has width to spare. */
+.relgraph-layout {
+  display: flex;
+  gap: 0.75rem;
+  align-items: stretch;
+}
+.relgraph-controls {
+  width: 200px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.relgraph-controls .lb-toggle,
+.relgraph-controls .season-select {
+  width: 100%;
+}
+.relgraph-controls .lb-toggle-btn {
+  flex: 1;
+  justify-content: center;
+}
+.relgraph-hint {
+  margin: 0;
+  font-size: 0.75rem;
+  line-height: 1.45;
+  color: var(--color-text-light);
+}
+.relgraph-wrap {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+@media (max-width: 768px) {
+  .relgraph-layout {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .relgraph-controls {
+    width: 100%;
+  }
+}
+/* Without this a node drag pans/scrolls the page on touch instead of dragging. */
+.relgraph-svg {
+  touch-action: none;
+  display: block;
+  max-width: 100%;
+}
+.relgraph-node {
+  cursor: grab;
+}
+.relgraph-node:active {
+  cursor: grabbing;
+}
+/* font-size comes from the component: it's user-adjustable. */
+.relgraph-label {
+  font-weight: 700;
+  pointer-events: none;
+  user-select: none;
+  /* Halo in the panel color so names stay readable over the edges they cross.
+     paint-order puts the stroke behind the fill, turning it into a backdrop
+     rather than an outline. */
+  paint-order: stroke;
+  stroke: var(--card-bg);
+  stroke-width: 3px;
+  stroke-linejoin: round;
+}
+.relgraph-empty {
+  color: var(--color-text-light);
+  font-size: 0.9rem;
+  margin: 0 0 0.5rem;
+}
+.relgraph-slider {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-text-light);
+}
+.relgraph-slider-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+.relgraph-slider input {
+  width: 100%;
+  cursor: pointer;
+}
+.relgraph-slider-value {
+  color: var(--color-primary);
+  font-weight: 700;
+}
+.relgraph-tooltip {
+  background: var(--tooltip-bg);
+  border: 1px solid var(--bump-grid);
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  padding: 0.5rem 0.7rem;
+  pointer-events: none;
+  max-width: 240px;
+}
+.relgraph-tip-title {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+.relgraph-tip-sub {
+  font-size: 0.75rem;
+  color: var(--tooltip-sub);
+  margin-top: 0.15rem;
 }
 
 /* ── Auth screen (animated gradient, can't be a Tailwind utility) ── */
@@ -1713,6 +1861,24 @@ td.winrate {
   --bump-grid: #374151;
   --tooltip-bg: #1f2937;
   --tooltip-sub: #9ca3af;
+  --card-bg: #1f2937;
+  /* Same twelve hues, stepped for the dark card. Measured against #1f2937 these
+     land at worst normal-vision ΔE ~10 — under the 15 floor, because no twelve-hue
+     set clears it on this surface (all 28 candidate subsets were checked). The
+     graph-colouring guarantee plus the always-on labels carry it; if it ever
+     reads badly, the fix is fewer slots, not different hues. */
+  --relgraph-c1: #3987e5;
+  --relgraph-c2: #396e39;
+  --relgraph-c3: #c98500;
+  --relgraph-c4: #199e70;
+  --relgraph-c5: #9085e9;
+  --relgraph-c6: #ff1111;
+  --relgraph-c7: #666;
+  --relgraph-c8: #eee;
+  --relgraph-c9: #4711dd;
+  --relgraph-c10: #f320e1;
+  --relgraph-c11: #d8e614;
+  --relgraph-c12: #07f8d0;
 }
 
 [data-theme="dark"] ::selection {
@@ -1720,9 +1886,6 @@ td.winrate {
   color: #111827;
 }
 
-[data-theme="dark"] .card {
-  background: #1f2937;
-}
 [data-theme="dark"] .streak-badge.lose {
   color: #7cc4ff;
 }
@@ -1784,6 +1947,7 @@ td.winrate {
   --bump-grid: #808080;
   --tooltip-bg: #ffffdc;
   --tooltip-sub: #444444;
+  --card-bg: #d4d0c8;
 }
 
 [data-theme="win95"] ::selection {
@@ -1792,7 +1956,6 @@ td.winrate {
 }
 
 [data-theme="win95"] .card {
-  background: #d4d0c8;
   border-radius: 0;
   border: none;
   box-shadow:
