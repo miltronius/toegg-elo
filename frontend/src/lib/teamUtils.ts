@@ -1,5 +1,6 @@
 import { Match, Player } from "./supabase";
 import { TeamNameRow } from "./supabase";
+import { hashHue, hslHex } from "./colors";
 
 export type HeadToHead = {
   teamAWins: number;
@@ -163,22 +164,7 @@ export function computeTeamStats(
 }
 
 export function teamColor(team: TeamStats): string {
-  if (team.nameRow?.color) return team.nameRow.color;
-  let hash = 0;
-  for (let i = 0; i < team.key.length; i++) {
-    hash = (hash * 31 + team.key.charCodeAt(i)) & 0xffff;
-  }
-  // Convert HSL to hex so it's always a valid hex string for <input type="color">
-  const h = hash % 360;
-  const s = 0.7;
-  const l = 0.52;
-  const a = s * Math.min(l, 1 - l);
-  const f = (n: number) => {
-    const k = (n + h / 30) % 12;
-    const c = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
-    return Math.round(255 * c).toString(16).padStart(2, "0");
-  };
-  return `#${f(0)}${f(8)}${f(4)}`;
+  return team.nameRow?.color ?? hslHex(hashHue(team.key), 0.7, 0.52);
 }
 
 // Looks up a saved team name for an arbitrary (unordered) pair of player IDs,

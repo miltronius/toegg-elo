@@ -35,7 +35,7 @@ Copy `frontend/.env.example` to `frontend/.env.local` and fill in:
 ## Architecture
 
 ### Stack
-- **Frontend:** React 19 + Vite + TypeScript, Recharts for Elo history charts, `@react95/core` for Win95 theme chrome, `react-i18next` for translations
+- **Frontend:** React 19 + Vite + TypeScript, Recharts for Elo history charts, `d3-force-3d` for the relationship graph's 2D/3D layout math (rendering is our own SVG), `@react95/core` for Win95 theme chrome, `react-i18next` for translations
 - **Backend:** Supabase (PostgreSQL + Auth + RLS)
 - **Edge Function:** Deno (`supabase/functions/calculate-elo/`) for Elo computation
 - **Package manager:** pnpm
@@ -45,23 +45,36 @@ Copy `frontend/.env.example` to `frontend/.env.local` and fill in:
 - `frontend/src/contexts/AuthContext.tsx` — wraps the app, exposes `useAuth()` with user, role, and auth methods
 - `frontend/src/contexts/ThemeContext.tsx` — exposes `useTheme()` with `theme` (`"light" | "dark" | "win95"`) and `setTheme()`; persists selection in cookie `toegg-theme` (1-year); sets `data-theme` on `<html>` synchronously to avoid flash
 - `frontend/src/lib/i18n.ts` — i18next init (imported once in `main.tsx`); components call `useTranslation()` for `t()`. English (`en`, fallback) + German (`de`), with strings in `frontend/src/locales/{en,de}.json`; language persisted in cookie `toegg-lang` via `i18next-browser-languagedetector` (detection order cookie → browser, `de-CH` normalized to `de`). Also exports `DATE_LOCALE` (`'de-CH'`) — the fixed locale every `toLocale*String` date/time call uses, so dates stay Swiss-formatted (dd.mm.yyyy) regardless of UI language. Achievement names/descriptions are translated at the display layer under the `achievementDefs.<id>` keys (the `ACHIEVEMENT_DEFINITIONS` in `achievements.ts` stay English as the shared backend source + fallback)
-- `frontend/src/App.tsx` — main orchestrator; owns `loadData()` for refetching all state, passes data + callbacks to children; manages `selectedSeason` shared across Leaderboard, Teams, and PlayerDetail
+- `frontend/src/App.tsx` — main orchestrator; fetches all state in one TanStack Query (`fetchAppData`, key `["appData", userId, role]`) and refetches via `refresh()` (`invalidateQueries`), passes data + callbacks to children; manages `selectedSeason` shared across Leaderboard, Teams, and PlayerDetail
 - `frontend/src/lib/teamUtils.ts` — pure team stat computation (`computeTeamStats`, `teamColor`, `teamKey`); no DB calls
 - `frontend/src/lib/achievements.ts` — `ACHIEVEMENT_DEFINITIONS` array; shared between frontend and the `_shared` edge function
 - `frontend/src/lib/seasonStats.ts` — pure headline-stat computation (`computeSeasonStats`): games played, active players, longest win/lose streak, best/worst day, biggest win/loss, highest/lowest Elo (season-normalized for a season, raw all-time otherwise), busiest day, win-rate leader, achievements unlocked, games-by-weekday, per-day activity + date range; no DB calls
+- `frontend/src/lib/relationshipGraph.ts` — pure league-wide relationship computation (`computeRelationshipGraph`): nodes = players who played, friend edges = games as teammates, foe edges = games as opponents. Foe records are directional on an undirected `lo:hi` key — always stored from `lo`'s side, with `loShare` (0..1) driving the tug-of-war split. `topEdgesPerPlayer` keeps each player's N strongest links and drops the rest; **an absolute "min games" threshold does not work here** — with ~12 players everyone eventually partners with and faces everyone, so the graph is complete (all C(n,2) pairs) at any realistic match volume. Filters edges only, never nodes. No DB calls. Overlaps `computeTeammateCounts`/`computeOpponentCounts` (`achievements.ts`) and the private `computeHeadToHead` (`PlayerDetail.tsx`) — those are per-player, this is league-wide; consolidating them is open work
+- `frontend/src/lib/colors.ts` — palette constants mirroring the CSS vars, plus `hashHue`/`hslHex` (seed string → stable HSL → hex, used by `teamColor` in `teamUtils.ts`) and `RELGRAPH_SLOTS`. Note `Leaderboard.tsx` keeps its own file-private index-based `playerColor` for evenly-spaced bump-chart hues — deliberately different
+- `frontend/src/components/RelationshipGraph.tsx` — force-directed player network. Uses `d3-force-3d` for layout math only (it covers both modes via `numDimensions(2|3)`); the SVG is rendered here, so colors stay CSS vars, all three themes work, and the tug-of-war edges keep working. `frontend/src/types/d3-force-3d.d.ts` hand-declares the package (it ships no types). Key invariants:
+  - **3D must seed nodes on a sphere** (`seedPosition`): with every z at 0 the repulsion has no z-component and the layout stays flat forever. Switching 2D→3D re-seeds for the same reason
+  - Friends|Foes swaps the link set on the *same* simulation so nodes hold position; dimension/data/canvas changes rebuild it
+  - `chargeFor()` scales repulsion to the room per node — a fixed charge either knots up on a large canvas or flings nodes off a small one
+  - `WARMUP_TICKS` runs the settle synchronously (`tick()` fires no events) so the graph arrives near-settled instead of animating hundreds of rendered frames
+  - Projection is one path: 2D is the 3D projection with zero rotation and z = 0, which reduces to identity
+  - Nodes are draggable (pointer capture → `fx`/`fy`/`fz` pinning → `alphaTarget(0.3)`); a press that never moves counts as a click. Background drag orbits in 3D, pans in 2D; wheel zooms (registered non-passively by hand, since React's synthetic wheel handler is passive)
+  - **Node colour is not identity — the labels are.** No palette of ~12 perceptually distinct colours exists (measured with the dataviz skill's validator: past six, pairs fall under the ΔE 15 normal-vision floor; the old id-hash scheme scored 5.8, i.e. indistinguishable). So the six `--relgraph-c1..c6` vars are assigned by graph colouring (`assignColorSlots`) purely so linked players never match — which is what makes the two-tone foe edges readable. Clean at the default budget; the friend+foe union can force a repeat at budget 5+. Slot → hex lives in CSS, so themes still work without the component knowing the theme
+  - Friend edges are **directed**: game counts are symmetric but preference isn't, so `loPicked`/`hiPicked`/`mutual` mark an unrequited favourite with an arrow (one `auto-start-reverse` marker serves both ends)
+  - Scopes seasons locally and defaults to all-time, rather than using App's shared `selectedSeason` — so App passes it the **unfiltered** `allPlayerSeasonStats`
 - `frontend/src/components/ActivityHeatmap.tsx` — pure presentational GitHub-style contribution graph (weeks as columns, Mon→Sun rows, oldest left → most recent right) of per-day match counts; pads the window backwards to `minWeeks` (default 13 ≈ 3 months) and highlights the `firstDay` cell in purple; used by SeasonStats
-- `frontend/src/components/` — tab-based UI: Timeline, Leaderboard, Teams, TeamDetail, MatchForm, MatchHistory, PlayerDetail/Modal, SeasonStats, ActivityHeatmap, Achievements, UserManagement, SeasonDialog, ThemeToggle, LanguageSwitcher, Win95Shell
+- `frontend/src/components/` — tab-based UI: Timeline, Leaderboard, Teams, TeamDetail, RelationshipGraph, MatchForm, MatchHistory, PlayerDetail/Modal, SeasonStats, ActivityHeatmap, Achievements, UserManagement, SeasonDialog, ThemeToggle, LanguageSwitcher, Win95Shell
 - `frontend/src/test/setup.ts` — Vitest setup (jest-dom matchers, ResizeObserver mock, i18n init so components render real strings in tests)
 
 **Tab visibility rules:**
 
 - Timeline: logged-in users only; shown as first tab when authenticated
-- Teams, Record Match, Achievements: `user` or `admin` role only
+- Teams and Relationships: logged-in users only (any role, including `viewer`)
+- Record Match, Achievements: `user` or `admin` role only
 - Admin (user management + achievement recompute): `admin` only
 - Leaderboard and History: always visible
 
 ### Data Flow
-1. `App.tsx` calls `loadData()` on mount and after any mutation
+1. `App.tsx` fetches everything through one TanStack Query; mutations call `refresh()` to invalidate it
 2. All DB interactions go through helper functions in `supabase.ts`
 3. Match recording invokes the `calculate-elo` Deno edge function via `supabase.functions.invoke()`
 4. Child components call parent-provided callbacks to trigger data refresh
