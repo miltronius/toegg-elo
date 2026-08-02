@@ -83,7 +83,12 @@ function buildTimeline(
     const next = sortedSeasons.find((ns) => ns.number === s.number + 1);
     if (!next) continue;
     const day = s.ended_at.slice(0, 10);
-    transitionByDate.set(day, { type: "season_transition", endedSeason: s, startedSeason: next, standings: [] });
+    transitionByDate.set(day, {
+      type: "season_transition",
+      endedSeason: s,
+      startedSeason: next,
+      standings: [],
+    });
   }
 
   // Build match-id → elo entries lookup
@@ -130,7 +135,7 @@ function buildTimeline(
     achievementsByDate.set(day, arr);
   }
 
-  // Season ELO reconstruction — keyed by season_id, each player starts at 1500
+  // Season ELO reconstruction - keyed by season_id, each player starts at 1500
   const seasonElos = new Map<string, Map<string, number>>();
   const seasonWins = new Map<string, Map<string, number>>();
   const seasonLosses = new Map<string, Map<string, number>>();
@@ -160,7 +165,10 @@ function buildTimeline(
   };
 
   const activeDates = [...matchesByDate.keys()].sort();
-  const rankChangesForDay = new Map<string, (RankChangeEvent | FirstGameEvent)[]>();
+  const rankChangesForDay = new Map<
+    string,
+    (RankChangeEvent | FirstGameEvent)[]
+  >();
   // Track which players have played at least once per season
   const activePlayers = new Map<string, Set<string>>();
 
@@ -181,7 +189,11 @@ function buildTimeline(
     const rankBefore = new Map<string, number>();
     [...elosForSeason.entries()]
       .filter(([id]) => seasonActivePlayers.has(id))
-      .sort((a, b) => (b[1] - a[1]) || (seasonWinrate(seasonId, b[0]) - seasonWinrate(seasonId, a[0])))
+      .sort(
+        (a, b) =>
+          b[1] - a[1] ||
+          seasonWinrate(seasonId, b[0]) - seasonWinrate(seasonId, a[0]),
+      )
       .forEach(([id], i) => rankBefore.set(id, i + 1));
 
     // Apply all elo changes for this day (season-filtered entries only)
@@ -204,7 +216,11 @@ function buildTimeline(
     const rankAfter = new Map<string, number>();
     [...elosForSeason.entries()]
       .filter(([id]) => seasonActivePlayers.has(id))
-      .sort((a, b) => (b[1] - a[1]) || (seasonWinrate(seasonId, b[0]) - seasonWinrate(seasonId, a[0])))
+      .sort(
+        (a, b) =>
+          b[1] - a[1] ||
+          seasonWinrate(seasonId, b[0]) - seasonWinrate(seasonId, a[0]),
+      )
       .forEach(([id], i) => rankAfter.set(id, i + 1));
 
     const events: (RankChangeEvent | FirstGameEvent)[] = [];
@@ -216,7 +232,12 @@ function buildTimeline(
         // First game this season
         events.push({ type: "first_game", playerId: player.id, rank: after });
       } else if (before !== after) {
-        events.push({ type: "rank_change", playerId: player.id, fromRank: before, toRank: after });
+        events.push({
+          type: "rank_change",
+          playerId: player.id,
+          fromRank: before,
+          toRank: after,
+        });
       }
     }
     // Sort: best ranks (lowest number) first
@@ -252,7 +273,9 @@ function buildTimeline(
   }
 
   // Collect all dates: match days + season transition days
-  const allDates = [...new Set([...activeDates, ...transitionByDate.keys()])].sort();
+  const allDates = [
+    ...new Set([...activeDates, ...transitionByDate.keys()]),
+  ].sort();
 
   // Build day sections (newest first)
   const daySections: DaySection[] = [];
@@ -331,7 +354,10 @@ function formatDay(date: string, t: TFunction): string {
 }
 
 function formatTime(iso: string): string {
-  return new Date(iso).toLocaleTimeString(DATE_LOCALE, { hour: "2-digit", minute: "2-digit" });
+  return new Date(iso).toLocaleTimeString(DATE_LOCALE, {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 const PLACE_MEDALS: Record<number, string> = { 1: "🥇", 2: "🥈", 3: "🥉" };
@@ -371,7 +397,9 @@ function SeasonPodium({
             </div>
             <div className="season-podium-elo">{s.elo}</div>
             <div className="season-podium-block">
-              <span className="season-podium-medal">{PLACE_MEDALS[s.place]}</span>
+              <span className="season-podium-medal">
+                {PLACE_MEDALS[s.place]}
+              </span>
               <span className="season-podium-rank">#{s.place}</span>
             </div>
           </div>
@@ -408,10 +436,14 @@ export function Timeline({
     achievements: t("timeline.groupAchievements"),
     rankings: t("timeline.groupRankings"),
   };
-  const playerMap = useMemo(() => new Map(players.map((p) => [p.id, p])), [players]);
+  const playerMap = useMemo(
+    () => new Map(players.map((p) => [p.id, p])),
+    [players],
+  );
 
   const daySections = useMemo(
-    () => buildTimeline(players, matches, eloHistory, allAchievementRows, seasons),
+    () =>
+      buildTimeline(players, matches, eloHistory, allAchievementRows, seasons),
     [players, matches, eloHistory, allAchievementRows, seasons],
   );
 
@@ -447,7 +479,9 @@ export function Timeline({
     return (
       <div className="card">
         <h2>{t("timeline.title")}</h2>
-        <p className="text-center text-text-light py-8">{t("timeline.empty")}</p>
+        <p className="text-center text-text-light py-8">
+          {t("timeline.empty")}
+        </p>
       </div>
     );
   }
@@ -462,7 +496,9 @@ export function Timeline({
             <div className="dashboard-groups">
               {day.groups.map((group) => (
                 <div key={group.kind}>
-                  <div className="dashboard-group-label">{GROUP_LABELS[group.kind]}</div>
+                  <div className="dashboard-group-label">
+                    {GROUP_LABELS[group.kind]}
+                  </div>
                   <div className="dashboard-events">
                     {group.kind === "matches" &&
                       group.events.map((event, i) => {
@@ -475,16 +511,32 @@ export function Timeline({
                           ? [m.team_b_player_1_id, m.team_b_player_2_id]
                           : [m.team_a_player_1_id, m.team_a_player_2_id];
 
-                        const renderPlayer = (id: string, isWinner: boolean) => {
+                        const renderPlayer = (
+                          id: string,
+                          isWinner: boolean,
+                        ) => {
                           const name = playerMap.get(id)?.name ?? "?";
-                          const h = event.eloChanges.find((e) => e.player_id === id);
+                          const h = event.eloChanges.find(
+                            (e) => e.player_id === id,
+                          );
                           const delta = h ? h.elo_after - h.elo_before : null;
                           return (
                             <span key={id} className="dashboard-player-inline">
-                              <span className={isWinner ? "dashboard-match-winner" : "dashboard-match-loser"}>{name}</span>
+                              <span
+                                className={
+                                  isWinner
+                                    ? "dashboard-match-winner"
+                                    : "dashboard-match-loser"
+                                }
+                              >
+                                {name}
+                              </span>
                               {delta !== null && (
-                                <span className={`dashboard-elo-delta ${delta >= 0 ? "positive" : "negative"}`}>
-                                  {delta >= 0 ? "+" : ""}{delta}
+                                <span
+                                  className={`dashboard-elo-delta ${delta >= 0 ? "positive" : "negative"}`}
+                                >
+                                  {delta >= 0 ? "+" : ""}
+                                  {delta}
                                 </span>
                               )}
                             </span>
@@ -494,18 +546,32 @@ export function Timeline({
                         return (
                           <div key={i} className="dashboard-event">
                             <span className="dashboard-event-icon">⚽</span>
-                            <span className="dashboard-event-time">{formatTime(event.time)}</span>
+                            <span className="dashboard-event-time">
+                              {formatTime(event.time)}
+                            </span>
                             <span className="dashboard-event-body">
                               {winners.map((id, j) => (
                                 <span key={id}>
-                                  {j > 0 && <span className="dashboard-match-sep"> & </span>}
+                                  {j > 0 && (
+                                    <span className="dashboard-match-sep">
+                                      {" "}
+                                      &{" "}
+                                    </span>
+                                  )}
                                   {renderPlayer(id, true)}
                                 </span>
                               ))}
-                              <span className="dashboard-match-vs">{t("timeline.wonVs")}</span>
+                              <span className="dashboard-match-vs">
+                                {t("timeline.wonVs")}
+                              </span>
                               {losers.map((id, j) => (
                                 <span key={id}>
-                                  {j > 0 && <span className="dashboard-match-sep"> & </span>}
+                                  {j > 0 && (
+                                    <span className="dashboard-match-sep">
+                                      {" "}
+                                      &{" "}
+                                    </span>
+                                  )}
                                   {renderPlayer(id, false)}
                                 </span>
                               ))}
@@ -516,16 +582,34 @@ export function Timeline({
 
                     {group.kind === "achievements" &&
                       group.events.map((event, i) => {
-                        const def = ACHIEVEMENT_DEFINITIONS.find((d) => d.id === event.row.achievement_id);
-                        const playerName = playerMap.get(event.row.player_id)?.name ?? "?";
+                        const def = ACHIEVEMENT_DEFINITIONS.find(
+                          (d) => d.id === event.row.achievement_id,
+                        );
+                        const playerName =
+                          playerMap.get(event.row.player_id)?.name ?? "?";
                         return (
                           <div key={i} className="dashboard-event">
-                            <span className="dashboard-event-icon">{def?.icon ?? "🏅"}</span>
-                            <span className="dashboard-event-time">{formatTime(event.time)}</span>
+                            <span className="dashboard-event-icon">
+                              {def?.icon ?? "🏅"}
+                            </span>
+                            <span className="dashboard-event-time">
+                              {formatTime(event.time)}
+                            </span>
                             <span className="dashboard-event-body">
-                              <span className="dashboard-match-winner">{playerName}</span>
+                              <span className="dashboard-match-winner">
+                                {playerName}
+                              </span>
                               {t("timeline.earned")}
-                              <span className="dashboard-achievement-name">"{def ? t(`achievementDefs.${def.id}.name`, def.name) : event.row.achievement_id}"</span>
+                              <span className="dashboard-achievement-name">
+                                "
+                                {def
+                                  ? t(
+                                      `achievementDefs.${def.id}.name`,
+                                      def.name,
+                                    )
+                                  : event.row.achievement_id}
+                                "
+                              </span>
                             </span>
                           </div>
                         );
@@ -537,9 +621,19 @@ export function Timeline({
                           <span className="dashboard-event-icon">🏆</span>
                           <span className="dashboard-event-time" />
                           <span className="dashboard-event-body">
-                            <span className="dashboard-season-label">{t("timeline.seasonEnded", { number: group.event.endedSeason.number, name: group.event.endedSeason.name })}</span>
+                            <span className="dashboard-season-label">
+                              {t("timeline.seasonEnded", {
+                                number: group.event.endedSeason.number,
+                                name: group.event.endedSeason.name,
+                              })}
+                            </span>
                             <span className="dashboard-match-sep"> · </span>
-                            <span className="dashboard-season-label">{t("timeline.seasonStarted", { number: group.event.startedSeason.number, name: group.event.startedSeason.name })}</span>
+                            <span className="dashboard-season-label">
+                              {t("timeline.seasonStarted", {
+                                number: group.event.startedSeason.number,
+                                name: group.event.startedSeason.name,
+                              })}
+                            </span>
                           </span>
                         </div>
                         <SeasonPodium
@@ -553,16 +647,21 @@ export function Timeline({
 
                     {group.kind === "rankings" &&
                       group.events.map((event, i) => {
-                        const playerName = playerMap.get(event.playerId)?.name ?? "?";
+                        const playerName =
+                          playerMap.get(event.playerId)?.name ?? "?";
                         if (event.type === "first_game") {
                           return (
                             <div key={i} className="dashboard-event">
                               <span className="dashboard-event-icon">⭐</span>
                               <span className="dashboard-event-time" />
                               <span className="dashboard-event-body">
-                                <span className="dashboard-match-winner">{playerName}</span>
+                                <span className="dashboard-match-winner">
+                                  {playerName}
+                                </span>
                                 {t("timeline.firstGame")}
-                                <span className="dashboard-rank">#{event.rank}</span>
+                                <span className="dashboard-rank">
+                                  #{event.rank}
+                                </span>
                               </span>
                             </div>
                           );
@@ -570,14 +669,24 @@ export function Timeline({
                         const movedUp = event.fromRank > event.toRank;
                         return (
                           <div key={i} className="dashboard-event">
-                            <span className="dashboard-event-icon">{movedUp ? "📈" : "📉"}</span>
+                            <span className="dashboard-event-icon">
+                              {movedUp ? "📈" : "📉"}
+                            </span>
                             <span className="dashboard-event-time" />
                             <span className="dashboard-event-body">
-                              <span className="dashboard-match-winner">{playerName}</span>
-                              {movedUp ? t("timeline.movedUp") : t("timeline.dropped")}
-                              <span className="dashboard-rank">#{event.fromRank}</span>
+                              <span className="dashboard-match-winner">
+                                {playerName}
+                              </span>
+                              {movedUp
+                                ? t("timeline.movedUp")
+                                : t("timeline.dropped")}
+                              <span className="dashboard-rank">
+                                #{event.fromRank}
+                              </span>
                               {t("timeline.to")}
-                              <span className="dashboard-rank">#{event.toRank}</span>
+                              <span className="dashboard-rank">
+                                #{event.toRank}
+                              </span>
                             </span>
                           </div>
                         );
@@ -590,7 +699,10 @@ export function Timeline({
         ))}
       </div>
       {hasMore && (
-        <div ref={sentinelRef} className="flex justify-center py-6 text-text-light text-sm">
+        <div
+          ref={sentinelRef}
+          className="flex justify-center py-6 text-text-light text-sm"
+        >
           {t("timeline.loadingOlder")}
         </div>
       )}

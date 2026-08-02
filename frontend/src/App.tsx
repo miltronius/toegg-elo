@@ -10,6 +10,7 @@ import {
   getActiveSeason,
   getSeasons,
   getAllPlayerSeasonStats,
+  getBanners,
   deleteMatch,
   Player,
   Match,
@@ -17,6 +18,7 @@ import {
   TeamNameRow,
   Season,
   PlayerSeasonStats,
+  Banner,
 } from "./lib/supabase";
 import type { PlayerAchievementRow } from "./lib/achievements";
 import { useAuth } from "./contexts/AuthContext";
@@ -30,6 +32,8 @@ import { Leaderboard } from "./components/Leaderboard";
 import { MatchHistory } from "./components/MatchHistory";
 import { PlayerDetail } from "./components/PlayerDetail";
 import { UserManagement } from "./components/UserManagement";
+import { BannerAdmin } from "./components/BannerAdmin";
+import { MessageBanner } from "./components/MessageBanner";
 import { Teams } from "./components/Teams";
 import { TeamDetail } from "./components/TeamDetail";
 import { RelationshipGraph } from "./components/RelationshipGraph";
@@ -52,6 +56,7 @@ interface AppData {
   activeSeason: Season | null;
   seasons: Season[];
   allPlayerSeasonStats: PlayerSeasonStats[];
+  banners: Banner[];
 }
 
 // Single parallel fetch for everything the dashboard needs. Replaces the old
@@ -68,6 +73,7 @@ async function fetchAppData(): Promise<AppData> {
     seasons,
     allPlayerSeasonStats,
     allHistory,
+    banners,
   ] = await Promise.all([
     getPlayers(),
     getMatches(),
@@ -77,6 +83,7 @@ async function fetchAppData(): Promise<AppData> {
     getSeasons(),
     getAllPlayerSeasonStats(),
     getAllEloHistory(),
+    getBanners(),
   ]);
 
   // Group the flat history by player. Pre-seed every known player so each has
@@ -100,6 +107,7 @@ async function fetchAppData(): Promise<AppData> {
     activeSeason,
     seasons,
     allPlayerSeasonStats,
+    banners,
   };
 }
 
@@ -110,6 +118,7 @@ const EMPTY_TEAM_NAMES: TeamNameRow[] = [];
 const EMPTY_ACHIEVEMENTS: PlayerAchievementRow[] = [];
 const EMPTY_SEASONS: Season[] = [];
 const EMPTY_SEASON_STATS: PlayerSeasonStats[] = [];
+const EMPTY_BANNERS: Banner[] = [];
 const EMPTY_ELO_HISTORY = new Map<string, EloHistory[]>();
 
 function App() {
@@ -136,11 +145,14 @@ function App() {
     if (pulseTimerRef.current) clearTimeout(pulseTimerRef.current);
     pulseTimerRef.current = setTimeout(() => setUpdatePulse(false), 2000);
   };
-  useEffect(() => () => {
-    if (pulseTimerRef.current) clearTimeout(pulseTimerRef.current);
-  }, []);
+  useEffect(
+    () => () => {
+      if (pulseTimerRef.current) clearTimeout(pulseTimerRef.current);
+    },
+    [],
+  );
 
-  // Background refresh after a mutation — keeps the current UI on screen. The
+  // Background refresh after a mutation - keeps the current UI on screen. The
   // self-vs-remote stamp lives in the data layer (markLocalMutation), set at the
   // start of each mutation so realtime echoes of our own writes don't toast us.
   const refresh = () => {
@@ -166,16 +178,21 @@ function App() {
   const activeSeason = data?.activeSeason ?? null;
   const seasons = data?.seasons ?? EMPTY_SEASONS;
   const allPlayerSeasonStats = data?.allPlayerSeasonStats ?? EMPTY_SEASON_STATS;
+  const banners = data?.banners ?? EMPTY_BANNERS;
 
   // `undefined` means "no explicit choice yet" → fall back to the active
   // season. A user choice (including `null` = all seasons) overrides it. This
   // derives the default during render instead of via an effect.
-  const [selectedSeason, setSelectedSeason] = useState<Season | null | undefined>(undefined);
+  const [selectedSeason, setSelectedSeason] = useState<
+    Season | null | undefined
+  >(undefined);
   const [selectedTeam, setSelectedTeam] = useState<TeamStats | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [authOpen, setAuthOpen] = useState(false);
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
-  const [playerDetailInitialTab, setPlayerDetailInitialTab] = useState<"stats" | "achievements">("stats");
+  const [playerDetailInitialTab, setPlayerDetailInitialTab] = useState<
+    "stats" | "achievements"
+  >("stats");
   const [activeTab, setActiveTab] = useState<
     | "leaderboard"
     | "history"
@@ -192,7 +209,8 @@ function App() {
   const canSeeFullHistory = role === "user" || role === "admin";
   const visibleMatches = canSeeFullHistory ? matches : matches.slice(0, 5);
 
-  const effectiveSeason = selectedSeason === undefined ? activeSeason : selectedSeason;
+  const effectiveSeason =
+    selectedSeason === undefined ? activeSeason : selectedSeason;
 
   // Always reflect the freshest player data (e.g. after an inline edit) by
   // deriving the open player from the loaded list rather than holding a copy.
@@ -206,9 +224,9 @@ function App() {
     if (user) {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- syncing UI to external auth state
       setAuthOpen(false);
-      setActiveTab((prev) => prev === "leaderboard" ? "timeline" : prev);
+      setActiveTab((prev) => (prev === "leaderboard" ? "timeline" : prev));
     } else {
-      setActiveTab((prev) => prev === "timeline" ? "leaderboard" : prev);
+      setActiveTab((prev) => (prev === "timeline" ? "leaderboard" : prev));
     }
   }, [user]);
 
@@ -227,7 +245,8 @@ function App() {
       : EMPTY_SEASON_STATS;
   }, [allPlayerSeasonStats, effectiveSeason, activeSeason]);
 
-  const handleSeasonSelect = (season: Season | null) => setSelectedSeason(season);
+  const handleSeasonSelect = (season: Season | null) =>
+    setSelectedSeason(season);
 
   const teams = useMemo(
     () => computeTeamStats(matches, players, teamNames),
@@ -248,7 +267,11 @@ function App() {
   const appContent = (
     <div className="min-h-screen flex flex-col">
       {isFetching && !isLoading && (
-        <div className="app-refetch-bar" role="progressbar" aria-label={t("app.refreshing")} />
+        <div
+          className="app-refetch-bar"
+          role="progressbar"
+          aria-label={t("app.refreshing")}
+        />
       )}
       <header className="bg-white border-b border-border px-8 py-6 flex justify-between items-center shadow-sm flex-wrap gap-3">
         <h1 className="text-[1.875rem] font-bold">{t("app.title")}</h1>
@@ -273,13 +296,18 @@ function App() {
           <div className="flex items-center gap-2">
             {user ? (
               <>
-                <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-bg-light border border-border text-text-light uppercase tracking-wide">{role}</span>
+                <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-bg-light border border-border text-text-light uppercase tracking-wide">
+                  {role}
+                </span>
                 <button className="btn-secondary" onClick={signOut}>
                   {t("app.signOut")}
                 </button>
               </>
             ) : (
-              <button className="btn-secondary" onClick={() => setAuthOpen(true)}>
+              <button
+                className="btn-secondary"
+                onClick={() => setAuthOpen(true)}
+              >
                 {t("app.signIn")}
               </button>
             )}
@@ -290,40 +318,69 @@ function App() {
         className={`data-update-pulse${updatePulse ? " active" : ""}`}
         aria-hidden="true"
       />
+      <MessageBanner
+        banners={banners}
+        seasons={seasons}
+        signedIn={Boolean(user)}
+      />
       <nav className="flex gap-1 bg-white border-b border-border px-6 overflow-x-auto">
         {user && (
-          <button className={tabCls("timeline")} onClick={() => setActiveTab("timeline")}>
+          <button
+            className={tabCls("timeline")}
+            onClick={() => setActiveTab("timeline")}
+          >
             {t("tabs.timeline")}
           </button>
         )}
-        <button className={tabCls("leaderboard")} onClick={() => setActiveTab("leaderboard")}>
+        <button
+          className={tabCls("leaderboard")}
+          onClick={() => setActiveTab("leaderboard")}
+        >
           {t("tabs.leaderboard")}
         </button>
         {user && (
-          <button className={tabCls("teams")} onClick={() => setActiveTab("teams")}>
+          <button
+            className={tabCls("teams")}
+            onClick={() => setActiveTab("teams")}
+          >
             {t("tabs.teams")}
           </button>
         )}
         {user && (
-          <button className={tabCls("relationships")} onClick={() => setActiveTab("relationships")}>
+          <button
+            className={tabCls("relationships")}
+            onClick={() => setActiveTab("relationships")}
+          >
             {t("tabs.relationships")}
           </button>
         )}
         {canEdit && (
-          <button className={tabCls("match")} onClick={() => setActiveTab("match")}>
+          <button
+            className={tabCls("match")}
+            onClick={() => setActiveTab("match")}
+          >
             {t("tabs.match")}
           </button>
         )}
-        <button className={tabCls("history")} onClick={() => setActiveTab("history")}>
+        <button
+          className={tabCls("history")}
+          onClick={() => setActiveTab("history")}
+        >
           {t("tabs.history")}
         </button>
         {canEdit && (
-          <button className={tabCls("achievements")} onClick={() => setActiveTab("achievements")}>
+          <button
+            className={tabCls("achievements")}
+            onClick={() => setActiveTab("achievements")}
+          >
             {t("tabs.achievements")}
           </button>
         )}
         {isAdmin && (
-          <button className={tabCls("users")} onClick={() => setActiveTab("users")}>
+          <button
+            className={tabCls("users")}
+            onClick={() => setActiveTab("users")}
+          >
             {t("tabs.admin")}
           </button>
         )}
@@ -430,7 +487,14 @@ function App() {
           />
         )}
         {activeTab === "users" && isAdmin && (
-          <UserManagement onRecomputed={refresh} />
+          <>
+            <UserManagement onRecomputed={refresh} />
+            <BannerAdmin
+              banners={banners}
+              seasons={seasons}
+              onChanged={refresh}
+            />
+          </>
         )}
       </main>
       {canEdit && (

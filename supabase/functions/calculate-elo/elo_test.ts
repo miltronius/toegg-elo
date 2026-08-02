@@ -56,19 +56,25 @@ Deno.test("calculateNewElo: equal teams, loser loses ELO", () => {
   assertEquals(newElo < 1500, true);
 });
 
-Deno.test("calculateNewElo: equal teams, win gain = loss penalty (symmetric)", () => {
-  const gain = calculateNewElo(1500, 1500, 1500, true) - 1500;
-  const loss = 1500 - calculateNewElo(1500, 1500, 1500, false);
-  assertEquals(gain, loss);
-});
+Deno.test(
+  "calculateNewElo: equal teams, win gain = loss penalty (symmetric)",
+  () => {
+    const gain = calculateNewElo(1500, 1500, 1500, true) - 1500;
+    const loss = 1500 - calculateNewElo(1500, 1500, 1500, false);
+    assertEquals(gain, loss);
+  },
+);
 
-Deno.test("calculateNewElo: upset win gives larger gain than expected win", () => {
-  // Underdog beats heavy favourites
-  const upsetGain = calculateNewElo(1300, 1700, 1700, true) - 1300;
-  // Favourite beats underdogs
-  const expectedGain = calculateNewElo(1700, 1300, 1300, true) - 1700;
-  assertEquals(upsetGain > expectedGain, true);
-});
+Deno.test(
+  "calculateNewElo: upset win gives larger gain than expected win",
+  () => {
+    // Underdog beats heavy favourites
+    const upsetGain = calculateNewElo(1300, 1700, 1700, true) - 1300;
+    // Favourite beats underdogs
+    const expectedGain = calculateNewElo(1700, 1300, 1300, true) - 1700;
+    assertEquals(upsetGain > expectedGain, true);
+  },
+);
 
 Deno.test("calculateNewElo: heavily favoured winner gains little ELO", () => {
   const gain = calculateNewElo(1800, 1300, 1300, true) - 1800;
@@ -76,7 +82,7 @@ Deno.test("calculateNewElo: heavily favoured winner gains little ELO", () => {
 });
 
 Deno.test("calculateNewElo: expected loser loses little ELO", () => {
-  // Underdog loses to heavy favourites — expected outcome, should cost little
+  // Underdog loses to heavy favourites - expected outcome, should cost little
   const loss = 1300 - calculateNewElo(1300, 1800, 1800, false);
   assertEquals(loss >= 0 && loss < 5, true);
 });
@@ -98,28 +104,47 @@ function applyChange(
   won: boolean,
   kFactor = 32,
 ): { eloBefore: number; eloAfter: number; eloChange: number } {
-  const newSeasonElo = calculateNewElo(seasonElo, opp1SeasonElo, opp2SeasonElo, won, kFactor);
+  const newSeasonElo = calculateNewElo(
+    seasonElo,
+    opp1SeasonElo,
+    opp2SeasonElo,
+    won,
+    kFactor,
+  );
   const delta = newSeasonElo - seasonElo;
-  return { eloBefore: currentElo, eloAfter: currentElo + delta, eloChange: delta };
+  return {
+    eloBefore: currentElo,
+    eloAfter: currentElo + delta,
+    eloChange: delta,
+  };
 }
 
-Deno.test("season ELO: all players at 1500 season ELO → winner and loser change is symmetric", () => {
-  const winner = applyChange(1600, 1500, 1500, 1500, true);
-  const loser = applyChange(1400, 1500, 1500, 1500, false);
-  assertEquals(winner.eloChange, -loser.eloChange);
-});
+Deno.test(
+  "season ELO: all players at 1500 season ELO → winner and loser change is symmetric",
+  () => {
+    const winner = applyChange(1600, 1500, 1500, 1500, true);
+    const loser = applyChange(1400, 1500, 1500, 1500, false);
+    assertEquals(winner.eloChange, -loser.eloChange);
+  },
+);
 
-Deno.test("season ELO: all players at 1500 season ELO → all winners gain same amount", () => {
-  const w1 = applyChange(1800, 1500, 1500, 1500, true);
-  const w2 = applyChange(1300, 1500, 1500, 1500, true);
-  assertEquals(w1.eloChange, w2.eloChange);
-});
+Deno.test(
+  "season ELO: all players at 1500 season ELO → all winners gain same amount",
+  () => {
+    const w1 = applyChange(1800, 1500, 1500, 1500, true);
+    const w2 = applyChange(1300, 1500, 1500, 1500, true);
+    assertEquals(w1.eloChange, w2.eloChange);
+  },
+);
 
-Deno.test("season ELO: all players at 1500 season ELO → all losers lose same amount", () => {
-  const l1 = applyChange(1800, 1500, 1500, 1500, false);
-  const l2 = applyChange(1300, 1500, 1500, 1500, false);
-  assertEquals(l1.eloChange, l2.eloChange);
-});
+Deno.test(
+  "season ELO: all players at 1500 season ELO → all losers lose same amount",
+  () => {
+    const l1 = applyChange(1800, 1500, 1500, 1500, false);
+    const l2 = applyChange(1300, 1500, 1500, 1500, false);
+    assertEquals(l1.eloChange, l2.eloChange);
+  },
+);
 
 Deno.test("season ELO: delta applied to all-time ELO, not season ELO", () => {
   // Player has all-time ELO of 1700 but season ELO of 1500 (new season).

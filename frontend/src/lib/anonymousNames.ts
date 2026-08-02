@@ -1,4 +1,4 @@
-// Generates a player's "anonymous name" — a real musician whose first name starts with
+// Generates a player's "anonymous name" - a real musician whose first name starts with
 // the same letter as the player's real name (e.g. Milton -> Mike Rutherford,
 // Franz -> Freddie Mercury). Used to hide real names from viewers / logged-out users.
 //
@@ -211,7 +211,7 @@ export function generateAnonymousName(
     return anyAvailable[Math.floor(Math.random() * anyAvailable.length)];
   }
 
-  // Everything is taken — suffix a base name until unique.
+  // Everything is taken - suffix a base name until unique.
   const base =
     sameLetter[0] ??
     ALL_MUSICIANS[Math.floor(Math.random() * ALL_MUSICIANS.length)];

@@ -163,11 +163,11 @@ describe("computeTeamStats", () => {
     const teams = computeTeamStats(matches, allPlayers, []);
     const ab = teams.find((t) => t.player_id_lo === "aaa")!;
     expect(ab.rivals.length).toBeLessThanOrEqual(3);
-    // EF is the nemesis (2 losses) — must be first
+    // EF is the nemesis (2 losses) - must be first
     const efKey = teamKey("eee", "fff");
     expect(ab.rivals[0].key).toBe(efKey);
     expect(ab.rivals[0].losses).toBe(2);
-    // CD has 0 losses — should be last despite most matches
+    // CD has 0 losses - should be last despite most matches
     const cdKey = teamKey("ccc", "ddd");
     expect(ab.rivals[ab.rivals.length - 1].key).toBe(cdKey);
   });

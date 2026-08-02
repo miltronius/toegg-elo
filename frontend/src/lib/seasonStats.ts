@@ -1,7 +1,7 @@
 import type { Match, Player, EloHistory } from "./supabase";
 import type { PlayerAchievementRow } from "./achievements";
 
-// Monday–Friday only — foosball is played on working days, consistent with
+// Monday–Friday only - foosball is played on working days, consistent with
 // weekdayStats.ts and the all_weekdays achievement. getDay(): 0=Sun..6=Sat.
 const WEEKDAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri"];
 
@@ -73,7 +73,7 @@ function matchPlayerIds(m: Match): string[] {
 
 /**
  * Aggregate headline statistics for a season (or all-time when `seasonId` is
- * null). Pure — no DB access. Only real matches count; inactivity-penalty rows
+ * null). Pure - no DB access. Only real matches count; inactivity-penalty rows
  * (match_id == null) are ignored for ELO-based stats.
  */
 export function computeSeasonStats(
@@ -163,7 +163,9 @@ export function computeSeasonStats(
     }
   }
   const normElo = (pid: string, alltime: number): number =>
-    seasonId == null ? alltime : 1500 + (alltime - (startById.get(pid)?.elo ?? alltime));
+    seasonId == null
+      ? alltime
+      : 1500 + (alltime - (startById.get(pid)?.elo ?? alltime));
 
   // Best/worst single-day net ELO swing + biggest single-match gain/drop +
   // highest/lowest ELO score reached.
@@ -177,7 +179,10 @@ export function computeSeasonStats(
     if (h.elo_change > 0 && (!biggestWin || h.elo_change > biggestWin.gain)) {
       biggestWin = { name, gain: h.elo_change };
     }
-    if (h.elo_change < 0 && (!biggestLoss || -h.elo_change > biggestLoss.drop)) {
+    if (
+      h.elo_change < 0 &&
+      (!biggestLoss || -h.elo_change > biggestLoss.drop)
+    ) {
       biggestLoss = { name, drop: -h.elo_change };
     }
     const elo = normElo(h.player_id, h.elo_after);
@@ -213,7 +218,12 @@ export function computeSeasonStats(
       winrate > winRateLeader.winrate ||
       (winrate === winRateLeader.winrate && games > winRateLeader.games)
     ) {
-      winRateLeader = { name: nameById.get(pid) ?? "?", winrate, games, minGames };
+      winRateLeader = {
+        name: nameById.get(pid) ?? "?",
+        winrate,
+        games,
+        minGames,
+      };
     }
   }
 

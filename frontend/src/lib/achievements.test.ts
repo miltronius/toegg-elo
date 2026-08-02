@@ -7,7 +7,16 @@ import type { Match, Player, EloHistory } from "./supabase";
 // ---------------------------------------------------------------------------
 
 function makePlayer(id = "p1"): Player {
-  return { id, name: "Test", current_elo: 1500, matches_played: 0, wins: 0, losses: 0, created_at: "", anonymous_name: null };
+  return {
+    id,
+    name: "Test",
+    current_elo: 1500,
+    matches_played: 0,
+    wins: 0,
+    losses: 0,
+    created_at: "",
+    anonymous_name: null,
+  };
 }
 
 let matchCounter = 0;
@@ -48,7 +57,9 @@ describe("all_weekdays achievement", () => {
       makeMatch({ id: "w5", created_at: onDay(4) }), // Fri
     ];
     const result = computeAchievementsForPlayer("p1", makePlayer(), matches);
-    expect(result.find((a) => a.achievementId === "all_weekdays")).toBeDefined();
+    expect(
+      result.find((a) => a.achievementId === "all_weekdays"),
+    ).toBeDefined();
   });
 
   it("does not unlock with only 4 workdays", () => {
@@ -59,7 +70,9 @@ describe("all_weekdays achievement", () => {
       makeMatch({ id: "d4", created_at: onDay(3) }), // Thu
     ];
     const result = computeAchievementsForPlayer("p1", makePlayer(), matches);
-    expect(result.find((a) => a.achievementId === "all_weekdays")).toBeUndefined();
+    expect(
+      result.find((a) => a.achievementId === "all_weekdays"),
+    ).toBeUndefined();
   });
 
   it("does not unlock with 5 matches all on the same day", () => {
@@ -71,30 +84,34 @@ describe("all_weekdays achievement", () => {
       makeMatch({ id: "s5", created_at: onDay(0, 13) }),
     ];
     const result = computeAchievementsForPlayer("p1", makePlayer(), matches);
-    expect(result.find((a) => a.achievementId === "all_weekdays")).toBeUndefined();
+    expect(
+      result.find((a) => a.achievementId === "all_weekdays"),
+    ).toBeUndefined();
   });
 
   it("weekend matches do not count toward the 5 workdays", () => {
     const matches = [
-      makeMatch({ id: "we1", created_at: onDay(0) }),  // Mon
-      makeMatch({ id: "we2", created_at: onDay(1) }),  // Tue
-      makeMatch({ id: "we3", created_at: onDay(2) }),  // Wed
-      makeMatch({ id: "we4", created_at: onDay(3) }),  // Thu
-      makeMatch({ id: "we5", created_at: onDay(5) }),  // Sat — should not count
-      makeMatch({ id: "we6", created_at: onDay(6) }),  // Sun — should not count
+      makeMatch({ id: "we1", created_at: onDay(0) }), // Mon
+      makeMatch({ id: "we2", created_at: onDay(1) }), // Tue
+      makeMatch({ id: "we3", created_at: onDay(2) }), // Wed
+      makeMatch({ id: "we4", created_at: onDay(3) }), // Thu
+      makeMatch({ id: "we5", created_at: onDay(5) }), // Sat - should not count
+      makeMatch({ id: "we6", created_at: onDay(6) }), // Sun - should not count
     ];
     const result = computeAchievementsForPlayer("p1", makePlayer(), matches);
-    expect(result.find((a) => a.achievementId === "all_weekdays")).toBeUndefined();
+    expect(
+      result.find((a) => a.achievementId === "all_weekdays"),
+    ).toBeUndefined();
   });
 
   it("unlocks when 5th workday is reached even if weekends were played too", () => {
     const matches = [
-      makeMatch({ id: "mx1", created_at: onDay(0) }),  // Mon
-      makeMatch({ id: "mx2", created_at: onDay(1) }),  // Tue
-      makeMatch({ id: "mx3", created_at: onDay(5) }),  // Sat (ignored)
-      makeMatch({ id: "mx4", created_at: onDay(2) }),  // Wed
-      makeMatch({ id: "mx5", created_at: onDay(3) }),  // Thu
-      makeMatch({ id: "mx6", created_at: onDay(4) }),  // Fri — completes all 5
+      makeMatch({ id: "mx1", created_at: onDay(0) }), // Mon
+      makeMatch({ id: "mx2", created_at: onDay(1) }), // Tue
+      makeMatch({ id: "mx3", created_at: onDay(5) }), // Sat (ignored)
+      makeMatch({ id: "mx4", created_at: onDay(2) }), // Wed
+      makeMatch({ id: "mx5", created_at: onDay(3) }), // Thu
+      makeMatch({ id: "mx6", created_at: onDay(4) }), // Fri - completes all 5
     ];
     const result = computeAchievementsForPlayer("p1", makePlayer(), matches);
     const achievement = result.find((a) => a.achievementId === "all_weekdays");
@@ -143,10 +160,18 @@ function makeRoster(ids: string[]): Player[] {
 
 // p1 sits in team A by default, so winning_team "A" is a win for p1.
 function p1Win(seq: number): Match {
-  return makeMatch({ id: `w${seq}`, winning_team: "A", created_at: onDay(0, seq) });
+  return makeMatch({
+    id: `w${seq}`,
+    winning_team: "A",
+    created_at: onDay(0, seq),
+  });
 }
 function p1Loss(seq: number): Match {
-  return makeMatch({ id: `l${seq}`, winning_team: "B", created_at: onDay(0, seq) });
+  return makeMatch({
+    id: `l${seq}`,
+    winning_team: "B",
+    created_at: onDay(0, seq),
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -155,19 +180,32 @@ function p1Loss(seq: number): Match {
 
 describe("win streak achievements", () => {
   it("unlocks Unstoppable on 3 consecutive wins", () => {
-    const r = computeAchievementsForPlayer("p1", makePlayer(), [p1Win(1), p1Win(2), p1Win(3)]);
+    const r = computeAchievementsForPlayer("p1", makePlayer(), [
+      p1Win(1),
+      p1Win(2),
+      p1Win(3),
+    ]);
     expect(r.find((a) => a.achievementId === "streak_win_3")).toBeDefined();
     expect(r.find((a) => a.achievementId === "streak_win_5")).toBeUndefined();
   });
 
   it("does not unlock when the streak is broken before 3", () => {
-    const r = computeAchievementsForPlayer("p1", makePlayer(), [p1Win(1), p1Win(2), p1Loss(3), p1Win(4)]);
+    const r = computeAchievementsForPlayer("p1", makePlayer(), [
+      p1Win(1),
+      p1Win(2),
+      p1Loss(3),
+      p1Win(4),
+    ]);
     expect(r.find((a) => a.achievementId === "streak_win_3")).toBeUndefined();
   });
 
   it("unlocks Can't Stop Winning at 5 and dates tier 3 at the 3rd win", () => {
     const r = computeAchievementsForPlayer("p1", makePlayer(), [
-      p1Win(1), p1Win(2), p1Win(3), p1Win(4), p1Win(5),
+      p1Win(1),
+      p1Win(2),
+      p1Win(3),
+      p1Win(4),
+      p1Win(5),
     ]);
     expect(r.find((a) => a.achievementId === "streak_win_5")).toBeDefined();
     const tier3 = r.find((a) => a.achievementId === "streak_win_3");
@@ -177,12 +215,19 @@ describe("win streak achievements", () => {
 
 describe("loss streak achievements", () => {
   it("unlocks Rough Patch on 3 consecutive losses", () => {
-    const r = computeAchievementsForPlayer("p1", makePlayer(), [p1Loss(1), p1Loss(2), p1Loss(3)]);
+    const r = computeAchievementsForPlayer("p1", makePlayer(), [
+      p1Loss(1),
+      p1Loss(2),
+      p1Loss(3),
+    ]);
     expect(r.find((a) => a.achievementId === "streak_loss_3")).toBeDefined();
   });
 
   it("does not unlock on a 2-loss streak", () => {
-    const r = computeAchievementsForPlayer("p1", makePlayer(), [p1Loss(1), p1Loss(2)]);
+    const r = computeAchievementsForPlayer("p1", makePlayer(), [
+      p1Loss(1),
+      p1Loss(2),
+    ]);
     expect(r.find((a) => a.achievementId === "streak_loss_3")).toBeUndefined();
   });
 });
@@ -194,7 +239,10 @@ describe("loss streak achievements", () => {
 describe("comeback_kid achievement", () => {
   it("unlocks on a win that ends a 3+ loss streak, dated at that win", () => {
     const r = computeAchievementsForPlayer("p1", makePlayer(), [
-      p1Loss(1), p1Loss(2), p1Loss(3), p1Win(4),
+      p1Loss(1),
+      p1Loss(2),
+      p1Loss(3),
+      p1Win(4),
     ]);
     const c = r.find((a) => a.achievementId === "comeback_kid");
     expect(c).toBeDefined();
@@ -202,7 +250,11 @@ describe("comeback_kid achievement", () => {
   });
 
   it("does not unlock after only a 2-loss streak", () => {
-    const r = computeAchievementsForPlayer("p1", makePlayer(), [p1Loss(1), p1Loss(2), p1Win(3)]);
+    const r = computeAchievementsForPlayer("p1", makePlayer(), [
+      p1Loss(1),
+      p1Loss(2),
+      p1Win(3),
+    ]);
     expect(r.find((a) => a.achievementId === "comeback_kid")).toBeUndefined();
   });
 });
@@ -213,14 +265,23 @@ describe("comeback_kid achievement", () => {
 
 describe("punching_bag achievement", () => {
   it("unlocks on 3 consecutive wins vs the same opponent", () => {
-    const r = computeAchievementsForPlayer("p1", makePlayer(), [p1Win(1), p1Win(2), p1Win(3)]);
+    const r = computeAchievementsForPlayer("p1", makePlayer(), [
+      p1Win(1),
+      p1Win(2),
+      p1Win(3),
+    ]);
     const pb = r.find((a) => a.achievementId === "punching_bag");
     expect(pb).toBeDefined();
     expect(pb!.meta?.opponentId).toBe("p3");
   });
 
   it("resets when a meeting is lost", () => {
-    const r = computeAchievementsForPlayer("p1", makePlayer(), [p1Win(1), p1Win(2), p1Loss(3), p1Win(4)]);
+    const r = computeAchievementsForPlayer("p1", makePlayer(), [
+      p1Win(1),
+      p1Win(2),
+      p1Loss(3),
+      p1Win(4),
+    ]);
     expect(r.find((a) => a.achievementId === "punching_bag")).toBeUndefined();
   });
 });
@@ -231,14 +292,24 @@ describe("punching_bag achievement", () => {
 
 describe("teams achievements", () => {
   it("does not unlock Pairing Up after a single match with a partner", () => {
-    const r = computeAchievementsForPlayer("p1", makePlayer(), [makeMatch({ id: "t1" })]);
+    const r = computeAchievementsForPlayer("p1", makePlayer(), [
+      makeMatch({ id: "t1" }),
+    ]);
     expect(r.find((a) => a.achievementId === "teams_1")).toBeUndefined();
   });
 
   it("unlocks Pairing Up after teaming with the same partner twice", () => {
     const matches = [
-      makeMatch({ id: "t1", created_at: onDay(0, 1), team_a_player_2_id: "p2" }),
-      makeMatch({ id: "t2", created_at: onDay(0, 2), team_a_player_2_id: "p2" }),
+      makeMatch({
+        id: "t1",
+        created_at: onDay(0, 1),
+        team_a_player_2_id: "p2",
+      }),
+      makeMatch({
+        id: "t2",
+        created_at: onDay(0, 2),
+        team_a_player_2_id: "p2",
+      }),
     ];
     const r = computeAchievementsForPlayer("p1", makePlayer(), matches);
     expect(r.find((a) => a.achievementId === "teams_1")).toBeDefined();
@@ -246,7 +317,11 @@ describe("teams achievements", () => {
 
   it("counts a partner only once no matter how many matches they share", () => {
     const matches = Array.from({ length: 10 }, (_, i) =>
-      makeMatch({ id: `t${i}`, created_at: onDay(0, i), team_a_player_2_id: "p2" }),
+      makeMatch({
+        id: `t${i}`,
+        created_at: onDay(0, i),
+        team_a_player_2_id: "p2",
+      }),
     );
     const r = computeAchievementsForPlayer("p1", makePlayer(), matches);
     // One partner played 10 times is still a single team, not 10.
@@ -256,12 +331,36 @@ describe("teams achievements", () => {
 
   it("unlocks Team Player with 3 partners played twice each", () => {
     const matches = [
-      makeMatch({ id: "tA1", created_at: onDay(0, 1), team_a_player_2_id: "p2" }),
-      makeMatch({ id: "tA2", created_at: onDay(0, 2), team_a_player_2_id: "p2" }),
-      makeMatch({ id: "tB1", created_at: onDay(0, 3), team_a_player_2_id: "p5" }),
-      makeMatch({ id: "tB2", created_at: onDay(0, 4), team_a_player_2_id: "p5" }),
-      makeMatch({ id: "tC1", created_at: onDay(0, 5), team_a_player_2_id: "p6" }),
-      makeMatch({ id: "tC2", created_at: onDay(0, 6), team_a_player_2_id: "p6" }),
+      makeMatch({
+        id: "tA1",
+        created_at: onDay(0, 1),
+        team_a_player_2_id: "p2",
+      }),
+      makeMatch({
+        id: "tA2",
+        created_at: onDay(0, 2),
+        team_a_player_2_id: "p2",
+      }),
+      makeMatch({
+        id: "tB1",
+        created_at: onDay(0, 3),
+        team_a_player_2_id: "p5",
+      }),
+      makeMatch({
+        id: "tB2",
+        created_at: onDay(0, 4),
+        team_a_player_2_id: "p5",
+      }),
+      makeMatch({
+        id: "tC1",
+        created_at: onDay(0, 5),
+        team_a_player_2_id: "p6",
+      }),
+      makeMatch({
+        id: "tC2",
+        created_at: onDay(0, 6),
+        team_a_player_2_id: "p6",
+      }),
     ];
     const r = computeAchievementsForPlayer("p1", makePlayer(), matches);
     expect(r.find((a) => a.achievementId === "teams_3")).toBeDefined();
@@ -270,9 +369,21 @@ describe("teams achievements", () => {
 
   it("does not unlock Team Player when partners are each played only once", () => {
     const matches = [
-      makeMatch({ id: "tA", created_at: onDay(0, 1), team_a_player_2_id: "p2" }),
-      makeMatch({ id: "tB", created_at: onDay(0, 2), team_a_player_2_id: "p5" }),
-      makeMatch({ id: "tC", created_at: onDay(0, 3), team_a_player_2_id: "p6" }),
+      makeMatch({
+        id: "tA",
+        created_at: onDay(0, 1),
+        team_a_player_2_id: "p2",
+      }),
+      makeMatch({
+        id: "tB",
+        created_at: onDay(0, 2),
+        team_a_player_2_id: "p5",
+      }),
+      makeMatch({
+        id: "tC",
+        created_at: onDay(0, 3),
+        team_a_player_2_id: "p6",
+      }),
     ];
     const r = computeAchievementsForPlayer("p1", makePlayer(), matches);
     expect(r.find((a) => a.achievementId === "teams_3")).toBeUndefined();
@@ -361,13 +472,39 @@ describe("carrying_hard and deadweight achievements", () => {
       makeMatch({ id: "cw1", winning_team: "A", created_at: onDay(0, 2) }),
     ];
     const elo = [
-      makeElo({ match_id: "cw0", player_id: "p1", elo_before: 1500, created_at: onDay(0, 1) }),
-      makeElo({ match_id: "cw0", player_id: "p2", elo_before: 1500, created_at: onDay(0, 1) }),
+      makeElo({
+        match_id: "cw0",
+        player_id: "p1",
+        elo_before: 1500,
+        created_at: onDay(0, 1),
+      }),
+      makeElo({
+        match_id: "cw0",
+        player_id: "p2",
+        elo_before: 1500,
+        created_at: onDay(0, 1),
+      }),
       // p1 climbed +200 in season ELO, p2 stayed flat → 200 gap
-      makeElo({ match_id: "cw1", player_id: "p1", elo_before: 1700, created_at: onDay(0, 2) }),
-      makeElo({ match_id: "cw1", player_id: "p2", elo_before: 1500, created_at: onDay(0, 2) }),
+      makeElo({
+        match_id: "cw1",
+        player_id: "p1",
+        elo_before: 1700,
+        created_at: onDay(0, 2),
+      }),
+      makeElo({
+        match_id: "cw1",
+        player_id: "p2",
+        elo_before: 1500,
+        created_at: onDay(0, 2),
+      }),
     ];
-    const r = computeAchievementsForPlayer("p1", makePlayer(), matches, [], elo);
+    const r = computeAchievementsForPlayer(
+      "p1",
+      makePlayer(),
+      matches,
+      [],
+      elo,
+    );
     const ch = r.find((a) => a.achievementId === "carrying_hard");
     expect(ch).toBeDefined();
     expect(ch!.meta?.partnerId).toBe("p2");
@@ -379,25 +516,69 @@ describe("carrying_hard and deadweight achievements", () => {
       makeMatch({ id: "cw1", winning_team: "A", created_at: onDay(0, 2) }),
     ];
     const elo = [
-      makeElo({ match_id: "cw0", player_id: "p1", elo_before: 1500, created_at: onDay(0, 1) }),
-      makeElo({ match_id: "cw0", player_id: "p2", elo_before: 1500, created_at: onDay(0, 1) }),
+      makeElo({
+        match_id: "cw0",
+        player_id: "p1",
+        elo_before: 1500,
+        created_at: onDay(0, 1),
+      }),
+      makeElo({
+        match_id: "cw0",
+        player_id: "p2",
+        elo_before: 1500,
+        created_at: onDay(0, 1),
+      }),
       // p2 climbed +200 in season ELO, p1 stayed flat → partner 200 above
-      makeElo({ match_id: "cw1", player_id: "p1", elo_before: 1500, created_at: onDay(0, 2) }),
-      makeElo({ match_id: "cw1", player_id: "p2", elo_before: 1700, created_at: onDay(0, 2) }),
+      makeElo({
+        match_id: "cw1",
+        player_id: "p1",
+        elo_before: 1500,
+        created_at: onDay(0, 2),
+      }),
+      makeElo({
+        match_id: "cw1",
+        player_id: "p2",
+        elo_before: 1700,
+        created_at: onDay(0, 2),
+      }),
     ];
-    const r = computeAchievementsForPlayer("p1", makePlayer(), matches, [], elo);
+    const r = computeAchievementsForPlayer(
+      "p1",
+      makePlayer(),
+      matches,
+      [],
+      elo,
+    );
     expect(r.find((a) => a.achievementId === "deadweight")).toBeDefined();
   });
 
   it("uses season ELO, not all-time, so a big all-time gap on a first season match does not count", () => {
     // Single match of the season: both players normalize to 1500 regardless of
     // their all-time ELO, so there is no season-ELO gap.
-    const matches = [makeMatch({ id: "cw1", winning_team: "A", created_at: onDay(0, 1) })];
-    const elo = [
-      makeElo({ match_id: "cw1", player_id: "p1", elo_before: 1600, created_at: onDay(0, 1) }),
-      makeElo({ match_id: "cw1", player_id: "p2", elo_before: 1390, created_at: onDay(0, 1) }),
+    const matches = [
+      makeMatch({ id: "cw1", winning_team: "A", created_at: onDay(0, 1) }),
     ];
-    const r = computeAchievementsForPlayer("p1", makePlayer(), matches, [], elo);
+    const elo = [
+      makeElo({
+        match_id: "cw1",
+        player_id: "p1",
+        elo_before: 1600,
+        created_at: onDay(0, 1),
+      }),
+      makeElo({
+        match_id: "cw1",
+        player_id: "p2",
+        elo_before: 1390,
+        created_at: onDay(0, 1),
+      }),
+    ];
+    const r = computeAchievementsForPlayer(
+      "p1",
+      makePlayer(),
+      matches,
+      [],
+      elo,
+    );
     expect(r.find((a) => a.achievementId === "carrying_hard")).toBeUndefined();
     expect(r.find((a) => a.achievementId === "deadweight")).toBeUndefined();
   });
@@ -408,12 +589,38 @@ describe("carrying_hard and deadweight achievements", () => {
       makeMatch({ id: "cl1", winning_team: "B", created_at: onDay(0, 2) }),
     ];
     const elo = [
-      makeElo({ match_id: "cl0", player_id: "p1", elo_before: 1500, created_at: onDay(0, 1) }),
-      makeElo({ match_id: "cl0", player_id: "p2", elo_before: 1500, created_at: onDay(0, 1) }),
-      makeElo({ match_id: "cl1", player_id: "p1", elo_before: 1700, created_at: onDay(0, 2) }),
-      makeElo({ match_id: "cl1", player_id: "p2", elo_before: 1500, created_at: onDay(0, 2) }),
+      makeElo({
+        match_id: "cl0",
+        player_id: "p1",
+        elo_before: 1500,
+        created_at: onDay(0, 1),
+      }),
+      makeElo({
+        match_id: "cl0",
+        player_id: "p2",
+        elo_before: 1500,
+        created_at: onDay(0, 1),
+      }),
+      makeElo({
+        match_id: "cl1",
+        player_id: "p1",
+        elo_before: 1700,
+        created_at: onDay(0, 2),
+      }),
+      makeElo({
+        match_id: "cl1",
+        player_id: "p2",
+        elo_before: 1500,
+        created_at: onDay(0, 2),
+      }),
     ];
-    const r = computeAchievementsForPlayer("p1", makePlayer(), matches, [], elo);
+    const r = computeAchievementsForPlayer(
+      "p1",
+      makePlayer(),
+      matches,
+      [],
+      elo,
+    );
     expect(r.find((a) => a.achievementId === "carrying_hard")).toBeUndefined();
     expect(r.find((a) => a.achievementId === "deadweight")).toBeUndefined();
   });
@@ -427,7 +634,10 @@ describe("party_pooper achievement", () => {
   // p1Loss = team B wins, so the opponents p3/p4 rack up the wins.
   it("unlocks when beating an opponent who came in on a 3-win streak", () => {
     const r = computeAchievementsForPlayer("p1", makePlayer(), [
-      p1Loss(1), p1Loss(2), p1Loss(3), p1Win(4),
+      p1Loss(1),
+      p1Loss(2),
+      p1Loss(3),
+      p1Win(4),
     ]);
     const pp = r.find((a) => a.achievementId === "party_pooper");
     expect(pp).toBeDefined();
@@ -437,14 +647,19 @@ describe("party_pooper achievement", () => {
 
   it("does not unlock when the opponent's streak was only 2", () => {
     const r = computeAchievementsForPlayer("p1", makePlayer(), [
-      p1Loss(1), p1Loss(2), p1Win(3),
+      p1Loss(1),
+      p1Loss(2),
+      p1Win(3),
     ]);
     expect(r.find((a) => a.achievementId === "party_pooper")).toBeUndefined();
   });
 
   it("does not unlock if you lose to the streaking opponent", () => {
     const r = computeAchievementsForPlayer("p1", makePlayer(), [
-      p1Loss(1), p1Loss(2), p1Loss(3), p1Loss(4),
+      p1Loss(1),
+      p1Loss(2),
+      p1Loss(3),
+      p1Loss(4),
     ]);
     expect(r.find((a) => a.achievementId === "party_pooper")).toBeUndefined();
   });

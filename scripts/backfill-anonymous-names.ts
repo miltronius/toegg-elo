@@ -2,7 +2,7 @@
 // that doesn't have one yet. Reuses the canonical generator in the frontend so the
 // musician list lives in exactly one place.
 //
-// Run (requires the service-role key — it bypasses RLS and can read/write real names):
+// Run (requires the service-role key - it bypasses RLS and can read/write real names):
 //
 //   SUPABASE_URL="https://<project>.supabase.co" \
 //   SUPABASE_SERVICE_ROLE_KEY="<service-role-key>" \

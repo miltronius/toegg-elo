@@ -2,7 +2,7 @@
  * Who counts as "part of the season".
  *
  * A player only becomes *ranked* once they have played `RANKED_MIN_GAMES` games
- * in the season in scope — a single lucky (or unlucky) guest appearance
+ * in the season in scope - a single lucky (or unlucky) guest appearance
  * shouldn't top or tail the board. Everyone below that still exists and still
  * has an ELO; they're just filtered out of the ranked view.
  *
@@ -11,7 +11,7 @@
  * `AUTO_SELECT_MIN_ENTRIES`. So a board is never empty because of a filter, and
  * never *defaults* to a view too thin to read.
  *
- * Pure helpers only — no DB calls, no React.
+ * Pure helpers only - no DB calls, no React.
  */
 
 /** Games needed in the season in scope before a player is ranked. */
@@ -31,14 +31,18 @@ export const FILTER_MIN_ENTRIES = 1;
 export const AUTO_SELECT_MIN_ENTRIES = 4;
 
 /**
- * `all` — the whole roster, including players who never played this season.
- * `played` — at least one game.
- * `ranked` — at least `RANKED_MIN_GAMES` games.
+ * `all` - the whole roster, including players who never played this season.
+ * `played` - at least one game.
+ * `ranked` - at least `RANKED_MIN_GAMES` games.
  */
 export type RosterFilter = "all" | "played" | "ranked";
 
 /** Widest → narrowest; also the render order of the toggle. */
-export const ROSTER_FILTERS: readonly RosterFilter[] = ["all", "played", "ranked"];
+export const ROSTER_FILTERS: readonly RosterFilter[] = [
+  "all",
+  "played",
+  "ranked",
+];
 
 /** How many players each view would show. */
 export type RosterCounts = Record<RosterFilter, number>;
@@ -71,7 +75,7 @@ export function isRanked(player: RosterEntry): boolean {
   return player.matches_played >= RANKED_MIN_GAMES;
 }
 
-/** One pass for all three views — both gating rules read from this. */
+/** One pass for all three views - both gating rules read from this. */
 export function rosterCounts(players: RosterEntry[]): RosterCounts {
   let played = 0;
   let ranked = 0;
@@ -85,7 +89,7 @@ export function rosterCounts(players: RosterEntry[]): RosterCounts {
 /**
  * `all` is always offered: it's the widest view, so nothing is hidden behind a
  * disabled button. The narrowing views are offered only when they'd show
- * someone — a button that leads to a blank table is worse than no button.
+ * someone - a button that leads to a blank table is worse than no button.
  */
 export function isFilterAvailable(
   filter: RosterFilter,
@@ -97,7 +101,7 @@ export function isFilterAvailable(
 /**
  * Narrowest view with a full match's worth of players, else the whole roster.
  * Early in a season hardly anyone has three games, so defaulting to ranked
- * would show a board of one or two — `AUTO_SELECT_MIN_ENTRIES` stops that,
+ * would show a board of one or two - `AUTO_SELECT_MIN_ENTRIES` stops that,
  * while still letting the played view take over from the very first match.
  */
 export function defaultRosterFilter(counts: RosterCounts): RosterFilter {
@@ -107,7 +111,7 @@ export function defaultRosterFilter(counts: RosterCounts): RosterFilter {
 }
 
 /**
- * A pinned choice only holds while it has data — switching to a season where
+ * A pinned choice only holds while it has data - switching to a season where
  * nobody qualifies drops back to the default instead of stranding the user on
  * an empty board whose own button is disabled.
  */

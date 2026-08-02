@@ -77,6 +77,79 @@
       "admin": "admin"
     }
   },
+  "banner": {
+    "label": "Announcements",
+    "seasonStarted": "🏆 A new season has started - Season {{number}}: {{name}}. Everyone is back at 1500 Elo. Good luck!"
+  },
+  "bannerAdmin": {
+    "title": "Message Banner",
+    "hint": "Announcements scroll across the top of the app. A new season creates its own banner automatically, running for {{days}} days - edit it below like any other.",
+    "message": "Message",
+    "messagePlaceholder": "e.g. Tournament this Friday at 17:00 - sign up in the kitchen!",
+    "seasonMessageHint": "This is the automatic text, which each viewer sees in their own language. Leave it as it is (or clear it) to keep that; change it to fix your own wording for everyone.",
+    "seasonBadge": "Season",
+    "seasonBannerTitle": "Created automatically when this season started",
+    "audience": "Who can see it",
+    "audiences": {
+      "everyone": "Everyone",
+      "members": "Logged-in users only"
+    },
+    "audienceHint": {
+      "everyone": "Shown to every visitor, including logged-out ones.",
+      "members": "Shown only to signed-in users, whatever their role."
+    },
+    "state": "Status",
+    "states": {
+      "on": "Visible",
+      "off": "Hidden"
+    },
+    "stateHintOn": "Switched on. It shows whenever it is inside the window below.",
+    "stateHintOff": "Switched off. It shows to nobody, and keeps its window for later.",
+    "from": "Show from",
+    "until": "Show until",
+    "fromHint": "Format {{format}}. Leave empty to start immediately.",
+    "untilHint": "Format {{format}}. Leave empty to run until you switch it off.",
+    "create": "Create banner",
+    "save": "Save changes",
+    "saving": "Saving…",
+    "cancel": "Cancel",
+    "edit": "Edit",
+    "delete": "Delete",
+    "hide": "Hide",
+    "show": "Show",
+    "durations": {
+      "1w": "1 week",
+      "2w": "2 weeks",
+      "1m": "1 month"
+    },
+    "clearUntil": "No end",
+    "existing": "All banners",
+    "empty": "No banners yet.",
+    "reorderHint": "Drag the handle to change the order they scroll in — the top one shows first.",
+    "reorderGrip": "Drag to reorder, or use the arrow keys",
+    "reorderError": "Failed to save the new order.",
+    "confirmDelete": "Delete this banner?",
+    "messageRequired": "A message is required.",
+    "windowOrder": "\"Show until\" must be after \"Show from\".",
+    "dateInvalid": "Dates must look like {{format}}.",
+    "saveError": "Failed to save banner.",
+    "deleteError": "Failed to delete banner.",
+    "statuses": {
+      "live": "Live",
+      "scheduled": "Scheduled",
+      "expired": "Expired",
+      "hidden": "Hidden"
+    },
+    "windowOpen": "Always",
+    "windowFrom": "From {{from}}",
+    "windowUntil": "Until {{until}}",
+    "windowBoth": "{{from}} → {{until}}"
+  },
+  "playerPicker": {
+    "placeholder": "Type a name…",
+    "clear": "Clear selection",
+    "noMatch": "No player matches"
+  },
   "common": {
     "loading": "Loading",
     "dismiss": "Click to dismiss"
@@ -86,7 +159,7 @@
     "losestreak": "Losestreak",
     "anonTitle": "Name shown to viewers / logged-out users",
     "regenerate": "Generate a new anonymous name",
-    "anonEditHint": "Anonymous name shown to viewers / logged-out users — click to edit",
+    "anonEditHint": "Anonymous name shown to viewers / logged-out users - click to edit",
     "setAnonName": "Set anonymous name",
     "allTime": "All-Time",
     "seasonElo": "Season ELO",
@@ -286,7 +359,7 @@
       "ranked": "Ranked",
       "allHint": "Show everyone on the roster, including players with no games",
       "playedHint": "Show players with at least 1 game",
-      "rankedHint": "Show ranked players only — {{min}}+ games",
+      "rankedHint": "Show ranked players only - {{min}}+ games",
       "emptyHint": "Nobody qualifies for this view yet"
     },
     "table": "Table",
@@ -321,14 +394,14 @@
     "startNew": "Start New Season",
     "resetWarning": "All players will reset to <0>1500 Elo</0> when the new season begins.",
     "seasonName": "Season Name",
-    "kStandard": "32 — Standard (slower)",
-    "kFaster": "64 — Faster",
-    "kVeryFast": "128 — Very fast",
+    "kStandard": "32 - Standard (slower)",
+    "kFaster": "64 - Faster",
+    "kVeryFast": "128 - Very fast",
     "weeklyPenaltyLabel": "Weekly Inactivity Penalty (% of Elo)",
     "penaltyHint": "Applied every Monday to players inactive for 7+ days. 0 = disabled.",
     "back": "Back",
     "starting": "Starting…",
-    "confirmEnd": "Confirm — End Season {{number}}",
+    "confirmEnd": "Confirm - End Season {{number}}",
     "nameRequired": "Season name is required.",
     "startError": "Failed to start new season.",
     "defaultName": "Season {{number}}"
@@ -363,8 +436,8 @@
     "foes": "Foes",
     "twoD": "2D",
     "threeD": "3D",
-    "friendsHint": "Each player's strongest partnerships — thicker lines mean more games together.",
-    "foesHint": "Each player's biggest rivalries — each side's color shows how often they win.",
+    "friendsHint": "Each player's strongest partnerships - thicker lines mean more games together.",
+    "foesHint": "Each player's biggest rivalries - each side's color shows how often they win.",
     "hint2d": "Drag a player to untangle the web, drag the background to pan, scroll to zoom.",
     "hint3d": "Drag the background to orbit, right-drag to pan, drag a player to move it, scroll to zoom.",
     "oneWay": "One-way: among {{a}}'s favourites, but not {{b}}'s",

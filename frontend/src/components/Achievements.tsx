@@ -86,7 +86,9 @@ export function Achievements({
               <th>#</th>
               <th>{t("achievements.player")}</th>
               <th>{t("achievements.badges")}</th>
-              <th className="achievements-progress">{t("achievements.progress")}</th>
+              <th className="achievements-progress">
+                {t("achievements.progress")}
+              </th>
               <th>{t("achievements.highlights")}</th>
             </tr>
           </thead>
@@ -162,7 +164,10 @@ function AchievementRow({
             <span
               key={s.definition.id}
               className="achievements-highlight-badge"
-              title={t(`achievementDefs.${s.definition.id}.name`, s.definition.name)}
+              title={t(
+                `achievementDefs.${s.definition.id}.name`,
+                s.definition.name,
+              )}
               style={
                 s.rarityTier
                   ? {
@@ -176,7 +181,9 @@ function AchievementRow({
             </span>
           ))}
           {unlockedCount === 0 && (
-            <span className="achievements-none">{t("achievements.noneYet")}</span>
+            <span className="achievements-none">
+              {t("achievements.noneYet")}
+            </span>
           )}
         </div>
       </td>
@@ -185,7 +192,7 @@ function AchievementRow({
 }
 
 // ---------------------------------------------------------------------------
-// AchievementsOverview — global Steam-style achievement list
+// AchievementsOverview - global Steam-style achievement list
 // ---------------------------------------------------------------------------
 
 const RARITY_ORDER: Array<ReturnType<typeof rarityTierForPercent> | "none"> = [
@@ -283,7 +290,8 @@ function AchievementsOverview({
           ? null
           : RARITY_TIERS.find((r) => r.tier === tier);
         const groupColor = tierInfo?.color ?? "var(--text-light)";
-        const groupLabel = tierInfo?.label ?? t("achievements.notYetUnlockedGroup");
+        const groupLabel =
+          tierInfo?.label ?? t("achievements.notYetUnlockedGroup");
 
         return (
           <div key={tier} className="mb-2">
@@ -321,9 +329,14 @@ function AchievementsOverview({
                     {isNone ? "🔒" : def.icon}
                   </div>
                   <div className="achievements-overview-info">
-                    <div className="achievements-overview-name">{t(`achievementDefs.${def.id}.name`, def.name)}</div>
+                    <div className="achievements-overview-name">
+                      {t(`achievementDefs.${def.id}.name`, def.name)}
+                    </div>
                     <div className="achievements-overview-desc">
-                      {t(`achievementDefs.${def.id}.description`, def.description)}
+                      {t(
+                        `achievementDefs.${def.id}.description`,
+                        def.description,
+                      )}
                     </div>
                   </div>
                   <div>
@@ -343,15 +356,19 @@ function AchievementsOverview({
                   >
                     {percent !== undefined && percent > 0
                       ? `${percent.toFixed(0)}%`
-                      : "—"}
+                      : "-"}
                   </div>
                   <div className="achievements-overview-tooltip" role="tooltip">
                     <div className="achievements-overview-tooltip-title">
                       {achievers.length === 0
                         ? t("achievements.notYetUnlocked")
                         : earnedByAll
-                          ? t("achievements.earnedByAll", { count: achievers.length })
-                          : t("achievements.earnedBy", { count: achievers.length })}
+                          ? t("achievements.earnedByAll", {
+                              count: achievers.length,
+                            })
+                          : t("achievements.earnedBy", {
+                              count: achievers.length,
+                            })}
                     </div>
                     {isCommon
                       ? !earnedByAll &&
@@ -409,7 +426,7 @@ function AchievementsOverview({
 }
 
 // ---------------------------------------------------------------------------
-// AchievementGallery — used inside PlayerDetail
+// AchievementGallery - used inside PlayerDetail
 // ---------------------------------------------------------------------------
 
 interface AchievementGalleryProps {
@@ -462,7 +479,9 @@ export function AchievementGallery({
     <div className="flex flex-col gap-6">
       {nextUp.length > 0 && (
         <section>
-          <div className="achievement-section-heading">{t("achievements.nextUp")}</div>
+          <div className="achievement-section-heading">
+            {t("achievements.nextUp")}
+          </div>
           <div className="achievement-nextup-list">
             {nextUp.map((p) => {
               const def = ACHIEVEMENT_DEFINITIONS.find(
@@ -574,9 +593,13 @@ function AchievementCard({ status, playerMap, locked }: AchievementCardProps) {
     const partnerId = meta.partnerId as string | undefined;
     const opponentId = meta.opponentId as string | undefined;
     if (partnerId) {
-      subtext = t("achievements.withPartner", { name: playerMap.get(partnerId)?.name ?? "?" });
+      subtext = t("achievements.withPartner", {
+        name: playerMap.get(partnerId)?.name ?? "?",
+      });
     } else if (opponentId) {
-      subtext = t("achievements.vsOpponent", { name: playerMap.get(opponentId)?.name ?? "?" });
+      subtext = t("achievements.vsOpponent", {
+        name: playerMap.get(opponentId)?.name ?? "?",
+      });
     }
   }
 
@@ -599,8 +622,15 @@ function AchievementCard({ status, playerMap, locked }: AchievementCardProps) {
       data-unlocked={!locked && unlockedLabel ? unlockedLabel : undefined}
     >
       <div className="achievement-icon">{locked ? "🔒" : definition.icon}</div>
-      <div className="achievement-name">{t(`achievementDefs.${definition.id}.name`, definition.name)}</div>
-      <div className="achievement-desc">{t(`achievementDefs.${definition.id}.description`, definition.description)}</div>
+      <div className="achievement-name">
+        {t(`achievementDefs.${definition.id}.name`, definition.name)}
+      </div>
+      <div className="achievement-desc">
+        {t(
+          `achievementDefs.${definition.id}.description`,
+          definition.description,
+        )}
+      </div>
       {subtext && <div className="achievement-sub">{subtext}</div>}
       {tierInfo && !locked && (
         <span

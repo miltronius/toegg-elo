@@ -16,8 +16,8 @@ import { createClient } from "@supabase/supabase-js";
 import { recomputeAllAchievements } from "./_shared/achievements.ts";
 
 // Achievement ids whose computation changed and must be rebuilt:
-//   * teams_* — a partner now only counts after pairing up at least twice
-//   * carrying_hard / deadweight — gap now measured on season ELO, not all-time
+//   * teams_* - a partner now only counts after pairing up at least twice
+//   * carrying_hard / deadweight - gap now measured on season ELO, not all-time
 const FIXED_ACHIEVEMENT_IDS = [
   "teams_1",
   "teams_3",

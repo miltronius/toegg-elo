@@ -171,7 +171,7 @@ function computeAchievementsForPlayer(
     else lossMatches.push(m);
   }
 
-  // win milestones — unlockedAt = date of the Nth win
+  // win milestones - unlockedAt = date of the Nth win
   if (winMatches.length >= 1)
     unlocked.push({
       achievementId: "win_1",
@@ -198,7 +198,7 @@ function computeAchievementsForPlayer(
       unlockedAt: new Date(winMatches[49].created_at),
     });
 
-  // lose milestones — unlockedAt = date of the Nth loss
+  // lose milestones - unlockedAt = date of the Nth loss
   if (lossMatches.length >= 1)
     unlocked.push({
       achievementId: "lose_1",
@@ -225,7 +225,7 @@ function computeAchievementsForPlayer(
       unlockedAt: new Date(lossMatches[49].created_at),
     });
 
-  // play milestones — unlockedAt = date of the Nth match
+  // play milestones - unlockedAt = date of the Nth match
   if (sorted.length >= 10)
     unlocked.push({
       achievementId: "play_10",
@@ -252,7 +252,7 @@ function computeAchievementsForPlayer(
       unlockedAt: new Date(sorted[199].created_at),
     });
 
-  // all_weekdays — unlockedAt = date of the match that completed all 5 workdays (Mon–Fri)
+  // all_weekdays - unlockedAt = date of the match that completed all 5 workdays (Mon–Fri)
   // getUTCDay(): 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat
   const seenWorkdays = new Set<number>();
   for (const m of sorted) {
@@ -269,7 +269,7 @@ function computeAchievementsForPlayer(
     }
   }
 
-  // triple_day — unlockedAt = date of the 3rd match on the qualifying day
+  // triple_day - unlockedAt = date of the 3rd match on the qualifying day
   const dayCounts = new Map<string, number>();
   for (const m of sorted) {
     const day = m.created_at.slice(0, 10);
@@ -284,7 +284,7 @@ function computeAchievementsForPlayer(
     }
   }
 
-  // triple_win_day — unlockedAt = date of the 3rd win on the qualifying day
+  // triple_win_day - unlockedAt = date of the 3rd win on the qualifying day
   const dayWinCounts = new Map<string, number>();
   for (const m of sorted) {
     const inA =
@@ -305,7 +305,7 @@ function computeAchievementsForPlayer(
     }
   }
 
-  // best_friend / bff — unlockedAt = date of the 10th/20th match with that partner
+  // best_friend / bff - unlockedAt = date of the 10th/20th match with that partner
   const teammateCounts = computeTeammateCounts(playerId, matches);
   let bestPartnerId: string | null = null;
   let bestPartnerCount = 0;
@@ -354,7 +354,7 @@ function computeAchievementsForPlayer(
     }
   }
 
-  // sworn_enemies / arch_nemesis — unlockedAt = date of the 10th/20th match vs that opponent
+  // sworn_enemies / arch_nemesis - unlockedAt = date of the 10th/20th match vs that opponent
   const opponentCounts = computeOpponentCounts(playerId, matches);
   let topEnemyId: string | null = null;
   let topEnemyCount = 0;
@@ -403,7 +403,7 @@ function computeAchievementsForPlayer(
     }
   }
 
-  // win / loss streaks + comeback_kid — single chronological pass
+  // win / loss streaks + comeback_kid - single chronological pass
   {
     let winStreak = 0;
     let lossStreak = 0;
@@ -460,7 +460,7 @@ function computeAchievementsForPlayer(
     }
   }
 
-  // punching_bag — 3 consecutive wins vs the same opponent (last 3 matches)
+  // punching_bag - 3 consecutive wins vs the same opponent (last 3 matches)
   {
     const consecWins = new Map<string, number>();
     let done = false;
@@ -488,7 +488,7 @@ function computeAchievementsForPlayer(
     }
   }
 
-  // teams_1 / teams_3 / teams_10 — distinct partners you've actually formed a
+  // teams_1 / teams_3 / teams_10 - distinct partners you've actually formed a
   // team with. A partner only counts once you've paired up with them at least
   // twice; a single shared match does not make a team.
   {
@@ -527,7 +527,7 @@ function computeAchievementsForPlayer(
     }
   }
 
-  // world_tour / nemesis_of_all — breadth across the roster (>= 4 players)
+  // world_tour / nemesis_of_all - breadth across the roster (>= 4 players)
   if (allPlayers.length >= 4) {
     const others = new Set(
       allPlayers.map((p) => p.id).filter((id) => id !== playerId),
@@ -567,7 +567,7 @@ function computeAchievementsForPlayer(
     }
   }
 
-  // to_the_moon / rock_bottom — net ELO change within a single calendar day
+  // to_the_moon / rock_bottom - net ELO change within a single calendar day
   {
     const playerHistory = eloHistory
       .filter((h) => h.player_id === playerId)
@@ -599,7 +599,7 @@ function computeAchievementsForPlayer(
     }
   }
 
-  // carrying_hard / deadweight — partner SEASON ELO gap (200+) on a won match.
+  // carrying_hard / deadweight - partner SEASON ELO gap (200+) on a won match.
   // Season ELO normalizes every player to 1500 at the start of each season:
   //   seasonElo = 1500 + (alltime_before - season_start)
   // where season_start is the player's elo_before on their first elo_history
@@ -675,7 +675,7 @@ function computeAchievementsForPlayer(
     }
   }
 
-  // party_pooper — win a match against an opponent who came in on a win streak
+  // party_pooper - win a match against an opponent who came in on a win streak
   // of 3 or more, ending their run. The streak is the opponent's own consecutive
   // match wins immediately before this match, across all their games.
   {
@@ -742,7 +742,7 @@ function computeAchievementsForPlayer(
     }
   }
 
-  // achievement_hunter — unlockedAt = date the 10th achievement was earned
+  // achievement_hunter - unlockedAt = date the 10th achievement was earned
   if (unlocked.length >= 10) {
     const tenth = [...unlocked].sort(
       (a, b) => a.unlockedAt.getTime() - b.unlockedAt.getTime(),
@@ -753,7 +753,7 @@ function computeAchievementsForPlayer(
     });
   }
 
-  // completionist — unlockedAt = date the 20th achievement was earned
+  // completionist - unlockedAt = date the 20th achievement was earned
   if (unlocked.length >= 20) {
     const twentieth = [...unlocked].sort(
       (a, b) => a.unlockedAt.getTime() - b.unlockedAt.getTime(),
@@ -764,7 +764,7 @@ function computeAchievementsForPlayer(
     });
   }
 
-  // completionist_30 — unlockedAt = date the 30th achievement was earned
+  // completionist_30 - unlockedAt = date the 30th achievement was earned
   // (counted after the lower meta-achievements so they are included)
   if (unlocked.length >= 30) {
     const thirtieth = [...unlocked].sort(

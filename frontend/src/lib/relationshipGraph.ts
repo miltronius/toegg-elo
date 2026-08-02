@@ -8,7 +8,7 @@ export type RelationNode = {
   name: string;
   /** All-time ELO, unless the caller passed season-normalized players. */
   elo: number;
-  /** Matches played in scope — drives node size. */
+  /** Matches played in scope - drives node size. */
   games: number;
   wins: number;
   losses: number;
@@ -52,7 +52,7 @@ export type FoeEdge = {
   loWins: number;
   /** Always games - loWins. */
   hiWins: number;
-  /** loWins / games, 0..1 — where the tug-of-war line splits. */
+  /** loWins / games, 0..1 - where the tug-of-war line splits. */
   loShare: number;
 };
 
@@ -78,7 +78,7 @@ export type RelationshipGraphData = {
  * each player's top N instead stays readable at any volume.
  *
  * An edge survives if it is a top pick for *either* end, so a player's strongest
- * partner never vanishes just because that partner is popular — which also means
+ * partner never vanishes just because that partner is popular - which also means
  * a node can end up with more than `n` edges. That asymmetry is the point.
  */
 function topPerPlayer<
@@ -114,17 +114,17 @@ function topPerPlayer<
  * Give every node a palette slot such that no two connected players share one.
  *
  * Colour cannot carry identity here: no palette of ~12 perceptually distinct
- * colours exists (validated — past six, pairs collide even for full colour
+ * colours exists (validated - past six, pairs collide even for full colour
  * vision), and a roster has no upper bound. The labels carry identity instead,
  * which frees colour to do the one job it's actually needed for: telling the two
  * ends of an edge apart, which matters most for the two-tone foe edges.
  *
- * Greedy Welsh-Powell — highest degree first, lowest slot no neighbour holds.
+ * Greedy Welsh-Powell - highest degree first, lowest slot no neighbour holds.
  * Six slots colour a 12-player league cleanly at the default budget of 3. They
  * are not a guarantee: the caller colours friend and foe edges as one graph so
  * a player's colour survives the Friends/Foes toggle, and that union gets dense
  * enough at budget 5+ that a pair can be forced to share. When a node does run
- * out, the least-common neighbouring slot is reused rather than failing — every
+ * out, the least-common neighbouring slot is reused rather than failing - every
  * node always comes back with a valid slot.
  */
 export function assignColorSlots(
@@ -173,7 +173,7 @@ export function assignColorSlots(
 
 /**
  * Build the league-wide player relationship graph for a season (or all-time when
- * `seasonId` is null). Pure — no DB access.
+ * `seasonId` is null). Pure - no DB access.
  *
  * Every match contributes two friend pairs (the two teams) and four foe pairs
  * (each player of team A against each player of team B).

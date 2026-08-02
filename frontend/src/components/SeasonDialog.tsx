@@ -33,9 +33,6 @@ export function SeasonDialog({
   achievements,
 }: SeasonDialogProps) {
   const { t } = useTranslation();
-  // Ending a season is temporarily disabled for everyone. Flip to re-enable
-  // (the new-season flow is gated on admin role below).
-  const ALLOW_END_SEASON = false;
 
   const [open, setOpen] = useState(false);
   const [view, setView] = useState<"info" | "new-season">("info");
@@ -49,7 +46,9 @@ export function SeasonDialog({
     setView("info");
     setError(null);
     if (activeSeason) {
-      setNewName(t("seasonDialog.defaultName", { number: activeSeason.number + 1 }));
+      setNewName(
+        t("seasonDialog.defaultName", { number: activeSeason.number + 1 }),
+      );
     }
     setOpen(true);
   };
@@ -104,7 +103,7 @@ export function SeasonDialog({
           onClick={close}
         >
           <div
-            className={`bg-white rounded-lg p-8 ${view === "info" ? "max-w-200" : "max-w-140"} w-[90%] max-h-[90vh] overflow-y-auto shadow-[0_20px_25px_-5px_rgba(0,0,0,0.1)]`}
+            className={`modal-panel bg-white rounded-lg p-8 ${view === "info" ? "max-w-200" : "max-w-140"} w-[90%] max-h-[90vh] overflow-y-auto shadow-[0_20px_25px_-5px_rgba(0,0,0,0.1)]`}
             onClick={(e) => e.stopPropagation()}
           >
             {view === "info" && (
@@ -112,7 +111,9 @@ export function SeasonDialog({
                 <h2 className="text-2xl font-semibold mb-5 flex items-center gap-2.5">
                   {activeSeason?.name ?? t("seasonDialog.season")}
                   <span className="text-[0.75rem] font-medium text-text-light bg-bg border border-border rounded-full px-2.5 py-0.5">
-                    {t("seasonDialog.seasonNumber", { number: activeSeason?.number })}
+                    {t("seasonDialog.seasonNumber", {
+                      number: activeSeason?.number,
+                    })}
                   </span>
                 </h2>
 
@@ -120,14 +121,16 @@ export function SeasonDialog({
                   <dt className="font-semibold text-text-light whitespace-nowrap">
                     {t("seasonDialog.kFactor")}
                   </dt>
-                  <dd className="m-0">{activeSeason?.k_factor ?? "—"}</dd>
+                  <dd className="m-0">{activeSeason?.k_factor ?? "-"}</dd>
 
                   <dt className="font-semibold text-text-light whitespace-nowrap">
                     {t("seasonDialog.inactivityPenalty")}
                   </dt>
                   <dd className="m-0">
                     {activeSeason?.inactivity_penalty_percent
-                      ? t("seasonDialog.penaltyPerWeek", { percent: activeSeason.inactivity_penalty_percent })
+                      ? t("seasonDialog.penaltyPerWeek", {
+                          percent: activeSeason.inactivity_penalty_percent,
+                        })
                       : t("seasonDialog.none")}
                   </dd>
 
@@ -135,7 +138,7 @@ export function SeasonDialog({
                     {t("seasonDialog.started")}
                   </dt>
                   <dd className="m-0">
-                    {activeSeason ? formatDate(activeSeason.started_at) : "—"}
+                    {activeSeason ? formatDate(activeSeason.started_at) : "-"}
                   </dd>
                 </dl>
 
@@ -152,7 +155,7 @@ export function SeasonDialog({
                   <button className="btn-secondary" onClick={close}>
                     {t("seasonDialog.close")}
                   </button>
-                  {ALLOW_END_SEASON && isAdmin && (
+                  {isAdmin && (
                     <button
                       className="btn-primary"
                       onClick={() => setView("new-season")}
@@ -171,23 +174,31 @@ export function SeasonDialog({
                 </h2>
 
                 <div className="bg-[#fef3c7] border border-warning rounded-md p-3 text-[0.875rem] text-[#92400e] mb-5">
-                  <Trans i18nKey="seasonDialog.resetWarning"><strong>1500 Elo</strong></Trans>
+                  <Trans i18nKey="seasonDialog.resetWarning">
+                    <strong>1500 Elo</strong>
+                  </Trans>
                 </div>
 
                 <div className="form-group">
-                  <label htmlFor="season-name">{t("seasonDialog.seasonName")}</label>
+                  <label htmlFor="season-name">
+                    {t("seasonDialog.seasonName")}
+                  </label>
                   <input
                     id="season-name"
                     type="text"
                     value={newName}
                     onChange={(e) => setNewName(e.target.value)}
-                    placeholder={t("seasonDialog.defaultName", { number: (activeSeason?.number ?? 0) + 1 })}
+                    placeholder={t("seasonDialog.defaultName", {
+                      number: (activeSeason?.number ?? 0) + 1,
+                    })}
                     disabled={loading}
                   />
                 </div>
 
                 <div className="form-group">
-                  <label htmlFor="season-kfactor">{t("seasonDialog.kFactor")}</label>
+                  <label htmlFor="season-kfactor">
+                    {t("seasonDialog.kFactor")}
+                  </label>
                   <select
                     id="season-kfactor"
                     value={newKFactor}
@@ -245,7 +256,9 @@ export function SeasonDialog({
                   >
                     {loading
                       ? t("seasonDialog.starting")
-                      : t("seasonDialog.confirmEnd", { number: activeSeason?.number })}
+                      : t("seasonDialog.confirmEnd", {
+                          number: activeSeason?.number,
+                        })}
                   </button>
                 </div>
               </>

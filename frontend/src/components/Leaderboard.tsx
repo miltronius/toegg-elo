@@ -57,7 +57,8 @@ function computePlayerStreaks(history: EloHistory[]): {
   const lose = new Map<string, number>();
   for (const [playerId, entries] of byPlayer) {
     const sorted = [...entries].sort(
-      (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+      (a, b) =>
+        new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
     );
     const last = sorted[sorted.length - 1]?.elo_change ?? 0;
     let streak = 0;
@@ -72,7 +73,11 @@ function computePlayerStreaks(history: EloHistory[]): {
   return { win, lose };
 }
 
-function buildSnapshots(players: Player[], history: EloHistory[], isSeasonView = false): Snapshot[] {
+function buildSnapshots(
+  players: Player[],
+  history: EloHistory[],
+  isSeasonView = false,
+): Snapshot[] {
   if (!history.length) return [];
   const sorted = [...history].sort(
     (a, b) =>
@@ -128,8 +133,10 @@ function buildSnapshots(players: Player[], history: EloHistory[], isSeasonView =
   matchOrder.forEach((matchId, matchIdx) => {
     for (const h of byMatch[matchId]) {
       currentElo[h.player_id] = h.elo_after;
-      if (h.elo_change > 0) currentWins[h.player_id] = (currentWins[h.player_id] ?? 0) + 1;
-      else if (h.elo_change < 0) currentLosses[h.player_id] = (currentLosses[h.player_id] ?? 0) + 1;
+      if (h.elo_change > 0)
+        currentWins[h.player_id] = (currentWins[h.player_id] ?? 0) + 1;
+      else if (h.elo_change < 0)
+        currentLosses[h.player_id] = (currentLosses[h.player_id] ?? 0) + 1;
     }
     const winrateOf = (id: string) => {
       const w = currentWins[id] ?? 0;
@@ -138,8 +145,11 @@ function buildSnapshots(players: Player[], history: EloHistory[], isSeasonView =
       return t > 0 ? w / t : 0;
     };
     const ranked = [...rankablePlayers]
-      .map((p) => ({ id: p.id, elo: normalize(p.id, currentElo[p.id] ?? p.current_elo) }))
-      .sort((a, b) => (b.elo - a.elo) || (winrateOf(b.id) - winrateOf(a.id)));
+      .map((p) => ({
+        id: p.id,
+        elo: normalize(p.id, currentElo[p.id] ?? p.current_elo),
+      }))
+      .sort((a, b) => b.elo - a.elo || winrateOf(b.id) - winrateOf(a.id));
     ranked.forEach(({ id, elo }, i) =>
       snapshots.push({
         player_id: id,
@@ -338,7 +348,13 @@ export function Leaderboard({
   const effectivePlayers = players.map((p) => {
     if (isSeasonView && seasonStatsMap.has(p.id)) {
       const s = seasonStatsMap.get(p.id)!;
-      return { ...p, current_elo: s.current_season_elo, wins: s.wins, losses: s.losses, matches_played: s.wins + s.losses };
+      return {
+        ...p,
+        current_elo: s.current_season_elo,
+        wins: s.wins,
+        losses: s.losses,
+        matches_played: s.wins + s.losses,
+      };
     }
     return p;
   });
@@ -346,7 +362,9 @@ export function Leaderboard({
   // In season view: filter history to the selected season only
   const effectiveHistory =
     isSeasonView && selectedSeason
-      ? history.filter((h) => (h as { season_id?: string }).season_id === selectedSeason.id)
+      ? history.filter(
+          (h) => (h as { season_id?: string }).season_id === selectedSeason.id,
+        )
       : history;
   const { win: playerStreaks, lose: playerLoseStreaks } =
     computePlayerStreaks(effectiveHistory);
@@ -381,8 +399,8 @@ export function Leaderboard({
   // In season view, scope the player list to that season's roster: anyone with a
   // per-season stats row (one is created for every player when the season starts)
   // or who appears in the season's history. This excludes players who first joined
-  // in a later season — otherwise they'd chart with their all-time ELO across a
-  // season they never played — while still showing the full roster of a freshly
+  // in a later season - otherwise they'd chart with their all-time ELO across a
+  // season they never played - while still showing the full roster of a freshly
   // created season that has no matches yet (so the "All" filter lists everyone).
   const seasonRosterIds = new Set<string>([
     ...(playerSeasonStats ?? []).map((s) => s.player_id),
@@ -405,41 +423,62 @@ export function Leaderboard({
     return t > 0 ? p.wins / t : 0;
   };
 
-  // sortedPlayers is always ELO desc (winrate tiebreaker) — used for charts and color assignment
+  // sortedPlayers is always ELO desc (winrate tiebreaker) - used for charts and color assignment
   const sortedPlayers = [...visiblePlayers].sort(
-    (a, b) => (b.current_elo - a.current_elo) || (winrateOf(b) - winrateOf(a)),
+    (a, b) => b.current_elo - a.current_elo || winrateOf(b) - winrateOf(a),
   );
 
   // effectivePlayers/visiblePlayers carry season-overridden ELO/wins/losses for
   // in-table display. Consumers (PlayerDetail) expect the canonical all-time
-  // player, so map back to the original by id before handing it off — otherwise
+  // player, so map back to the original by id before handing it off - otherwise
   // PlayerDetail's All-Time view would show the season's numbers.
   const handlePlayerClick = onPlayerClick
-    ? (p: Player) => onPlayerClick(players.find((orig) => orig.id === p.id) ?? p)
+    ? (p: Player) =>
+        onPlayerClick(players.find((orig) => orig.id === p.id) ?? p)
     : undefined;
 
   const handleSort = (key: "elo" | "name" | "winrate") => {
     if (sortBy === key) setSortAsc((a) => !a);
-    else { setSortBy(key); setSortAsc(false); }
+    else {
+      setSortBy(key);
+      setSortAsc(false);
+    }
   };
 
   const tableRows = [...sortedPlayers].sort((a, b) => {
     let diff = 0;
-    if (sortBy === "elo") diff = (b.current_elo - a.current_elo) || (winrateOf(b) - winrateOf(a));
+    if (sortBy === "elo")
+      diff = b.current_elo - a.current_elo || winrateOf(b) - winrateOf(a);
     else if (sortBy === "name") diff = a.name.localeCompare(b.name);
     else diff = winrateOf(b) - winrateOf(a);
     return sortAsc ? -diff : diff;
   });
-  const snapshots = buildSnapshots(visiblePlayers, effectiveHistory, isSeasonView);
-  const eloData = buildEloProgressionData(visiblePlayers, effectiveHistory, isSeasonView);
-  const eloDateData = buildEloProgressionDataByDate(visiblePlayers, effectiveHistory, isSeasonView, DATE_LOCALE);
+  const snapshots = buildSnapshots(
+    visiblePlayers,
+    effectiveHistory,
+    isSeasonView,
+  );
+  const eloData = buildEloProgressionData(
+    visiblePlayers,
+    effectiveHistory,
+    isSeasonView,
+  );
+  const eloDateData = buildEloProgressionDataByDate(
+    visiblePlayers,
+    effectiveHistory,
+    isSeasonView,
+    DATE_LOCALE,
+  );
 
   // Season background ranges for the all-time ELO chart
   const seasonGameRanges = useMemo(() => {
     if (isSeasonView || (seasons ?? []).length <= 1) return [];
     const sorted = [...history]
       .filter((h) => h.match_id)
-      .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+      .sort(
+        (a, b) =>
+          new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+      );
     const matchOrder: string[] = [];
     const seen = new Set<string>();
     const matchSeason: Record<string, string> = {};
@@ -470,13 +509,18 @@ export function Leaderboard({
     if (isSeasonView || (seasons ?? []).length <= 1) return [];
     const sorted = [...history]
       .filter((h) => h.match_id)
-      .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+      .sort(
+        (a, b) =>
+          new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+      );
     const dateOrder: string[] = [];
     const seenDates = new Set<string>();
     const dateSeason: Record<string, string> = {};
     for (const h of sorted) {
       const date = new Date(h.created_at).toLocaleDateString(DATE_LOCALE, {
-        day: "2-digit", month: "2-digit", year: "numeric",
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
       });
       if (!seenDates.has(date)) {
         seenDates.add(date);
@@ -501,9 +545,10 @@ export function Leaderboard({
   const matchIndices = [...new Set(snapshots.map((s) => s.match_index))].sort(
     (a, b) => a - b,
   );
-  const nPlayers = snapshots.length > 0
-    ? Math.max(...snapshots.map((s) => s.rank))
-    : visiblePlayers.length;
+  const nPlayers =
+    snapshots.length > 0
+      ? Math.max(...snapshots.map((s) => s.rank))
+      : visiblePlayers.length;
 
   // Responsive padding: smaller right pad on mobile (no name labels, just dots)
   const isMobile = svgWidth > 0 && svgWidth < 480;
@@ -554,7 +599,12 @@ export function Leaderboard({
       {/* ── Header ── */}
       <div className="flex items-center justify-between mb-6 flex-wrap gap-2">
         <h2 className="m-0">{t("leaderboard.title")}</h2>
-        <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+        {/* ml-auto, not just the parent's justify-between: with four control
+            groups these wrap onto their own line on a narrower card, and a lone
+            item on a line has nothing to sit "between", so it would fall flush
+            left under the heading. justify-end keeps the groups right-packed
+            once they wrap among themselves. */}
+        <div className="flex flex-wrap items-center justify-end gap-2 ml-auto">
           {(seasons ?? []).length > 0 && (
             <select
               className="season-select"
@@ -563,7 +613,9 @@ export function Leaderboard({
                 if (e.target.value === "alltime") {
                   onSeasonSelect?.(null);
                 } else {
-                  const s = (seasons ?? []).find((s) => s.id === e.target.value) ?? null;
+                  const s =
+                    (seasons ?? []).find((s) => s.id === e.target.value) ??
+                    null;
                   onSeasonSelect?.(s);
                 }
               }}
@@ -571,7 +623,8 @@ export function Leaderboard({
               <option value="alltime">{t("leaderboard.allTime")}</option>
               {(seasons ?? []).map((s) => (
                 <option key={s.id} value={s.id}>
-                  S{s.number} · {s.name}{s.is_active ? " ★" : ""}
+                  S{s.number} · {s.name}
+                  {s.is_active ? " ★" : ""}
                 </option>
               ))}
             </select>
@@ -597,7 +650,9 @@ export function Leaderboard({
                   disabled={!available}
                   title={
                     available
-                      ? t(`leaderboard.roster.${f}Hint`, { min: RANKED_MIN_GAMES })
+                      ? t(`leaderboard.roster.${f}Hint`, {
+                          min: RANKED_MIN_GAMES,
+                        })
                       : t("leaderboard.roster.emptyHint")
                   }
                 >
@@ -617,7 +672,11 @@ export function Leaderboard({
               className={`lb-toggle-btn${view === "elo" ? " active" : ""}`}
               onClick={() => setView("elo")}
               disabled={eloData.length === 0}
-              title={eloData.length === 0 ? t("leaderboard.noMatchHistory") : undefined}
+              title={
+                eloData.length === 0
+                  ? t("leaderboard.noMatchHistory")
+                  : undefined
+              }
             >
               <EloIcon /> {t("leaderboard.eloChart")}
             </button>
@@ -625,7 +684,11 @@ export function Leaderboard({
               className={`lb-toggle-btn${view === "bump" ? " active" : ""}`}
               onClick={() => setView("bump")}
               disabled={snapshots.length === 0}
-              title={snapshots.length === 0 ? t("leaderboard.noMatchHistory") : undefined}
+              title={
+                snapshots.length === 0
+                  ? t("leaderboard.noMatchHistory")
+                  : undefined
+              }
             >
               <BumpIcon /> {t("leaderboard.bumpChart")}
             </button>
@@ -633,35 +696,54 @@ export function Leaderboard({
         </div>
       </div>
 
-      {/* ── TABLE VIEW — identical to your original ── */}
+      {/* ── TABLE VIEW - identical to your original ── */}
       {view === "table" && (
         <table className="leaderboard-table">
           <thead>
             <tr>
               <th>{t("leaderboard.rank")}</th>
-              <th style={{ cursor: "pointer" }} onClick={() => handleSort("name")}>
-                {t("leaderboard.name")} {sortBy === "name" && (sortAsc ? "▴" : "▾")}
+              <th
+                style={{ cursor: "pointer" }}
+                onClick={() => handleSort("name")}
+              >
+                {t("leaderboard.name")}{" "}
+                {sortBy === "name" && (sortAsc ? "▴" : "▾")}
               </th>
-              <th style={{ cursor: "pointer" }} onClick={() => handleSort("elo")}>
-                {t("leaderboard.elo")} {sortBy === "elo" && (sortAsc ? "▴" : "▾")}
+              <th
+                style={{ cursor: "pointer" }}
+                onClick={() => handleSort("elo")}
+              >
+                {t("leaderboard.elo")}{" "}
+                {sortBy === "elo" && (sortAsc ? "▴" : "▾")}
               </th>
-              <th className="winrate" style={{ cursor: "pointer" }} onClick={() => handleSort("winrate")}>
-                {t("leaderboard.winrate")} {sortBy === "winrate" && (sortAsc ? "▴" : "▾")}
+              <th
+                className="winrate"
+                style={{ cursor: "pointer" }}
+                onClick={() => handleSort("winrate")}
+              >
+                {t("leaderboard.winrate")}{" "}
+                {sortBy === "winrate" && (sortAsc ? "▴" : "▾")}
               </th>
             </tr>
           </thead>
           <tbody>
             {(() => {
-              const show1500Line = show1500Sep && sortBy === "elo" && !anyAtStartingElo;
+              const show1500Line =
+                show1500Sep && sortBy === "elo" && !anyAtStartingElo;
               return tableRows.flatMap((player, idx) => {
                 const total = player.wins + player.losses;
                 const winrate =
                   total > 0 ? ((player.wins / total) * 100).toFixed(1) : "0";
-                const rank = sortedPlayers.findIndex((p) => p.id === player.id) + 1;
+                const rank =
+                  sortedPlayers.findIndex((p) => p.id === player.id) + 1;
                 const playerCount = sortedPlayers.length;
                 const band = playerCount >= 10 ? 5 : playerCount >= 6 ? 2 : 1;
                 const rowClass =
-                  rank <= band ? "row-top" : rank > playerCount - band ? "row-bottom" : "";
+                  rank <= band
+                    ? "row-top"
+                    : rank > playerCount - band
+                      ? "row-bottom"
+                      : "";
                 const row = (
                   <tr
                     key={player.id}
@@ -672,10 +754,20 @@ export function Leaderboard({
                     <td className="name">
                       {player.name}
                       {playerStreaks.get(player.id) && (
-                        <span className="streak-badge" title={t("leaderboard.winstreak")}>🔥{playerStreaks.get(player.id)}</span>
+                        <span
+                          className="streak-badge"
+                          title={t("leaderboard.winstreak")}
+                        >
+                          🔥{playerStreaks.get(player.id)}
+                        </span>
                       )}
                       {playerLoseStreaks.get(player.id) && (
-                        <span className="streak-badge lose" title={t("leaderboard.losestreak")}>🥶{playerLoseStreaks.get(player.id)}</span>
+                        <span
+                          className="streak-badge lose"
+                          title={t("leaderboard.losestreak")}
+                        >
+                          🥶{playerLoseStreaks.get(player.id)}
+                        </span>
                       )}
                     </td>
                     <td className="elo">{player.current_elo}</td>
@@ -689,7 +781,12 @@ export function Leaderboard({
                   ((player.current_elo > 1500 && next.current_elo < 1500) ||
                     (player.current_elo < 1500 && next.current_elo > 1500));
                 return insertLine
-                  ? [row, <tr key="sep-1500" className="elo-1500-sep"><td colSpan={4} /></tr>]
+                  ? [
+                      row,
+                      <tr key="sep-1500" className="elo-1500-sep">
+                        <td colSpan={4} />
+                      </tr>,
+                    ]
                   : [row];
               });
             })()}
@@ -700,7 +797,7 @@ export function Leaderboard({
       {/* ── BUMP CHART VIEW ── */}
       {view === "bump" && (
         <div className="bump-chart-wrap">
-          {/* Legend — wraps naturally on small screens */}
+          {/* Legend - wraps naturally on small screens */}
           <div className="bump-legend">
             {sortedPlayers.map((p, i) => (
               <button
@@ -726,7 +823,7 @@ export function Leaderboard({
             ))}
           </div>
 
-          {/* SVG container — fills full card width */}
+          {/* SVG container - fills full card width */}
           <div ref={svgContainerRef} className="bump-svg-container">
             {svgWidth > 0 && (
               <svg
@@ -761,7 +858,7 @@ export function Leaderboard({
                   </g>
                 ))}
 
-                {/* X-axis match labels — fewer on mobile */}
+                {/* X-axis match labels - fewer on mobile */}
                 {matchIndices
                   .filter((_, i) => {
                     const maxLabels = isMobile ? 5 : 10;
@@ -817,7 +914,7 @@ export function Leaderboard({
                   );
                 })}
 
-                {/* Dots — smaller on mobile */}
+                {/* Dots - smaller on mobile */}
                 {sortedPlayers.map((player, i) => {
                   const color = playerColor(i, sortedPlayers.length);
                   const dimmed = hovered && hovered !== player.id;
@@ -858,7 +955,7 @@ export function Leaderboard({
                   });
                 })}
 
-                {/* Right-side name labels — hidden on mobile (legend covers it) */}
+                {/* Right-side name labels - hidden on mobile (legend covers it) */}
                 {!isMobile &&
                   sortedPlayers.map((player, i) => {
                     const last = matchIndices.at(-1);
@@ -890,7 +987,7 @@ export function Leaderboard({
                     );
                   })}
 
-                {/* Tooltip — flips left if near right edge, up if near bottom */}
+                {/* Tooltip - flips left if near right edge, up if near bottom */}
                 {tooltip &&
                   (() => {
                     const pi = sortedPlayers.findIndex(
@@ -938,7 +1035,11 @@ export function Leaderboard({
                           fill="var(--tooltip-sub)"
                           fontSize={11}
                         >
-                          {t("leaderboard.tooltipStats", { elo: tooltip.snap.elo, rank: tooltip.snap.rank, match: tooltip.snap.match_index + 1 })}
+                          {t("leaderboard.tooltipStats", {
+                            elo: tooltip.snap.elo,
+                            rank: tooltip.snap.rank,
+                            match: tooltip.snap.match_index + 1,
+                          })}
                         </text>
                       </g>
                     );
@@ -957,7 +1058,10 @@ export function Leaderboard({
       {/* ── ELO PROGRESSION CHART VIEW ── */}
       {view === "elo" && (
         <div className="bump-chart-wrap">
-          <div className="lb-toggle" style={{ width: "fit-content", marginBottom: "12px" }}>
+          <div
+            className="lb-toggle"
+            style={{ width: "fit-content", marginBottom: "12px" }}
+          >
             <button
               className={`lb-toggle-btn${eloXAxis === "date" ? " active" : ""}`}
               onClick={() => setEloXAxis("date")}
@@ -1025,8 +1129,13 @@ export function Leaderboard({
                   contentStyle={{ fontSize: 12 }}
                   itemSorter={(item) => -(item.value as number)}
                 />
-                {(eloXAxis === "date" ? seasonDateRanges : seasonGameRanges).map((range, i) => {
-                  const season = (seasons ?? []).find((s) => s.id === range.seasonId);
+                {(eloXAxis === "date"
+                  ? seasonDateRanges
+                  : seasonGameRanges
+                ).map((range, i) => {
+                  const season = (seasons ?? []).find(
+                    (s) => s.id === range.seasonId,
+                  );
                   return (
                     <ReferenceArea
                       key={range.seasonId}
@@ -1034,12 +1143,16 @@ export function Leaderboard({
                       x2={range.x2}
                       fill={`hsl(${(i * 137) % 360}, 55%, 55%)`}
                       fillOpacity={0.08}
-                      label={season ? {
-                        value: `S${season.number} · ${season.name}`,
-                        position: "insideTopLeft",
-                        fontSize: 10,
-                        fill: `hsl(${(i * 137) % 360}, 45%, 65%)`,
-                      } : undefined}
+                      label={
+                        season
+                          ? {
+                              value: `S${season.number} · ${season.name}`,
+                              position: "insideTopLeft",
+                              fontSize: 10,
+                              fill: `hsl(${(i * 137) % 360}, 45%, 65%)`,
+                            }
+                          : undefined
+                      }
                     />
                   );
                 })}
@@ -1069,7 +1182,11 @@ export function Leaderboard({
                       activeDot={{ r: 4 }}
                       label={
                         <EloLineLabel
-                          dataLength={eloXAxis === "date" ? eloDateData.length : eloData.length}
+                          dataLength={
+                            eloXAxis === "date"
+                              ? eloDateData.length
+                              : eloData.length
+                          }
                           playerName={p.name}
                           color={color}
                           dimmed={dimmed}
@@ -1085,9 +1202,7 @@ export function Leaderboard({
           </div>
 
           <p className="bump-hint">
-            {isMobile
-              ? t("leaderboard.hintTapLine")
-              : t("leaderboard.hintElo")}
+            {isMobile ? t("leaderboard.hintTapLine") : t("leaderboard.hintElo")}
           </p>
         </div>
       )}

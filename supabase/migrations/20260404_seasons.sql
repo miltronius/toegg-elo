@@ -106,7 +106,7 @@ SELECT
 FROM players p;
 
 -- ============================================================
--- 7. Helper: increment_season_stats — called by edge function per match
+-- 7. Helper: increment_season_stats - called by edge function per match
 -- ============================================================
 CREATE OR REPLACE FUNCTION increment_season_stats(
   p_player_id UUID,
@@ -125,7 +125,7 @@ END;
 $$;
 
 -- ============================================================
--- 8. end_season_and_start_new — atomic season transition (admin only via RPC)
+-- 8. end_season_and_start_new - atomic season transition (admin only via RPC)
 -- ============================================================
 CREATE OR REPLACE FUNCTION end_season_and_start_new(
   new_season_name    TEXT,
@@ -168,7 +168,7 @@ END;
 $$;
 
 -- ============================================================
--- 9. apply_inactivity_penalties — run by pg_cron every Monday or by admin ad hoc
+-- 9. apply_inactivity_penalties - run by pg_cron every Monday or by admin ad hoc
 -- ============================================================
 CREATE OR REPLACE FUNCTION apply_inactivity_penalties()
 RETURNS TABLE(
@@ -227,7 +227,7 @@ END;
 $$;
 
 -- ============================================================
--- 10. pg_cron schedule — enable pg_cron extension first via Supabase dashboard
+-- 10. pg_cron schedule - enable pg_cron extension first via Supabase dashboard
 -- Then uncomment and run the line below:
 -- SELECT cron.schedule('inactivity-penalty-weekly', '0 8 * * 1', 'SELECT apply_inactivity_penalties()');
 -- ============================================================

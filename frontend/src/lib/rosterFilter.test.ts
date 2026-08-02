@@ -13,7 +13,8 @@ import {
 
 const p = (matches_played: number) => ({ matches_played });
 /** n players with `games` each. */
-const roster = (n: number, games: number) => Array.from({ length: n }, () => p(games));
+const roster = (n: number, games: number) =>
+  Array.from({ length: n }, () => p(games));
 const counts = (all: number, played: number, ranked: number): RosterCounts => ({
   all,
   played,
@@ -44,15 +45,15 @@ describe("filterRoster", () => {
   });
 
   it("drops players with no games under 'played'", () => {
-    expect(filterRoster(players, "played").map((x) => x.matches_played)).toEqual([
-      1, 2, 3, 10,
-    ]);
+    expect(
+      filterRoster(players, "played").map((x) => x.matches_played),
+    ).toEqual([1, 2, 3, 10]);
   });
 
   it("keeps only players at or above the ranked threshold", () => {
-    expect(filterRoster(players, "ranked").map((x) => x.matches_played)).toEqual([
-      3, 10,
-    ]);
+    expect(
+      filterRoster(players, "ranked").map((x) => x.matches_played),
+    ).toEqual([3, 10]);
   });
 
   it("returns the same array instance for 'all' (no needless copy)", () => {
@@ -91,10 +92,10 @@ describe("isFilterAvailable", () => {
 });
 
 describe("defaultRosterFilter", () => {
-  it("picks played from the very first match — 2v2 is exactly four players", () => {
-    expect(defaultRosterFilter(rosterCounts([...roster(4, 1), ...roster(8, 0)]))).toBe(
-      "played",
-    );
+  it("picks played from the very first match - 2v2 is exactly four players", () => {
+    expect(
+      defaultRosterFilter(rosterCounts([...roster(4, 1), ...roster(8, 0)])),
+    ).toBe("played");
   });
 
   it("picks ranked once four players qualify", () => {
@@ -114,10 +115,10 @@ describe("defaultRosterFilter", () => {
   });
 
   it("falls back to the full roster when neither view is readable", () => {
-    // 3 played, 1 ranked — both under the auto-select threshold.
-    expect(defaultRosterFilter(rosterCounts([p(0), p(0), p(1), p(2), p(5)]))).toBe(
-      "all",
-    );
+    // 3 played, 1 ranked - both under the auto-select threshold.
+    expect(
+      defaultRosterFilter(rosterCounts([p(0), p(0), p(1), p(2), p(5)])),
+    ).toBe("all");
   });
 
   it("falls back to the full roster for a season nobody has played", () => {
@@ -141,7 +142,7 @@ describe("resolveRosterFilter", () => {
   });
 
   it("honours a pinned narrowing view below the auto-select threshold", () => {
-    // Only 2 ranked — too thin to auto-select, but fine to ask for.
+    // Only 2 ranked - too thin to auto-select, but fine to ask for.
     expect(resolveRosterFilter("ranked", counts(12, 8, 2))).toBe("ranked");
   });
 

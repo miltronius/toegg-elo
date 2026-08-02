@@ -69,7 +69,7 @@ export function CreatePlayerModal({
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[1000]" onClick={onClose}>
-      <div className="bg-white rounded-lg p-8 max-w-[400px] w-[90%] shadow-[0_20px_25px_-5px_rgba(0,0,0,0.1)]" onClick={(e) => e.stopPropagation()}>
+      <div className="modal-panel bg-white rounded-lg p-8 max-w-[400px] w-[90%] shadow-[0_20px_25px_-5px_rgba(0,0,0,0.1)]" onClick={(e) => e.stopPropagation()}>
         <h2 className="text-2xl font-semibold mb-6 text-text">{t("playerModal.createTitle")}</h2>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <input
@@ -123,50 +123,6 @@ export function CreatePlayerModal({
           </div>
         </form>
       </div>
-    </div>
-  );
-}
-
-interface PlayerDropdownProps {
-  label: string;
-  players: Player[];
-  value: string;
-  onChange: (id: string) => void;
-  disabled?: boolean;
-  excludeIds?: string[];
-  seasonEloMap?: Map<string, number>;
-}
-
-export function PlayerDropdown({
-  label,
-  players,
-  value,
-  onChange,
-  disabled,
-  excludeIds = [],
-  seasonEloMap,
-}: PlayerDropdownProps) {
-  const { t } = useTranslation();
-  const filteredPlayers = players.filter((p) => !excludeIds.includes(p.id));
-
-  return (
-    <div className="form-group">
-      <label>{label}</label>
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        disabled={disabled}
-      >
-        <option value="">{t("playerModal.selectPlayer")}</option>
-        {filteredPlayers.map((player) => {
-          const elo = seasonEloMap?.get(player.id) ?? player.current_elo;
-          return (
-            <option key={player.id} value={player.id}>
-              {player.name} ({elo})
-            </option>
-          );
-        })}
-      </select>
     </div>
   );
 }

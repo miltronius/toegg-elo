@@ -1,7 +1,14 @@
 import { useState, useMemo } from "react";
+import { PlayerAutocomplete } from "./PlayerAutocomplete";
 import { useTranslation } from "react-i18next";
 import { createPortal } from "react-dom";
-import { Match, Player, PlayerSeasonStats, Season, TeamNameRow } from "../lib/supabase";
+import {
+  Match,
+  Player,
+  PlayerSeasonStats,
+  Season,
+  TeamNameRow,
+} from "../lib/supabase";
 import {
   TeamStats,
   getTeamDisplayName,
@@ -81,7 +88,16 @@ type SortKey = "rank" | "elo" | "winrate" | "matches" | "name";
 
 const STORAGE_KEY = "teams-view";
 
-export function Teams({ matches, players, teamNames, seasons, selectedSeason, onSeasonSelect, onTeamClick, playerSeasonStats }: TeamsProps) {
+export function Teams({
+  matches,
+  players,
+  teamNames,
+  seasons,
+  selectedSeason,
+  onSeasonSelect,
+  onTeamClick,
+  playerSeasonStats,
+}: TeamsProps) {
   const { t } = useTranslation();
   const [view, setView] = useState<"table" | "card">(
     () => (localStorage.getItem(STORAGE_KEY) as "table" | "card") ?? "table",
@@ -118,7 +134,10 @@ export function Teams({ matches, players, teamNames, seasons, selectedSeason, on
   }, [players, selectedSeason, playerSeasonStats]);
 
   const filteredMatches = useMemo(
-    () => selectedSeason ? matches.filter((m) => m.season_id === selectedSeason.id) : matches,
+    () =>
+      selectedSeason
+        ? matches.filter((m) => m.season_id === selectedSeason.id)
+        : matches,
     [matches, selectedSeason],
   );
 
@@ -150,7 +169,8 @@ export function Teams({ matches, players, teamNames, seasons, selectedSeason, on
       return sortAsc ? diff : -diff;
     }
     let diff = 0;
-    if (sortBy === "rank") diff = globalRankMap.get(a.key)! - globalRankMap.get(b.key)!;
+    if (sortBy === "rank")
+      diff = globalRankMap.get(a.key)! - globalRankMap.get(b.key)!;
     else if (sortBy === "elo") diff = b.combinedElo - a.combinedElo;
     else if (sortBy === "winrate") diff = b.winRate - a.winRate;
     else diff = b.matchesPlayed - a.matchesPlayed;
@@ -204,20 +224,14 @@ export function Teams({ matches, players, teamNames, seasons, selectedSeason, on
               </option>
             ))}
           </select>
-          <select
-            className="px-2.5 py-1.5 border border-border rounded-lg bg-bg-light text-[0.8rem] font-semibold text-text cursor-pointer font-[inherit]"
+          <PlayerAutocomplete
+            compact
+            players={players}
             value={filterPlayerId}
-            onChange={(e) => setFilterPlayerId(e.target.value)}
-          >
-            <option value="">{t("teams.allPlayers")}</option>
-            {[...players]
-              .sort((a, b) => b.current_elo - a.current_elo)
-              .map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name} ({p.current_elo})
-                </option>
-              ))}
-          </select>
+            onChange={setFilterPlayerId}
+            emptyLabel={t("teams.allPlayers")}
+            placeholder={t("teams.allPlayers")}
+          />
           <div className="lb-toggle">
             <button
               className={`lb-toggle-btn ${view === "table" ? "active" : ""}`}
@@ -235,7 +249,9 @@ export function Teams({ matches, players, teamNames, seasons, selectedSeason, on
         </div>
       </div>
 
-      <p className="text-[0.78rem] text-text-light -mt-2 mb-3">{t("teams.minMatchesNote")}</p>
+      <p className="text-[0.78rem] text-text-light -mt-2 mb-3">
+        {t("teams.minMatchesNote")}
+      </p>
 
       {sorted.length === 0 && (
         <div className="text-center py-12 px-4 text-text-light text-[0.95rem]">
@@ -248,20 +264,42 @@ export function Teams({ matches, players, teamNames, seasons, selectedSeason, on
         <table className="leaderboard-table">
           <thead>
             <tr>
-              <th className="rank" style={{ cursor: "pointer" }} onClick={() => handleSort("rank")}>
+              <th
+                className="rank"
+                style={{ cursor: "pointer" }}
+                onClick={() => handleSort("rank")}
+              >
                 # {sortBy === "rank" && (sortAsc ? "▴" : "▾")}
               </th>
-              <th style={{ cursor: "pointer" }} onClick={() => handleSort("name")}>
+              <th
+                style={{ cursor: "pointer" }}
+                onClick={() => handleSort("name")}
+              >
                 {t("teams.team")} {sortBy === "name" && (sortAsc ? "▴" : "▾")}
               </th>
-              <th className="elo" style={{ cursor: "pointer" }} onClick={() => handleSort("elo")}>
-                {t("teams.combinedElo")} {sortBy === "elo" && (sortAsc ? "▴" : "▾")}
+              <th
+                className="elo"
+                style={{ cursor: "pointer" }}
+                onClick={() => handleSort("elo")}
+              >
+                {t("teams.combinedElo")}{" "}
+                {sortBy === "elo" && (sortAsc ? "▴" : "▾")}
               </th>
-              <th className="record" style={{ cursor: "pointer" }} onClick={() => handleSort("matches")}>
-                {t("teams.record")} {sortBy === "matches" && (sortAsc ? "▴" : "▾")}
+              <th
+                className="record"
+                style={{ cursor: "pointer" }}
+                onClick={() => handleSort("matches")}
+              >
+                {t("teams.record")}{" "}
+                {sortBy === "matches" && (sortAsc ? "▴" : "▾")}
               </th>
-              <th className="winrate" style={{ cursor: "pointer" }} onClick={() => handleSort("winrate")}>
-                {t("teams.winRate")} {sortBy === "winrate" && (sortAsc ? "▴" : "▾")}
+              <th
+                className="winrate"
+                style={{ cursor: "pointer" }}
+                onClick={() => handleSort("winrate")}
+              >
+                {t("teams.winRate")}{" "}
+                {sortBy === "winrate" && (sortAsc ? "▴" : "▾")}
               </th>
               <th>{t("teams.topRival")}</th>
             </tr>
@@ -273,72 +311,111 @@ export function Teams({ matches, players, teamNames, seasons, selectedSeason, on
               const band = totalTeams >= 10 ? 5 : totalTeams >= 6 ? 2 : 1;
               const rank = rankIdx + 1;
               const rowClass =
-                rank <= band ? "row-top" : rank > totalTeams - band ? "row-bottom" : "";
+                rank <= band
+                  ? "row-top"
+                  : rank > totalTeams - band
+                    ? "row-bottom"
+                    : "";
               return (
-              <tr
-                key={team.key}
-                className={`clickable-row${rowClass ? ` ${rowClass}` : ""}`}
-                onClick={() => onTeamClick(team)}
-                style={{ borderLeft: `4px solid ${teamColor(team)}` }}
-              >
-                <td className="rank">
-                  {MEDALS[globalRankMap.get(team.key)!] ??
-                    `#${globalRankMap.get(team.key)! + 1}`}
-                </td>
-                <td className="name" style={{ padding: 0 }}>
-                  <TeamTooltip
-                    tooltipPlayers={teamPlayers(team)}
-                    color={teamColor(team)}
-                  >
-                    <div style={{ padding: "1rem" }}>
-                      <div>
-                        {getTeamDisplayName(team, players)}
-                        {team.currentStreak > 0 && (
-                          <span className="streak-badge" title={t("teams.winstreak")}>🔥{team.currentStreak}</span>
-                        )}
-                        {team.currentLoseStreak > 0 && (
-                          <span className="streak-badge lose" title={t("teams.losestreak")}>🥶{team.currentLoseStreak}</span>
+                <tr
+                  key={team.key}
+                  className={`clickable-row${rowClass ? ` ${rowClass}` : ""}`}
+                  onClick={() => onTeamClick(team)}
+                  style={{ borderLeft: `4px solid ${teamColor(team)}` }}
+                >
+                  <td className="rank">
+                    {MEDALS[globalRankMap.get(team.key)!] ??
+                      `#${globalRankMap.get(team.key)! + 1}`}
+                  </td>
+                  <td className="name" style={{ padding: 0 }}>
+                    <TeamTooltip
+                      tooltipPlayers={teamPlayers(team)}
+                      color={teamColor(team)}
+                    >
+                      <div style={{ padding: "1rem" }}>
+                        <div>
+                          {getTeamDisplayName(team, players)}
+                          {team.currentStreak > 0 && (
+                            <span
+                              className="streak-badge"
+                              title={t("teams.winstreak")}
+                            >
+                              🔥{team.currentStreak}
+                            </span>
+                          )}
+                          {team.currentLoseStreak > 0 && (
+                            <span
+                              className="streak-badge lose"
+                              title={t("teams.losestreak")}
+                            >
+                              🥶{team.currentLoseStreak}
+                            </span>
+                          )}
+                        </div>
+                        {(team.nameRow?.alias_1 || team.nameRow?.alias_2) && (
+                          <div className="text-[0.75rem] text-text-light mt-0.5">
+                            {[team.nameRow.alias_1, team.nameRow.alias_2]
+                              .filter(Boolean)
+                              .join(" · ")}
+                          </div>
                         )}
                       </div>
-                      {(team.nameRow?.alias_1 || team.nameRow?.alias_2) && (
-                        <div className="text-[0.75rem] text-text-light mt-0.5">
-                          {[team.nameRow.alias_1, team.nameRow.alias_2]
-                            .filter(Boolean)
-                            .join(" · ")}
-                        </div>
-                      )}
-                    </div>
-                  </TeamTooltip>
-                </td>
-                <td className="elo">{team.combinedElo}</td>
-                <td className="record">
-                  {team.wins} – {team.losses}
-                </td>
-                <td className="winrate" style={{ color: winRateColor(team.winRate) }}>
-                  {(team.winRate * 100).toFixed(0)}%
-                </td>
-                <td style={{ fontSize: "0.85rem", padding: 0 }}>
-                  {team.rivals[0] ? (
-                    (() => {
-                      const { name, color, rivalTeam } = rivalDisplay(team.rivals[0].key);
-                      const rPlayers = rivalTeam ? teamPlayers(rivalTeam) : [];
-                      return (
-                        <TeamTooltip tooltipPlayers={rPlayers} color={color}>
-                          <span style={{ display: "flex", alignItems: "center", gap: "0.4rem", padding: "1rem" }}>
-                            <span className="inline-block w-2 h-2 rounded-full shrink-0" style={{ background: color }} />
-                            <span className="text-text-light">
-                              {t("teams.rivalCount", { name, count: team.rivals[0].matchesPlayed })}
+                    </TeamTooltip>
+                  </td>
+                  <td className="elo">{team.combinedElo}</td>
+                  <td className="record">
+                    {team.wins} – {team.losses}
+                  </td>
+                  <td
+                    className="winrate"
+                    style={{ color: winRateColor(team.winRate) }}
+                  >
+                    {(team.winRate * 100).toFixed(0)}%
+                  </td>
+                  <td style={{ fontSize: "0.85rem", padding: 0 }}>
+                    {team.rivals[0] ? (
+                      (() => {
+                        const { name, color, rivalTeam } = rivalDisplay(
+                          team.rivals[0].key,
+                        );
+                        const rPlayers = rivalTeam
+                          ? teamPlayers(rivalTeam)
+                          : [];
+                        return (
+                          <TeamTooltip tooltipPlayers={rPlayers} color={color}>
+                            <span
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "0.4rem",
+                                padding: "1rem",
+                              }}
+                            >
+                              <span
+                                className="inline-block w-2 h-2 rounded-full shrink-0"
+                                style={{ background: color }}
+                              />
+                              <span className="text-text-light">
+                                {t("teams.rivalCount", {
+                                  name,
+                                  count: team.rivals[0].matchesPlayed,
+                                })}
+                              </span>
                             </span>
-                          </span>
-                        </TeamTooltip>
-                      );
-                    })()
-                  ) : (
-                    <span style={{ padding: "1rem", display: "block" }} className="text-text-light">—</span>
-                  )}
-                </td>
-              </tr>
-            );
+                          </TeamTooltip>
+                        );
+                      })()
+                    ) : (
+                      <span
+                        style={{ padding: "1rem", display: "block" }}
+                        className="text-text-light"
+                      >
+                        -
+                      </span>
+                    )}
+                  </td>
+                </tr>
+              );
             })}
           </tbody>
         </table>
@@ -351,7 +428,10 @@ export function Teams({ matches, players, teamNames, seasons, selectedSeason, on
               onClick={() => onTeamClick(team)}
               style={{ borderLeft: `4px solid ${teamColor(team)}` }}
             >
-              <TeamTooltip tooltipPlayers={teamPlayers(team)} color={teamColor(team)}>
+              <TeamTooltip
+                tooltipPlayers={teamPlayers(team)}
+                color={teamColor(team)}
+              >
                 <div className="font-bold text-base text-text mb-0.5">
                   {MEDALS[globalRankMap.get(team.key)!] && (
                     <span style={{ marginRight: "0.35rem" }}>
@@ -360,34 +440,58 @@ export function Teams({ matches, players, teamNames, seasons, selectedSeason, on
                   )}
                   {getTeamDisplayName(team, players)}
                   {team.currentStreak > 0 && (
-                    <span className="streak-badge" title={t("teams.winstreak")}>🔥{team.currentStreak}</span>
+                    <span className="streak-badge" title={t("teams.winstreak")}>
+                      🔥{team.currentStreak}
+                    </span>
                   )}
                   {team.currentLoseStreak > 0 && (
-                    <span className="streak-badge lose" title={t("teams.losestreak")}>🥶{team.currentLoseStreak}</span>
+                    <span
+                      className="streak-badge lose"
+                      title={t("teams.losestreak")}
+                    >
+                      🥶{team.currentLoseStreak}
+                    </span>
                   )}
                 </div>
                 {(team.nameRow?.alias_1 || team.nameRow?.alias_2) && (
                   <div className="text-[0.75rem] text-text-light mb-3">
-                    {[team.nameRow!.alias_1, team.nameRow!.alias_2].filter(Boolean).join(" · ")}
+                    {[team.nameRow!.alias_1, team.nameRow!.alias_2]
+                      .filter(Boolean)
+                      .join(" · ")}
                   </div>
                 )}
               </TeamTooltip>
               <div className="flex gap-4 items-baseline flex-wrap mt-2">
-                <span className="text-[1.375rem] font-bold text-primary">{team.combinedElo}</span>
-                <span className="text-[0.85rem] text-text-light">{team.wins} – {team.losses}</span>
-                <span className="text-[0.85rem] font-semibold" style={{ color: winRateColor(team.winRate) }}>
+                <span className="text-[1.375rem] font-bold text-primary">
+                  {team.combinedElo}
+                </span>
+                <span className="text-[0.85rem] text-text-light">
+                  {team.wins} – {team.losses}
+                </span>
+                <span
+                  className="text-[0.85rem] font-semibold"
+                  style={{ color: winRateColor(team.winRate) }}
+                >
                   {(team.winRate * 100).toFixed(0)}%
                 </span>
               </div>
               {team.rivals[0] &&
                 (() => {
-                  const { name, color, rivalTeam } = rivalDisplay(team.rivals[0].key);
+                  const { name, color, rivalTeam } = rivalDisplay(
+                    team.rivals[0].key,
+                  );
                   const rPlayers = rivalTeam ? teamPlayers(rivalTeam) : [];
                   return (
                     <TeamTooltip tooltipPlayers={rPlayers} color={color}>
                       <div className="flex items-center gap-1.5 mt-3 text-[0.75rem] text-text-light border-t border-border-light pt-2">
-                        <span className="inline-block w-2 h-2 rounded-full shrink-0" style={{ background: color }} />
-                        {t("teams.rivalCount", { name, count: team.rivals[0].matchesPlayed })}
+                        <span
+                          className="inline-block w-2 h-2 rounded-full shrink-0"
+                          style={{ background: color }}
+                        />
+                        {t("teams.rivalCount", {
+                          name,
+                          count: team.rivals[0].matchesPlayed,
+                        })}
                       </div>
                     </TeamTooltip>
                   );
