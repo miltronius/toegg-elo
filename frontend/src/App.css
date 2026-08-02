@@ -1071,17 +1071,6 @@ td.winrate {
   color: var(--color-text-light);
 }
 
-/* The details flyout sits 14px to the right of the row and is up to 240px wide,
-   so the row has to stop short of the card's edge or the flyout lands outside
-   it. Worst in Win95, where `main` drops its max-width and the card fills a
-   1600px window whose content area clips with overflow:auto - but it bites any
-   theme on a mid-width screen too. Below 768px the flyout drops underneath
-   instead, so no reserve is needed there. */
-@media (min-width: 769px) {
-  .achievements-overview-row {
-    max-width: calc(100% - 17rem);
-  }
-}
 .achievements-overview-row {
   position: relative;
   display: grid;
@@ -2377,6 +2366,43 @@ td.winrate {
 }
 [data-theme="win95"] .modal-panel > :last-child {
   margin-bottom: 0.75rem;
+}
+
+/* Achievements details flyout: drop it below the row instead of flying out to
+   the right.
+
+   Win95 is the one theme where `main` has no max-width, so the card fills the
+   whole 1600px window and a row's right edge is the window's right edge - the
+   flyout at `left: calc(100% + 14px)` lands outside it and is clipped by the
+   shell's `overflow: auto`. This is the same treatment the narrow-screen case
+   already uses, applied here for the same reason: no room to the side. */
+[data-theme="win95"] .achievements-overview-tooltip {
+  left: auto;
+  right: 0;
+  top: calc(100% + 8px);
+  transform: translateY(-6px);
+}
+[data-theme="win95"] .achievements-overview-row:hover .achievements-overview-tooltip {
+  transform: translateY(0);
+}
+[data-theme="win95"] .achievements-overview-tooltip::before {
+  left: auto;
+  right: 16px;
+  top: auto;
+  bottom: 100%;
+  transform: none;
+  border-width: 0 8px 8px 8px;
+  border-color: transparent transparent var(--ach-color, var(--color-border))
+    transparent;
+}
+[data-theme="win95"] .achievements-overview-tooltip::after {
+  left: auto;
+  right: 17px;
+  top: auto;
+  bottom: calc(100% - 1px);
+  transform: none;
+  border-width: 0 7px 7px 7px;
+  border-color: transparent transparent var(--color-bg) transparent;
 }
 
 /* Opts out of the violet gradient entirely: a flat navy strip with a bevelled
