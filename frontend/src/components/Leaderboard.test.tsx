@@ -37,7 +37,7 @@ const NO_HISTORY: EloHistory[] = [];
 
 // ── unauthenticated / read-only view ──────────────────────────────────────────
 
-describe("Leaderboard — unauthenticated (no onPlayerClick)", () => {
+describe("Leaderboard - unauthenticated (no onPlayerClick)", () => {
   it("renders all players", () => {
     render(<Leaderboard players={PLAYERS} history={NO_HISTORY} />);
     expect(screen.getByText("Alice")).toBeInTheDocument();
@@ -67,7 +67,7 @@ describe("Leaderboard — unauthenticated (no onPlayerClick)", () => {
 
 // ── sorting ───────────────────────────────────────────────────────────────────
 
-describe("Leaderboard — sorting", () => {
+describe("Leaderboard - sorting", () => {
   it("sorts by Elo descending by default", () => {
     render(<Leaderboard players={PLAYERS} history={NO_HISTORY} />);
     const rows = screen.getAllByRole("row").slice(1);
@@ -126,7 +126,7 @@ describe("Leaderboard — sorting", () => {
 
 // ── canEdit (onPlayerClick provided) ─────────────────────────────────────────
 
-describe("Leaderboard — with onPlayerClick (edit-capable user)", () => {
+describe("Leaderboard - with onPlayerClick (edit-capable user)", () => {
   it("calls onPlayerClick when a row is clicked", async () => {
     const onPlayerClick = vi.fn();
     render(
@@ -142,14 +142,14 @@ describe("Leaderboard — with onPlayerClick (edit-capable user)", () => {
 
   it("does not throw when rows clicked without onPlayerClick", async () => {
     render(<Leaderboard players={PLAYERS} history={NO_HISTORY} />);
-    // Should not throw — onPlayerClick is optional
+    // Should not throw - onPlayerClick is optional
     await userEvent.click(screen.getByText("Bob"));
   });
 });
 
 // ── winrate display ───────────────────────────────────────────────────────────
 
-describe("Leaderboard — winrate", () => {
+describe("Leaderboard - winrate", () => {
   it("shows winrate percentage", () => {
     render(<Leaderboard players={PLAYERS} history={NO_HISTORY} />);
     // Alice: 8W 2L = 80.0%
@@ -158,20 +158,144 @@ describe("Leaderboard — winrate", () => {
     expect(screen.getByText("50.0%")).toBeInTheDocument();
   });
 
-  it("hides players with no matches by default, shows them when toggled", () => {
+  it("shows a player with no matches when no narrower view is available", () => {
     const newbie = player("zzz", "Newbie", 1500, 0, 0);
     render(<Leaderboard players={[newbie]} history={NO_HISTORY} />);
-    // filtered out by default (Active only = on)
-    expect(screen.queryByText("0%")).not.toBeInTheDocument();
-    // toggle off Active only → newbie appears
-    fireEvent.click(screen.getByText("Active only"));
+    // Nobody has played, so "Played" has nothing to show → default is "All".
     expect(screen.getByText("0%")).toBeInTheDocument();
+  });
+
+  it("hides players with no matches from the first match onwards", () => {
+    // One 2v2 game = 4 players with a game, which is enough to select Played.
+    const field = [
+      ...Array.from({ length: 4 }, (_, i) =>
+        player(`p${i}`, `P${i}`, 1500 + i, 1, 0),
+      ),
+      player("zzz", "Newbie", 1400, 0, 0),
+    ];
+    render(<Leaderboard players={field} history={NO_HISTORY} />);
+    expect(screen.getByText("P0")).toBeInTheDocument();
+    expect(screen.queryByText("Newbie")).not.toBeInTheDocument();
+  });
+});
+
+// ── roster filter (All / Played / Ranked) ─────────────────────────────────────
+
+describe("Leaderboard - roster filter", () => {
+  // 4 players: neither narrowing view reaches 5 → default is "All".
+  const SMALL = [
+    player("aaa", "Alice", 1700, 8, 2),
+    player("bbb", "Bob", 1600, 2, 0), // 2 games - played but unranked
+    player("ccc", "Carl", 1550, 1, 0), // 1 game - played but unranked
+    player("ddd", "Dana", 1500, 0, 0), // never played
+  ];
+
+  const seg = (name: string) => screen.getByRole("button", { name });
+
+  it("defaults to All when no narrower view has enough entries", () => {
+    render(<Leaderboard players={SMALL} history={NO_HISTORY} />);
+    expect(seg("All")).toHaveClass("active");
+    expect(screen.getByText("Dana")).toBeInTheDocument();
+  });
+
+  it("shows only players with 3+ games under Ranked", () => {
+    render(<Leaderboard players={SMALL} history={NO_HISTORY} />);
+    fireEvent.click(seg("Ranked"));
+    expect(screen.getByText("Alice")).toBeInTheDocument(); // 10 games
+    expect(screen.queryByText("Bob")).not.toBeInTheDocument(); // 2 games
+    expect(screen.queryByText("Carl")).not.toBeInTheDocument(); // 1 game
+    expect(screen.queryByText("Dana")).not.toBeInTheDocument();
+  });
+
+  it("drops never-played players under Played", () => {
+    render(<Leaderboard players={SMALL} history={NO_HISTORY} />);
+    fireEvent.click(seg("Played"));
+    expect(screen.getByText("Carl")).toBeInTheDocument();
+    expect(screen.queryByText("Dana")).not.toBeInTheDocument();
+  });
+
+  it("ranks over the visible players only", () => {
+    render(<Leaderboard players={SMALL} history={NO_HISTORY} />);
+    fireEvent.click(seg("Ranked"));
+    const rows = screen.getAllByRole("row").slice(1);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toHaveTextContent("#1");
+    expect(rows[0]).toHaveTextContent("Alice");
+  });
+
+  it("defaults to Ranked once 4 players qualify", () => {
+    const field = [
+      player("a", "Ann", 1700, 3, 1),
+      player("b", "Ben", 1650, 3, 1),
+      player("c", "Cid", 1600, 3, 1),
+      player("d", "Dee", 1550, 3, 1),
+      player("f", "Fay", 1450, 1, 0), // 1 game - excluded by the default
+    ];
+    render(<Leaderboard players={field} history={NO_HISTORY} />);
+    expect(seg("Ranked")).toHaveClass("active");
+    expect(screen.getByText("Ann")).toBeInTheDocument();
+    expect(screen.queryByText("Fay")).not.toBeInTheDocument();
+  });
+
+  it("holds off on Ranked at 3 qualifiers", () => {
+    const field = [
+      player("a", "Ann", 1700, 3, 1),
+      player("b", "Ben", 1650, 3, 1),
+      player("c", "Cid", 1600, 3, 1),
+      player("f", "Fay", 1450, 1, 0),
+    ];
+    render(<Leaderboard players={field} history={NO_HISTORY} />);
+    expect(seg("Played")).toHaveClass("active");
+    expect(seg("Ranked")).toBeEnabled();
+    expect(screen.getByText("Fay")).toBeInTheDocument();
+  });
+
+  it("never defaults to Ranked while it would show nobody", () => {
+    const field = Array.from({ length: 10 }, (_, i) =>
+      player(`p${i}`, `P${i}`, 1500 + i, 1, 0),
+    );
+    render(<Leaderboard players={field} history={NO_HISTORY} />);
+    expect(seg("Played")).toHaveClass("active");
+    expect(screen.getByText("P0")).toBeInTheDocument();
+  });
+
+  it("disables Ranked while nobody qualifies", () => {
+    const field = Array.from({ length: 10 }, (_, i) =>
+      player(`p${i}`, `P${i}`, 1500 + i, 1, 0),
+    );
+    render(<Leaderboard players={field} history={NO_HISTORY} />);
+    expect(seg("Ranked")).toBeDisabled();
+    expect(seg("Played")).toBeEnabled();
+  });
+
+  it("disables Played while nobody has played", () => {
+    const field = Array.from({ length: 6 }, (_, i) =>
+      player(`p${i}`, `P${i}`, 1500, 0, 0),
+    );
+    render(<Leaderboard players={field} history={NO_HISTORY} />);
+    expect(seg("Played")).toBeDisabled();
+    expect(seg("Ranked")).toBeDisabled();
+    expect(seg("All")).toBeEnabled();
+    expect(seg("All")).toHaveClass("active");
+  });
+
+  it("enables Ranked as soon as one player qualifies", () => {
+    const field = [
+      player("a", "Ann", 1700, 3, 0),
+      ...Array.from({ length: 5 }, (_, i) =>
+        player(`p${i}`, `P${i}`, 1500, 1, 0),
+      ),
+    ];
+    render(<Leaderboard players={field} history={NO_HISTORY} />);
+    // Only one qualifier - offered, but not auto-selected.
+    expect(seg("Ranked")).toBeEnabled();
+    expect(seg("Played")).toHaveClass("active");
   });
 });
 
 // ── season view: exclude players who didn't exist that season ──────────────────
 
-describe("Leaderboard — season view participation", () => {
+describe("Leaderboard - season view participation", () => {
   const season = (
     id: string,
     number: number,
@@ -274,7 +398,7 @@ describe("Leaderboard — season view participation", () => {
     expect(screen.getByText("Latecomer")).toBeInTheDocument();
   });
 
-  it("shows the full season roster (incl. zero-match players) when Active only is off", () => {
+  it("shows the full season roster (incl. zero-match players) under All", () => {
     // Freshly created S2: every current player has a stats row but no matches yet.
     render(
       <Leaderboard
@@ -285,16 +409,14 @@ describe("Leaderboard — season view participation", () => {
         playerSeasonStats={[pss("vvv", "s2"), pss("lll", "s2")]}
       />,
     );
-    // Active only is on by default → nobody has played the new season yet.
-    expect(screen.queryByText("Veteran")).not.toBeInTheDocument();
-    expect(screen.queryByText("Latecomer")).not.toBeInTheDocument();
-    // Turn Active only off → the whole roster shows (all at starting ELO).
-    fireEvent.click(screen.getByText("Active only"));
+    // Nobody has played the new season, so Played has nothing to offer and the
+    // default lands on All → the whole roster shows (all at starting ELO).
+    expect(screen.getByRole("button", { name: "Played" })).toBeDisabled();
     expect(screen.getByText("Veteran")).toBeInTheDocument();
     expect(screen.getByText("Latecomer")).toBeInTheDocument();
   });
 
-  it("still excludes a later-season newcomer from an older season even with Active only off", () => {
+  it("still excludes a later-season newcomer from an older season even under All", () => {
     // S1 roster only had Veteran; Latecomer joined for S2.
     render(
       <Leaderboard
@@ -305,7 +427,7 @@ describe("Leaderboard — season view participation", () => {
         playerSeasonStats={[pss("vvv", "s1", 1520, 1, 0)]}
       />,
     );
-    fireEvent.click(screen.getByText("Active only"));
+    fireEvent.click(screen.getByText("All"));
     expect(screen.getByText("Veteran")).toBeInTheDocument();
     expect(screen.queryByText("Latecomer")).not.toBeInTheDocument();
   });

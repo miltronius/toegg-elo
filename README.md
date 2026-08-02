@@ -5,13 +5,14 @@ A dashboard to track 2v2 table soccer (foosball) matches and rank players using 
 ## Features
 
 - Record 2v2 matches and automatically recalculate Elo ratings
-- **Timeline** — reverse-chronological daily activity feed showing match results (with per-player Elo deltas), achievements earned, rank changes, and season transitions; shown first to logged-in users
+- **Timeline** - reverse-chronological daily activity feed showing match results (with per-player Elo deltas), achievements earned, rank changes, and season transitions; shown first to logged-in users
 - **Leaderboard** with player rankings, sortable by Elo / name / winrate, with Elo history charts; season-filtered
 - **Player detail modal** with Elo progression, winrate chart, Top Enemy & Nemesis stats, season dropdown, and ‹ › keyboard navigation (← → / A D)
-- **Teams tab** — all player pairs (≥ 2 matches) with combined Elo, win rate, nemesis rival, custom names/colors; season-filtered
-- **Statistics** — headline season/all-time stats: games played, active players, longest win streak 🔥 and lose streak 🥶, best/worst day, biggest single win/loss, highest/lowest Elo, busiest day, win-rate leader, season start/end dates, a games-by-weekday chart, and a GitHub-style daily-activity heatmap (spans at least the last ~3 months, with the first official day marked in purple)
-- **Achievements tab** — per-player achievement tracking; the overview's hover tooltip lists who earned each achievement, and for common ones flips to show who hasn't earned it yet (users/admins only)
-- **Admin tab** — user role management and one-click achievement recompute (admins only)
+- **Teams tab** - all player pairs (≥ 2 matches) with combined Elo, win rate, nemesis rival, custom names/colors; season-filtered
+- **Statistics** - headline season/all-time stats: games played, active players, longest win streak 🔥 and lose streak 🥶, best/worst day, biggest single win/loss, highest/lowest Elo, busiest day, win-rate leader, season start/end dates, a games-by-weekday chart, and a GitHub-style daily-activity heatmap (spans at least the last ~3 months, with the first official day marked in purple)
+- **Achievements tab** - per-player achievement tracking; the overview's hover tooltip lists who earned each achievement, and for common ones flips to show who hasn't earned it yet (users/admins only)
+- **Admin tab** - user role management, one-click achievement recompute, and message-banner management (admins only)
+- **Message banner** - announcements scrolling right-to-left across the top of the app. Admins can write one, schedule it (show from / show until, with 1 week / 2 weeks / 1 month presets), aim it at everyone or at signed-in users only, switch it on and off, and drag banners into the order they scroll. A new season announces itself automatically for 14 days; that banner is editable like any other, and left alone it shows in each viewer's own language
 - Match history with per-match Elo changes and season badge
 - Season support: all views filter by season; each season has its own K-factor
 
@@ -19,6 +20,7 @@ A dashboard to track 2v2 table soccer (foosball) matches and rank players using 
 
 - Role-based access: viewers (read-only), users (record matches, edit, achievements), admins (full control)
 - Magic link login
+- Player pickers (Record Match, Teams filter) are type-to-find autocompletes, listed alphabetically and searchable without accents - typing `muller` finds `Müller`
 - Themes: Light mode, Dark mode, Windows 95 mode
 - Languages: English and German, switchable via an EN/DE toggle in the header; choice is saved in a cookie. Dates always render in Swiss/German format (dd.mm.yyyy) regardless of language
 
@@ -57,9 +59,13 @@ K-factor is configurable per season (default 32).
 
 1. Create a [Supabase](https://supabase.com) project and run the migrations in `supabase/migrations/` in order.
 
+   Migrations are applied by hand in the SQL editor, so they are written to be
+   re-runnable - running one twice is a no-op rather than an error. Filename
+   order matters: later files alter tables the earlier ones create.
+
 2. Install the [Supabase CLI](https://supabase.com/docs/guides/cli/getting-started).
 
-   **Windows (Scoop — recommended):**
+   **Windows (Scoop - recommended):**
 
    Install Scoop:
 
@@ -115,7 +121,7 @@ Frontend is on Vercel (one project, auto-deployed). Edge function must be deploy
 
 ### Preview / staging
 
-1. Open a pull request — Vercel preview deployment is created automatically.
+1. Open a pull request - Vercel preview deployment is created automatically.
 
 2. Deploy the edge function to the **staging** Supabase project:
 
@@ -125,7 +131,7 @@ Frontend is on Vercel (one project, auto-deployed). Edge function must be deploy
 
 ### Production
 
-1. Merge the pull request — Vercel deploys to production automatically.
+1. Merge the pull request - Vercel deploys to production automatically.
 
 2. Deploy the edge function to the **production** Supabase project:
 

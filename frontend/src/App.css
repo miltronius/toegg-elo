@@ -40,11 +40,24 @@ body {
   /* Panel background. Also used as the halo behind SVG labels drawn on a card. */
   --card-bg: white;
 
-  /* Relationship-graph node colours. NOT identity — there is no palette of ~12
+  /* Shared height for the compact controls that share a card's header row -
+     season select, segmented toggles, compact autocomplete. They used to each
+     pick their own padding and so lined up at three different heights. */
+  --control-h: 34px;
+
+  /* Message-banner surface. Its own vars rather than the primary blue, so the
+     announcement bar reads as distinct from the app chrome and its contrast is
+     pinned independently of theme accent changes. White on both stops:
+     8.98:1 and 5.70:1, clearing 4.5:1 for text this size. */
+  --banner-bg-from: #5b21b6;
+  --banner-bg-to: #7c3aed;
+  --banner-fg: #ffffff;
+
+  /* Relationship-graph node colours. NOT identity - there is no palette of ~12
      perceptually distinct colours, so names carry identity and these six are
      assigned by graph colouring (see assignColorSlots) purely so no two linked
      players ever match. Validated all-pairs against the white card surface:
-     worst normal-vision ΔE 15.6, worst CVD ΔE 6.9 — the 6–8 CVD band is legal
+     worst normal-vision ΔE 15.6, worst CVD ΔE 6.9 - the 6–8 CVD band is legal
      here because every node is directly labelled. Six is the measured ceiling;
      a seventh hue drops the worst pair below the ΔE 15 floor. */
   --relgraph-c1: #3987e5;
@@ -299,6 +312,8 @@ body {
 /* ── Leaderboard view toggle ─────────────────────────────────────── */
 .lb-toggle {
   display: flex;
+  height: var(--control-h);
+  align-items: center;
   background: var(--color-bg-light);
   border: 1px solid var(--color-border);
   border-radius: 8px;
@@ -338,7 +353,8 @@ body {
 
 /* ── Season select ───────────────────────────────────────────────── */
 .season-select {
-  padding: 0.25rem 0.5rem;
+  height: var(--control-h);
+  padding: 0 0.5rem;
   border: 1px solid var(--color-border);
   border-radius: 0.375rem;
   font-size: 0.8rem;
@@ -736,6 +752,250 @@ td.winrate {
   }
 }
 
+/* ── Message banner (scrolling announcements) ────────────────────── */
+/* Violet rather than the primary blue: the banner should not read as more app
+   chrome, and white text on --color-primary only reaches 3.68:1 (below the 4.5
+   floor for text this size). Both violet stops clear it - 8.98:1 and 5.70:1.
+   The gradient is deliberately a short hop between two neighbouring shades:
+   enough to catch the light, not enough to become a stripe. */
+.message-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 1rem;
+  background: linear-gradient(
+    100deg,
+    var(--banner-bg-from),
+    var(--banner-bg-to)
+  );
+  color: var(--banner-fg);
+  font-size: 0.9rem;
+  font-weight: 700;
+  overflow: hidden;
+}
+.message-banner-icon {
+  flex-shrink: 0;
+  font-size: 1rem;
+  line-height: 1;
+}
+.banner-marquee {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+/* inline-flex so the track is sized by its content: the animation translates by
+   -100%/3, which is then exactly one of the three identical copies - the seam
+   between them is invisible, so the loop never jumps.
+
+   Three copies, not two. At the end of a cycle the track covers (N-1) copies to
+   the right of the viewport origin, so N=2 needs one copy to be wider than the
+   screen on its own - which a short announcement isn't, and the right edge goes
+   blank once per cycle. N=3 clears the viewport on the gaps alone (2 x 60vw),
+   whatever the message length. */
+.banner-marquee-track {
+  display: inline-flex;
+  animation-name: banner-marquee;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  will-change: transform;
+}
+/* The trailing gap is viewport-proportional (not a fixed padding) so the copies
+   span the screen on gaps alone, and it doubles as the pause between repeats.
+   Kept in sync with MARQUEE_GAP_RATIO in lib/banners.ts, which paces the
+   animation - one cycle travels one copy, so the two have to agree. */
+.banner-marquee-copy {
+  display: inline-flex;
+  align-items: center;
+  /* Real spacing between announcements. A padded text separator cannot do this:
+     HTML collapses runs of spaces, so "  -  " renders as " - ". Half the gap
+     sits either side of the bullet. Kept in sync with MARQUEE_SEPARATOR_PX in
+     lib/banners.ts, which paces the scroll. */
+  gap: 2.5rem;
+  flex: 0 0 auto;
+  padding-right: 60vw;
+  white-space: nowrap;
+}
+.banner-marquee-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 2.5rem;
+  white-space: nowrap;
+}
+.banner-marquee-sep {
+  opacity: 0.6;
+}
+@keyframes banner-marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-33.3333%);
+  }
+}
+/* Hovering (or tabbing into) the strip holds it still so a long announcement
+   can actually be read to the end. */
+.banner-marquee:hover .banner-marquee-track,
+.banner-marquee:focus-within .banner-marquee-track {
+  animation-play-state: paused;
+}
+/* Scrolling text is a classic vestibular trigger: drop to a single static copy
+   the reader can scroll themselves. */
+@media (prefers-reduced-motion: reduce) {
+  .banner-marquee {
+    overflow-x: auto;
+  }
+  .banner-marquee-track {
+    animation: none;
+    transform: none;
+  }
+  .banner-marquee-copy {
+    padding-right: 0;
+  }
+  .banner-marquee-copy + .banner-marquee-copy {
+    display: none;
+  }
+}
+
+/* ── Player autocomplete ─────────────────────────────────────────── */
+.player-ac {
+  position: relative;
+}
+/* Header-row variant: no form-group margin, and sized to --control-h so it
+   lines up with the season select and the toggles beside it. */
+.player-ac--compact .player-ac-field input {
+  height: var(--control-h);
+  min-width: 11rem;
+  padding: 0 1.9rem 0 0.6rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.375rem;
+  background: var(--card-bg);
+  color: var(--color-text);
+  font-size: 0.8rem;
+  font-family: inherit;
+}
+.player-ac--compact .player-ac-field input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+.player-ac-field {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+/* Room for the clear button so a long name never runs under it. */
+.player-ac-field input {
+  padding-right: 2rem;
+}
+.player-ac-clear {
+  position: absolute;
+  right: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--color-text-light);
+  font-size: 0.7rem;
+  line-height: 1;
+  cursor: pointer;
+  font-family: inherit;
+}
+.player-ac-clear:hover {
+  background: var(--color-bg-light);
+  color: var(--color-text);
+}
+.player-ac-list {
+  position: absolute;
+  z-index: 40;
+  left: 0;
+  right: 0;
+  top: 100%;
+  margin: 0.25rem 0 0;
+  padding: 0.25rem;
+  list-style: none;
+  max-height: 15rem;
+  overflow-y: auto;
+  background: var(--card-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 0.375rem;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14);
+}
+.player-ac-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.4rem 0.6rem;
+  border: none;
+  border-radius: 0.25rem;
+  background: transparent;
+  color: var(--color-text);
+  font-size: 0.9rem;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+/* `.active` is the keyboard/hover highlight, `.selected` is the current value -
+   both can apply at once, so they differ in weight rather than fighting. */
+.player-ac-option.active {
+  background: var(--color-bg-light);
+}
+.player-ac-option.selected {
+  font-weight: 700;
+  color: var(--color-primary);
+}
+.player-ac-elo {
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.8rem;
+  color: var(--color-text-light);
+}
+.player-ac-empty {
+  padding: 0.5rem 0.6rem;
+  font-size: 0.85rem;
+  color: var(--color-text-light);
+}
+[data-theme="win95"] .player-ac-list,
+[data-theme="win95"] .player-ac-option {
+  border-radius: 0;
+}
+[data-theme="win95"] .player-ac-option.active {
+  background: #000080;
+  color: #fff;
+}
+[data-theme="win95"] .player-ac-option.active .player-ac-elo {
+  color: #cfd6ff;
+}
+
+/* ── Banner admin drag-to-reorder ────────────────────────────────── */
+.banner-grip {
+  flex-shrink: 0;
+  cursor: grab;
+  user-select: none;
+  color: var(--color-text-light);
+  font-size: 1.1rem;
+  line-height: 1;
+  padding: 0 0.15rem;
+  touch-action: none;
+}
+.banner-grip:active {
+  cursor: grabbing;
+}
+.banner-grip:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+.banner-row.dragging {
+  opacity: 0.55;
+  border-color: var(--color-primary);
+}
+
 /* ── Team tooltip ────────────────────────────────────────────────── */
 .team-tooltip {
   display: flex;
@@ -811,6 +1071,17 @@ td.winrate {
   color: var(--color-text-light);
 }
 
+/* The details flyout sits 14px to the right of the row and is up to 240px wide,
+   so the row has to stop short of the card's edge or the flyout lands outside
+   it. Worst in Win95, where `main` drops its max-width and the card fills a
+   1600px window whose content area clips with overflow:auto - but it bites any
+   theme on a mid-width screen too. Below 768px the flyout drops underneath
+   instead, so no reserve is needed there. */
+@media (min-width: 769px) {
+  .achievements-overview-row {
+    max-width: calc(100% - 17rem);
+  }
+}
 .achievements-overview-row {
   position: relative;
   display: grid;
@@ -925,7 +1196,7 @@ td.winrate {
   );
 }
 
-/* On narrow screens the right flyout would run off-screen — drop it below. */
+/* On narrow screens the right flyout would run off-screen - drop it below. */
 @media (max-width: 768px) {
   .achievements-overview-tooltip {
     left: auto;
@@ -1628,7 +1899,7 @@ td.winrate {
   padding: 0.5rem;
   margin-bottom: 0;
 }
-/* Controls in a side rail rather than a top bar — the canvas is short on
+/* Controls in a side rail rather than a top bar - the canvas is short on
    height and has width to spare. */
 .relgraph-layout {
   display: flex;
@@ -1862,8 +2133,12 @@ td.winrate {
   --tooltip-bg: #1f2937;
   --tooltip-sub: #9ca3af;
   --card-bg: #1f2937;
+  /* One step deeper than the light theme so the bar doesn't glare against the
+     dark chrome. White clears by more here: 10.95:1 and 7.10:1. */
+  --banner-bg-from: #4c1d95;
+  --banner-bg-to: #6d28d9;
   /* Same twelve hues, stepped for the dark card. Measured against #1f2937 these
-     land at worst normal-vision ΔE ~10 — under the 15 floor, because no twelve-hue
+     land at worst normal-vision ΔE ~10 - under the 15 floor, because no twelve-hue
      set clears it on this surface (all 28 candidate subsets were checked). The
      graph-colouring guarantee plus the always-on labels carry it; if it ever
      reads badly, the fix is fewer slots, not different hues. */
@@ -2021,6 +2296,94 @@ td.winrate {
 [data-theme="win95"] .btn-delete,
 [data-theme="win95"] .btn-danger {
   border-radius: 0;
+}
+
+/* ── Win95 dialogs: real windows, not rounded cards ──────────────────
+   Every modal is an overlay wrapping one `.modal-panel`, whose first child is
+   already the heading - either the <h2> itself (PlayerModal, SeasonDialog) or a
+   header row holding the <h2> and a close button (PlayerDetail, TeamDetail).
+   That is exactly a title bar's shape, so it becomes one here rather than each
+   dialog growing Win95-specific markup. */
+[data-theme="win95"] .modal-panel {
+  background: #c3c7cb;
+  border-radius: 0;
+  /* One padding for all four panels (they ship p-6 and p-8) so the title bar's
+     full-bleed negative margin below has a single value to cancel. */
+  padding: 3px;
+  color: var(--color-text);
+  /* The classic raised frame: light from the top-left, shade to the
+     bottom-right, hard black outer edge, and a dropped shadow onto the
+     desktop. */
+  box-shadow:
+    inset 1px 1px 0 0 #ffffff,
+    inset -1px -1px 0 0 #868a8e,
+    inset 2px 2px 0 0 #dfdfdf,
+    inset -2px -2px 0 0 #000000,
+    3px 3px 0 0 rgba(0, 0, 0, 0.4);
+}
+
+/* Title bar. The gradient is the Win98-era one; flat #000e7a reads as Win95 but
+   the sweep is what most people picture. */
+[data-theme="win95"] .modal-panel > :first-child {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin: 0 0 0.75rem;
+  padding: 2px 3px 2px 6px;
+  min-height: 20px;
+  background: linear-gradient(90deg, #000e7a 0%, #1084d0 100%);
+  border-radius: 0;
+  user-select: none;
+}
+[data-theme="win95"] .modal-panel > :first-child,
+[data-theme="win95"] .modal-panel > :first-child h2 {
+  color: #fefefe;
+  font-size: 12px;
+  font-weight: bold;
+  line-height: 1.4;
+}
+/* Badges and streak pills sitting in the heading would otherwise keep their
+   card colours against the navy. */
+[data-theme="win95"] .modal-panel > :first-child span {
+  color: #fefefe;
+}
+
+/* The dialogs that have a close button get a proper title-bar control. */
+[data-theme="win95"] .modal-panel > :first-child .close-btn {
+  width: 16px;
+  height: 14px;
+  min-width: 16px;
+  flex-shrink: 0;
+  padding: 0;
+  font-size: 9px;
+  font-weight: bold;
+  color: #000;
+  background: #c3c7cb;
+  border-radius: 0;
+  box-shadow:
+    inset 0.5px 0.5px 0 0.5px #ffffff,
+    inset 0 0 0 1px #868a8e,
+    1px 0 0 0 #000,
+    0 1px 0 0 #000,
+    1px 1px 0 0 #000;
+}
+
+/* The panel's own padding is now the 3px frame, so the content below the title
+   bar supplies its own. */
+[data-theme="win95"] .modal-panel > :not(:first-child) {
+  margin-left: 0.75rem;
+  margin-right: 0.75rem;
+}
+[data-theme="win95"] .modal-panel > :last-child {
+  margin-bottom: 0.75rem;
+}
+
+/* Opts out of the violet gradient entirely: a flat navy strip with a bevelled
+   edge is a Win95 title bar, and gradients would break the illusion. */
+[data-theme="win95"] .message-banner {
+  background: var(--color-primary);
+  border-bottom: 2px solid #808080;
 }
 
 [data-theme="win95"] .toast {

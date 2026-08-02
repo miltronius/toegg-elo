@@ -1,11 +1,17 @@
-import { useEffect, useRef } from 'react';
-import type { QueryClient } from '@tanstack/react-query';
-import { supabase, getLastLocalMutationAt } from '../lib/supabase';
+import { useEffect, useRef } from "react";
+import type { QueryClient } from "@tanstack/react-query";
+import { supabase, getLastLocalMutationAt } from "../lib/supabase";
 
 // Tables whose changes should refresh the dashboard. A match record fires events
 // across matches + players, so elo_history / season_stats are intentionally left
-// out — invalidating ["appData"] refetches everything anyway.
-const WATCHED_TABLES = ['matches', 'players', 'seasons', 'team_names'] as const;
+// out - invalidating ["appData"] refetches everything anyway.
+const WATCHED_TABLES = [
+  "matches",
+  "players",
+  "seasons",
+  "team_names",
+  "banners",
+] as const;
 
 // Collapse the burst of row events from a single match record into one refresh.
 const DEBOUNCE_MS = 1000;
@@ -43,7 +49,7 @@ export function useRealtimeSync({
       if (timer) clearTimeout(timer);
       timer = setTimeout(() => {
         timer = null;
-        queryClient.invalidateQueries({ queryKey: ['appData'] });
+        queryClient.invalidateQueries({ queryKey: ["appData"] });
 
         const now = Date.now();
         const isSelf = now - getLastLocalMutationAt() < SELF_WINDOW_MS;
@@ -55,11 +61,11 @@ export function useRealtimeSync({
       }, DEBOUNCE_MS);
     };
 
-    const channel = supabase.channel('public-changes');
+    const channel = supabase.channel("public-changes");
     for (const table of WATCHED_TABLES) {
       channel.on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table },
+        "postgres_changes",
+        { event: "*", schema: "public", table },
         handleChange,
       );
     }

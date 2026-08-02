@@ -31,7 +31,9 @@ export type Profile = {
 };
 
 export async function getMyRole(): Promise<Role> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   const { data, error } = await supabase
     .from("profiles")
     .select("role")
@@ -230,8 +232,12 @@ export async function deleteMatch(matchId: string) {
 
     // Update player_season_stats for the affected season
     if (seasonId) {
-      const seasonHistory = playerHistory.filter((h) => h.season_id === seasonId);
-      const seasonMatchHistory = seasonHistory.filter((h) => h.match_id !== null);
+      const seasonHistory = playerHistory.filter(
+        (h) => h.season_id === seasonId,
+      );
+      const seasonMatchHistory = seasonHistory.filter(
+        (h) => h.match_id !== null,
+      );
       // Most recent season entry (including any inactivity penalties) drives current_season_elo
       const lastSeasonEntry = seasonHistory[0];
 
@@ -354,7 +360,9 @@ export async function getSeasons(): Promise<Season[]> {
   return (data ?? []) as Season[];
 }
 
-export async function getPlayerSeasonStats(seasonId: string): Promise<PlayerSeasonStats[]> {
+export async function getPlayerSeasonStats(
+  seasonId: string,
+): Promise<PlayerSeasonStats[]> {
   const { data, error } = await supabase
     .from("player_season_stats")
     .select("*")
@@ -382,6 +390,86 @@ export async function endSeasonAndStartNew(
     new_k_factor: newKFactor,
     new_penalty_percent: newPenaltyPercent,
   });
+  if (error) throw error;
+}
+
+// ---------------------------------------------------------------------------
+// Message banners
+// ---------------------------------------------------------------------------
+
+export type { Banner, BannerAudience } from "./banners";
+
+/**
+ * The admin-editable fields; the rest are server-defaulted. `season_id` is
+ * absent on purpose - it is set once by the `create_season_banner` trigger and
+ * an edit must not detach a banner from its season.
+ */
+export type BannerInput = {
+  /** NULL on a season banner reverts it to the translated default. */
+  message: string | null;
+  starts_at: string | null;
+  ends_at: string | null;
+  is_active: boolean;
+  audience: import("./banners").BannerAudience;
+};
+
+/**
+ * Everything the caller is allowed to see. RLS does the audience and
+ * expiry filtering, so this is the public list for viewers and the full list
+ * (hidden + expired rows included) for admins - the admin section and the
+ * banner itself both read from this one fetch.
+ *
+ * This one query degrades to an empty list instead of throwing: it runs inside
+ * the dashboard's single `Promise.all`, so a rejection here would blank the
+ * whole app. An announcement bar is not worth that, and the frontend can ship
+ * before the migration is applied. The warning keeps a genuine failure (a bad
+ * RLS policy, say) visible rather than silent.
+ */
+export async function getBanners(): Promise<import("./banners").Banner[]> {
+  const { data, error } = await supabase
+    .from("banners")
+    .select("*")
+    .order("sort_order", { ascending: true })
+    .order("created_at", { ascending: false });
+  if (error) {
+    console.warn("Could not load message banners:", error.message);
+    return [];
+  }
+  return (data ?? []) as import("./banners").Banner[];
+}
+
+export async function createBanner(input: BannerInput): Promise<void> {
+  markLocalMutation();
+  const { error } = await supabase.from("banners").insert(input);
+  if (error) throw error;
+}
+
+export async function updateBanner(
+  id: string,
+  input: Partial<BannerInput>,
+): Promise<void> {
+  markLocalMutation();
+  const { error } = await supabase
+    .from("banners")
+    .update({ ...input, updated_at: new Date().toISOString() })
+    .eq("id", id);
+  if (error) throw error;
+}
+
+export async function deleteBanner(id: string): Promise<void> {
+  markLocalMutation();
+  const { error } = await supabase.from("banners").delete().eq("id", id);
+  if (error) throw error;
+}
+
+/**
+ * Apply a whole running order at once, `ids` in the order they should show.
+ * One RPC rather than N updates so the reorder is atomic and produces a single
+ * realtime burst; the function skips rows already in place.
+ */
+export async function reorderBanners(ids: string[]): Promise<void> {
+  markLocalMutation();
+  const { error } = await supabase.rpc("set_banner_order", { p_ids: ids });
   if (error) throw error;
 }
 

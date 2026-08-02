@@ -2,7 +2,8 @@ import { useState, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import clsx from "clsx";
 import { recordMatch, Player, PlayerSeasonStats, TeamNameRow, Match } from "../lib/supabase";
-import { PlayerDropdown } from "./PlayerModal";
+import { PlayerAutocomplete } from "./PlayerAutocomplete";
+import { sortPlayersByName } from "../lib/playerSearch";
 import { predictMatch, PlayerProjection } from "../lib/eloPrediction";
 import { getTeamNameForPlayers, getHeadToHead } from "../lib/teamUtils";
 
@@ -46,14 +47,11 @@ export function MatchForm({
     [playerSeasonStats],
   );
 
-  const sortedPlayers = useMemo(
-    () => [...players].sort((a, b) => {
-      const eloA = seasonEloMap.get(a.id) ?? a.current_elo;
-      const eloB = seasonEloMap.get(b.id) ?? b.current_elo;
-      return eloB - eloA;
-    }),
-    [players, seasonEloMap],
-  );
+  // Alphabetical rather than by Elo: the picker is for finding a name you
+  // already have in mind, and a list that reshuffles as ratings change has no
+  // stable place to look.
+  const sortedPlayers = useMemo(() => sortPlayersByName(players), [players]);
+
   const [teamA1, setTeamA1] = useState("");
   const [teamA2, setTeamA2] = useState("");
   const [teamB1, setTeamB1] = useState("");
@@ -137,7 +135,7 @@ export function MatchForm({
             winner === "A" ? "border-success bg-success-light/30" : "border-border",
           )}>
             <h3 className="mt-0 font-bold">{teamALabel}</h3>
-            <PlayerDropdown
+            <PlayerAutocomplete
               label={t("matchForm.player1")}
               players={sortedPlayers}
               value={teamA1}
@@ -147,7 +145,7 @@ export function MatchForm({
               seasonEloMap={seasonEloMap}
             />
             {prediction && <ProjectionChip projection={prediction.teamA[0]} />}
-            <PlayerDropdown
+            <PlayerAutocomplete
               label={t("matchForm.player2")}
               players={sortedPlayers}
               value={teamA2}
@@ -210,7 +208,7 @@ export function MatchForm({
             winner === "B" ? "border-success bg-success-light/30" : "border-border",
           )}>
             <h3 className="mt-0 font-bold">{teamBLabel}</h3>
-            <PlayerDropdown
+            <PlayerAutocomplete
               label={t("matchForm.player1")}
               players={sortedPlayers}
               value={teamB1}
@@ -220,7 +218,7 @@ export function MatchForm({
               seasonEloMap={seasonEloMap}
             />
             {prediction && <ProjectionChip projection={prediction.teamB[0]} />}
-            <PlayerDropdown
+            <PlayerAutocomplete
               label={t("matchForm.player2")}
               players={sortedPlayers}
               value={teamB2}

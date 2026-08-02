@@ -48,7 +48,7 @@ type Rot = { yaw: number; pitch: number };
 type Proj = { sx: number; sy: number; scale: number; depth: number };
 
 // Fallback size for the first paint and for jsdom, where the wrapper measures 0
-// and ResizeObserver never fires — without it the graph would never render.
+// and ResizeObserver never fires - without it the graph would never render.
 const FALLBACK_WIDTH = 600;
 const FALLBACK_HEIGHT = 520;
 const MIN_HEIGHT = 360;
@@ -68,7 +68,7 @@ const MAX_PITCH = Math.PI / 2 - 0.05;
 // Ticks run synchronously before the first paint. High enough that the graph
 // arrives readable, low enough to leave some settling motion to watch.
 const WARMUP_TICKS = 120;
-// Label size in px, adjustable — legibility depends a lot on roster size and
+// Label size in px, adjustable - legibility depends a lot on roster size and
 // how far out you're zoomed, so it's a dial rather than a fixed value.
 const DEFAULT_LABEL_SIZE = 15;
 const MIN_LABEL_SIZE = 9;
@@ -77,7 +77,7 @@ const MAX_LABEL_SIZE = 28;
 const clamp = (v: number, lo: number, hi: number) =>
   Math.min(hi, Math.max(lo, v));
 
-// Golden angle — spaces Fibonacci-sphere points without polar clustering.
+// Golden angle - spaces Fibonacci-sphere points without polar clustering.
 const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5));
 
 /**
@@ -118,7 +118,7 @@ const chargeFor = (w: number, h: number, count: number) =>
  * World → screen. Yaw then pitch, then a perspective divide.
  *
  * In 2D this is the identity: yaw/pitch are 0 and every z is 0, so scale is 1
- * and the node lands on its own simulation coordinates. That's deliberate —
+ * and the node lands on its own simulation coordinates. That's deliberate -
  * both modes render through one path.
  */
 function project(
@@ -191,7 +191,7 @@ export function RelationshipGraph({
   // user takes over. Same "no explicit choice yet" trick App uses for seasons.
   const [view, setView] = useState<View | null>(null);
   // d3 mutates the node objects in place, so each tick republishes the same
-  // objects in a fresh array — that's what turns a tick into a render.
+  // objects in a fresh array - that's what turns a tick into a render.
   const [nodes, setNodes] = useState<SimNode[]>([]);
 
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -311,7 +311,7 @@ export function RelationshipGraph({
     return () => svg.removeEventListener("wheel", onWheel);
   }, []);
 
-  // Rebuilds when the data, canvas or dimensionality changes — but NOT when
+  // Rebuilds when the data, canvas or dimensionality changes - but NOT when
   // `mode` flips, which is what lets nodes hold position across the toggle.
   useEffect(() => {
     const prev = new Map(nodesRef.current.map((n) => [n.id, n]));
@@ -403,7 +403,7 @@ export function RelationshipGraph({
   }
 
   // Coloured over both edge sets at once, so a player keeps their colour when
-  // you flip Friends/Foes — only the roster or the filter can repaint them.
+  // you flip Friends/Foes - only the roster or the filter can repaint them.
   const slotOf = useMemo(
     () =>
       assignColorSlots(
@@ -413,7 +413,8 @@ export function RelationshipGraph({
       ),
     [data],
   );
-  const colorOf = (id: string) => `var(--relgraph-c${(slotOf.get(id) ?? 0) + 1})`;
+  const colorOf = (id: string) =>
+    `var(--relgraph-c${(slotOf.get(id) ?? 0) + 1})`;
 
   const edges: (FriendEdge | FoeEdge)[] =
     mode === "friends" ? data.friends : data.foes;
@@ -751,7 +752,10 @@ export function RelationshipGraph({
                     orient="auto-start-reverse"
                     markerUnits="strokeWidth"
                   >
-                    <path d="M 0 1 L 10 5 L 0 9 z" fill="var(--color-success)" />
+                    <path
+                      d="M 0 1 L 10 5 L 0 9 z"
+                      fill="var(--color-success)"
+                    />
                   </marker>
                 </defs>
                 <g transform={`translate(${v.tx} ${v.ty}) scale(${v.k})`}>

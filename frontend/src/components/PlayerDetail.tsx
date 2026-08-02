@@ -192,7 +192,7 @@ export function PlayerDetail({
   }, [onNavigate, prevPlayer, nextPlayer, isEditingName]);
 
   // Derive this player's history from the already-loaded app data instead of
-  // refetching it — App holds every player's history in the eloHistory prop.
+  // refetching it - App holds every player's history in the eloHistory prop.
   useEffect(() => {
     const history = eloHistory
       .filter((h) => h.player_id === player.id)
@@ -327,7 +327,9 @@ export function PlayerDetail({
     } catch (error) {
       alert(
         t("playerDetail.updateNameError") +
-          (error instanceof Error ? error.message : t("playerDetail.unknownError")),
+          (error instanceof Error
+            ? error.message
+            : t("playerDetail.unknownError")),
       );
       setNewName(player.name);
     } finally {
@@ -354,7 +356,9 @@ export function PlayerDetail({
     } catch (error) {
       alert(
         t("playerDetail.updateAnonError") +
-          (error instanceof Error ? error.message : t("playerDetail.unknownError")),
+          (error instanceof Error
+            ? error.message
+            : t("playerDetail.unknownError")),
       );
       setNewAnon(anonName);
     } finally {
@@ -385,7 +389,7 @@ export function PlayerDetail({
       onClick={onClose}
     >
       <div
-        className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto p-6"
+        className="modal-panel bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto p-6"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-4 gap-3">
@@ -429,12 +433,18 @@ export function PlayerDetail({
                 {player.name}
               </h2>
               {currentStreak > 0 && (
-                <span className="streak-badge" title={t("playerDetail.winstreak")}>
+                <span
+                  className="streak-badge"
+                  title={t("playerDetail.winstreak")}
+                >
                   🔥{currentStreak}
                 </span>
               )}
               {currentLoseStreak > 0 && (
-                <span className="streak-badge lose" title={t("playerDetail.losestreak")}>
+                <span
+                  className="streak-badge lose"
+                  title={t("playerDetail.losestreak")}
+                >
                   🥶{currentLoseStreak}
                 </span>
               )}
@@ -548,7 +558,9 @@ export function PlayerDetail({
         <div className="player-stats-grid">
           <div className="stat-card">
             <div className="stat-label">
-              {selectedSeason ? t("playerDetail.seasonElo") : t("playerDetail.currentElo")}
+              {selectedSeason
+                ? t("playerDetail.seasonElo")
+                : t("playerDetail.currentElo")}
             </div>
             <div className="stat-value">{effectiveStats.elo}</div>
           </div>
@@ -571,7 +583,9 @@ export function PlayerDetail({
           </div>
           {topEnemy && (
             <div className="stat-card">
-              <div className="stat-label">{t("playerDetail.favoriteEnemy")}</div>
+              <div className="stat-label">
+                {t("playerDetail.favoriteEnemy")}
+              </div>
               <div className="stat-value stat-value--name">
                 {playerMap.get(topEnemy.playerId)?.name ?? "?"}
               </div>
@@ -735,7 +749,7 @@ export function PlayerDetail({
                           name === winrateLabel
                             ? [
                                 value == null
-                                  ? "—"
+                                  ? "-"
                                   : `${(value as number).toFixed(1)}%`,
                                 name,
                               ]

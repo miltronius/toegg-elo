@@ -38,7 +38,7 @@ interface Cell {
  * weeks as columns, Mon→Fri top to bottom. The most recent week sits at the far
  * right; columns expand to fill the available width. Days outside the in-range
  * window (e.g. after an ended season) render as inert greyed cells; future days
- * are not drawn at all. Pure presentational — counts are precomputed upstream.
+ * are not drawn at all. Pure presentational - counts are precomputed upstream.
  */
 export function ActivityHeatmap({
   activity,
@@ -48,9 +48,11 @@ export function ActivityHeatmap({
   minWeeks = 13,
 }: ActivityHeatmapProps) {
   const { t } = useTranslation();
-  // Weekends are hidden by default — foosball happens on workdays — but can be
+  // Weekends are hidden by default - foosball happens on workdays - but can be
   // toggled on. Mon→Fri (5 rows) or Mon→Sun (7 rows).
-  const allWeekdayLabels = t("heatmap.weekdays", { returnObjects: true }) as string[];
+  const allWeekdayLabels = t("heatmap.weekdays", {
+    returnObjects: true,
+  }) as string[];
   const WEEKDAY_LABELS_FULL = allWeekdayLabels;
   const WEEKDAY_LABELS_WORKDAYS = allWeekdayLabels.slice(0, 5);
   const MONTH_LABELS = t("heatmap.months", { returnObjects: true }) as string[];
@@ -85,7 +87,7 @@ export function ActivityHeatmap({
     const games = new Map(activity.map((a) => [a.day, a.games]));
     const startDate = new Date(start.slice(0, 10) + "T00:00:00Z");
     const endDate = new Date(end.slice(0, 10) + "T00:00:00Z");
-    // Never draw past today — future days are omitted entirely.
+    // Never draw past today - future days are omitted entirely.
     const today = new Date(dayStr(new Date()) + "T00:00:00Z");
 
     const columns = Math.max(minWeeks, fitWeeks);
@@ -121,7 +123,7 @@ export function ActivityHeatmap({
       if (idx < rows) {
         const day = dayStr(cursor);
         const inRange = cursor >= startDate && cursor <= endDate;
-        const g = inRange ? games.get(day) ?? 0 : 0;
+        const g = inRange ? (games.get(day) ?? 0) : 0;
         if (g > max) max = g;
         week.push({ day, games: g, inRange });
       }
@@ -187,21 +189,30 @@ export function ActivityHeatmap({
             ))}
           </div>
           <div className="heatmap-grid" style={rowsStyle}>
-            {weeks.flat().map((cell) =>
-              cell.inRange ? (
-                <div
-                  key={cell.day}
-                  className="heatmap-cell"
-                  data-level={level(cell.games)}
-                  data-first={cell.day === firstDay?.slice(0, 10) ? "true" : undefined}
-                  title={`${t("heatmap.cellTitle", { day: cell.day, count: cell.games })}${
-                    cell.day === firstDay?.slice(0, 10) ? t("heatmap.firstDaySuffix") : ""
-                  }`}
-                />
-              ) : (
-                <div key={cell.day} className="heatmap-cell heatmap-cell-empty" />
-              ),
-            )}
+            {weeks
+              .flat()
+              .map((cell) =>
+                cell.inRange ? (
+                  <div
+                    key={cell.day}
+                    className="heatmap-cell"
+                    data-level={level(cell.games)}
+                    data-first={
+                      cell.day === firstDay?.slice(0, 10) ? "true" : undefined
+                    }
+                    title={`${t("heatmap.cellTitle", { day: cell.day, count: cell.games })}${
+                      cell.day === firstDay?.slice(0, 10)
+                        ? t("heatmap.firstDaySuffix")
+                        : ""
+                    }`}
+                  />
+                ) : (
+                  <div
+                    key={cell.day}
+                    className="heatmap-cell heatmap-cell-empty"
+                  />
+                ),
+              )}
           </div>
         </div>
       </div>

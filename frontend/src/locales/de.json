@@ -77,6 +77,79 @@
       "admin": "Admin"
     }
   },
+  "banner": {
+    "label": "Ankündigungen",
+    "seasonStarted": "🏆 Eine neue Saison hat begonnen - Saison {{number}}: {{name}}. Alle starten wieder bei 1500 Elo. Viel Erfolg!"
+  },
+  "bannerAdmin": {
+    "title": "Laufschrift-Banner",
+    "hint": "Ankündigungen laufen oben durch die App. Eine neue Saison erstellt automatisch ihr eigenes Banner mit einer Laufzeit von {{days}} Tagen - unten wie jedes andere bearbeitbar.",
+    "message": "Nachricht",
+    "messagePlaceholder": "z.B. Turnier am Freitag um 17:00 - Anmeldung in der Küche!",
+    "seasonMessageHint": "Das ist der automatische Text, den jeder in seiner eigenen Sprache sieht. Unverändert lassen (oder leeren), um ihn zu behalten; ändern, um deinen eigenen Wortlaut für alle festzulegen.",
+    "seasonBadge": "Saison",
+    "seasonBannerTitle": "Automatisch erstellt, als diese Saison begonnen hat",
+    "audience": "Wer sieht es",
+    "audiences": {
+      "everyone": "Alle",
+      "members": "Nur angemeldete Nutzer"
+    },
+    "audienceHint": {
+      "everyone": "Wird allen Besuchern angezeigt, auch abgemeldeten.",
+      "members": "Wird nur angemeldeten Nutzern angezeigt, unabhängig von der Rolle."
+    },
+    "state": "Status",
+    "states": {
+      "on": "Sichtbar",
+      "off": "Ausgeblendet"
+    },
+    "stateHintOn": "Eingeschaltet. Wird angezeigt, sobald es im Zeitfenster unten liegt.",
+    "stateHintOff": "Ausgeschaltet. Wird niemandem angezeigt, das Zeitfenster bleibt erhalten.",
+    "from": "Anzeigen ab",
+    "until": "Anzeigen bis",
+    "fromHint": "Format {{format}}. Leer lassen, um sofort zu starten.",
+    "untilHint": "Format {{format}}. Leer lassen, bis du es ausschaltest.",
+    "create": "Banner erstellen",
+    "save": "Änderungen speichern",
+    "saving": "Wird gespeichert…",
+    "cancel": "Abbrechen",
+    "edit": "Bearbeiten",
+    "delete": "Löschen",
+    "hide": "Ausblenden",
+    "show": "Anzeigen",
+    "durations": {
+      "1w": "1 Woche",
+      "2w": "2 Wochen",
+      "1m": "1 Monat"
+    },
+    "clearUntil": "Kein Ende",
+    "existing": "Alle Banner",
+    "empty": "Noch keine Banner.",
+    "reorderHint": "Ziehe am Griff, um die Reihenfolge zu ändern — das oberste läuft zuerst.",
+    "reorderGrip": "Zum Umsortieren ziehen oder Pfeiltasten verwenden",
+    "reorderError": "Neue Reihenfolge konnte nicht gespeichert werden.",
+    "confirmDelete": "Dieses Banner löschen?",
+    "messageRequired": "Eine Nachricht ist erforderlich.",
+    "windowOrder": "«Anzeigen bis» muss nach «Anzeigen ab» liegen.",
+    "dateInvalid": "Datumsangaben müssen dem Format {{format}} entsprechen.",
+    "saveError": "Banner konnte nicht gespeichert werden.",
+    "deleteError": "Banner konnte nicht gelöscht werden.",
+    "statuses": {
+      "live": "Aktiv",
+      "scheduled": "Geplant",
+      "expired": "Abgelaufen",
+      "hidden": "Ausgeblendet"
+    },
+    "windowOpen": "Immer",
+    "windowFrom": "Ab {{from}}",
+    "windowUntil": "Bis {{until}}",
+    "windowBoth": "{{from}} → {{until}}"
+  },
+  "playerPicker": {
+    "placeholder": "Name eingeben…",
+    "clear": "Auswahl löschen",
+    "noMatch": "Kein Spieler gefunden"
+  },
   "common": {
     "loading": "Wird geladen",
     "dismiss": "Zum Schliessen klicken"
@@ -86,7 +159,7 @@
     "losestreak": "Niederlagenserie",
     "anonTitle": "Name, der Betrachtern / abgemeldeten Nutzern angezeigt wird",
     "regenerate": "Neuen anonymen Namen generieren",
-    "anonEditHint": "Anonymer Name für Betrachter / abgemeldete Nutzer — zum Bearbeiten klicken",
+    "anonEditHint": "Anonymer Name für Betrachter / abgemeldete Nutzer - zum Bearbeiten klicken",
     "setAnonName": "Anonymen Namen festlegen",
     "allTime": "Gesamt",
     "seasonElo": "Saison-ELO",
@@ -279,7 +352,16 @@
     "empty": "Noch keine Spieler. Erstelle einen Spieler, um zu beginnen!",
     "allTime": "Gesamt",
     "startingEloLine": "Start-Elo-Linie",
-    "activeOnly": "Nur aktive",
+    "roster": {
+      "label": "Wen anzeigen",
+      "all": "Alle",
+      "played": "Gespielt",
+      "ranked": "Gewertet",
+      "allHint": "Alle Spieler anzeigen, auch ohne Spiele",
+      "playedHint": "Spieler mit mindestens 1 Spiel anzeigen",
+      "rankedHint": "Nur gewertete Spieler anzeigen – ab {{min}} Spielen",
+      "emptyHint": "Noch keine Spieler in dieser Ansicht"
+    },
     "table": "Tabelle",
     "eloChart": "Elo Chart",
     "bumpChart": "Bump Chart (Rang)",
@@ -312,14 +394,14 @@
     "startNew": "Neue Saison starten",
     "resetWarning": "Alle Spieler werden auf <0>1500 Elo</0> zurückgesetzt, wenn die neue Saison beginnt.",
     "seasonName": "Saisonname",
-    "kStandard": "32 — Standard (langsamer)",
-    "kFaster": "64 — Schneller",
-    "kVeryFast": "128 — Sehr schnell",
+    "kStandard": "32 - Standard (langsamer)",
+    "kFaster": "64 - Schneller",
+    "kVeryFast": "128 - Sehr schnell",
     "weeklyPenaltyLabel": "Wöchentliche Inaktivitätsstrafe (% des Elo)",
     "penaltyHint": "Wird jeden Montag auf Spieler angewendet, die 7+ Tage inaktiv sind. 0 = deaktiviert.",
     "back": "Zurück",
     "starting": "Wird gestartet…",
-    "confirmEnd": "Bestätigen — Saison {{number}} beenden",
+    "confirmEnd": "Bestätigen - Saison {{number}} beenden",
     "nameRequired": "Saisonname ist erforderlich.",
     "startError": "Neue Saison konnte nicht gestartet werden.",
     "defaultName": "Saison {{number}}"
@@ -354,8 +436,8 @@
     "foes": "Gegner",
     "twoD": "2D",
     "threeD": "3D",
-    "friendsHint": "Die stärksten Partnerschaften jedes Spielers — dickere Linien bedeuten mehr Spiele zusammen.",
-    "foesHint": "Die grössten Rivalitäten jedes Spielers — die Farbanteile zeigen, wer öfter gewinnt.",
+    "friendsHint": "Die stärksten Partnerschaften jedes Spielers - dickere Linien bedeuten mehr Spiele zusammen.",
+    "foesHint": "Die grössten Rivalitäten jedes Spielers - die Farbanteile zeigen, wer öfter gewinnt.",
     "hint2d": "Zieh einen Spieler, um das Netz zu entwirren, zieh den Hintergrund zum Verschieben, scrolle zum Zoomen.",
     "hint3d": "Zieh den Hintergrund zum Drehen, Rechtsklick-Ziehen zum Verschieben, zieh einen Spieler zum Bewegen, scrolle zum Zoomen.",
     "oneWay": "Einseitig: gehört zu {{a}}s Favoriten, aber nicht zu {{b}}s",

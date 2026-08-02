@@ -105,10 +105,10 @@ Deno.serve(async (req) => {
       .single();
 
     if (seasonError || !activeSeason) {
-      return new Response(
-        JSON.stringify({ error: "No active season found" }),
-        { status: 400, headers: corsHeaders },
-      );
+      return new Response(JSON.stringify({ error: "No active season found" }), {
+        status: 400,
+        headers: corsHeaders,
+      });
     }
 
     const seasonId = activeSeason.id;
@@ -132,7 +132,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Fetch season ELO for each player — use this for ELO math so all players
+    // Fetch season ELO for each player - use this for ELO math so all players
     // start at 1500 at the beginning of a season (not their all-time ELO).
     const { data: seasonStats } = await supabase
       .from("player_season_stats")
@@ -147,7 +147,7 @@ Deno.serve(async (req) => {
 
     const seasonEloMap = new Map<string, number>();
     (seasonStats ?? []).forEach((s) =>
-      seasonEloMap.set(s.player_id, s.current_season_elo)
+      seasonEloMap.set(s.player_id, s.current_season_elo),
     );
 
     // Returns season ELO; falls back to all-time ELO if no season stats yet.
@@ -177,8 +177,20 @@ Deno.serve(async (req) => {
     const seasonEloB0 = getSeasonElo(teamB[0].id, teamB[0].current_elo);
     const seasonEloB1 = getSeasonElo(teamB[1].id, teamB[1].current_elo);
 
-    const applyChange = (player: PlayerElo, seasonElo: number, opp1SeasonElo: number, opp2SeasonElo: number, won: boolean) => {
-      const newSeasonElo = calculateNewElo(seasonElo, opp1SeasonElo, opp2SeasonElo, won, kFactor);
+    const applyChange = (
+      player: PlayerElo,
+      seasonElo: number,
+      opp1SeasonElo: number,
+      opp2SeasonElo: number,
+      won: boolean,
+    ) => {
+      const newSeasonElo = calculateNewElo(
+        seasonElo,
+        opp1SeasonElo,
+        opp2SeasonElo,
+        won,
+        kFactor,
+      );
       const delta = newSeasonElo - seasonElo;
       eloChanges.push({
         playerId: player.id,
