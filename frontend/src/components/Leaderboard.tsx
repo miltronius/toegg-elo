@@ -13,6 +13,15 @@ import {
 } from "recharts";
 import { Player, EloHistory, Season, PlayerSeasonStats } from "../lib/supabase";
 import { DATE_LOCALE } from "../lib/i18n";
+import {
+  ROSTER_FILTERS,
+  RANKED_MIN_GAMES,
+  RosterFilter,
+  filterRoster,
+  isFilterAvailable,
+  resolveRosterFilter,
+  rosterCounts,
+} from "../lib/rosterFilter";
 
 interface LeaderboardProps {
   players: Player[];
@@ -345,7 +354,9 @@ export function Leaderboard({
   const [sortBy, setSortBy] = useState<"elo" | "name" | "winrate">("elo");
   const [sortAsc, setSortAsc] = useState(false);
   const [show1500Sep, setShow1500Sep] = useState(true);
-  const [showOnlyActive, setShowOnlyActive] = useState(true);
+  // null = no explicit pick yet → follow the auto default, which is re-derived
+  // per season. A click pins the choice for the rest of the session.
+  const [rosterChoice, setRosterChoice] = useState<RosterFilter | null>(null);
   const [eloXAxis, setEloXAxis] = useState<"date" | "game">("date");
   const [hovered, setHovered] = useState<string | null>(null);
   const [tooltip, setTooltip] = useState<{
@@ -372,7 +383,7 @@ export function Leaderboard({
   // or who appears in the season's history. This excludes players who first joined
   // in a later season — otherwise they'd chart with their all-time ELO across a
   // season they never played — while still showing the full roster of a freshly
-  // created season that has no matches yet (so "Active only off" lists everyone).
+  // created season that has no matches yet (so the "All" filter lists everyone).
   const seasonRosterIds = new Set<string>([
     ...(playerSeasonStats ?? []).map((s) => s.player_id),
     ...effectiveHistory.map((h) => h.player_id),
@@ -381,9 +392,11 @@ export function Leaderboard({
     ? effectivePlayers.filter((p) => seasonRosterIds.has(p.id))
     : effectivePlayers;
 
-  const visiblePlayers = showOnlyActive
-    ? scopedPlayers.filter((p) => p.matches_played > 0)
-    : scopedPlayers;
+  // scopedPlayers already carries the season's own matches_played (see
+  // effectivePlayers), so "3 games" means 3 games *this season*.
+  const filterCounts = rosterCounts(scopedPlayers);
+  const rosterFilter = resolveRosterFilter(rosterChoice, filterCounts);
+  const visiblePlayers = filterRoster(scopedPlayers, rosterFilter);
 
   const anyAtStartingElo = visiblePlayers.some((p) => p.current_elo === 1500);
 
@@ -573,13 +586,25 @@ export function Leaderboard({
               </button>
             </div>
           )}
-          <div className="lb-toggle">
-            <button
-              className={`lb-toggle-btn${showOnlyActive ? " active" : ""}`}
-              onClick={() => setShowOnlyActive((v) => !v)}
-            >
-              {t("leaderboard.activeOnly")}
-            </button>
+          <div className="lb-toggle" title={t("leaderboard.roster.label")}>
+            {ROSTER_FILTERS.map((f) => {
+              const available = isFilterAvailable(f, filterCounts);
+              return (
+                <button
+                  key={f}
+                  className={`lb-toggle-btn${rosterFilter === f ? " active" : ""}`}
+                  onClick={() => setRosterChoice(f)}
+                  disabled={!available}
+                  title={
+                    available
+                      ? t(`leaderboard.roster.${f}Hint`, { min: RANKED_MIN_GAMES })
+                      : t("leaderboard.roster.emptyHint")
+                  }
+                >
+                  {t(`leaderboard.roster.${f}`)}
+                </button>
+              );
+            })}
           </div>
           <div className="lb-toggle">
             <button

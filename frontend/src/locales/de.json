@@ -279,7 +279,16 @@
     "empty": "Noch keine Spieler. Erstelle einen Spieler, um zu beginnen!",
     "allTime": "Gesamt",
     "startingEloLine": "Start-Elo-Linie",
-    "activeOnly": "Nur aktive",
+    "roster": {
+      "label": "Wen anzeigen",
+      "all": "Alle",
+      "played": "Gespielt",
+      "ranked": "Gewertet",
+      "allHint": "Alle Spieler anzeigen, auch ohne Spiele",
+      "playedHint": "Spieler mit mindestens 1 Spiel anzeigen",
+      "rankedHint": "Nur gewertete Spieler anzeigen – ab {{min}} Spielen",
+      "emptyHint": "Noch keine Spieler in dieser Ansicht"
+    },
     "table": "Tabelle",
     "eloChart": "Elo Chart",
     "bumpChart": "Bump Chart (Rang)",
