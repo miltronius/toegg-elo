@@ -529,7 +529,7 @@ export function computeAchievementsForPlayer(
       unlockedAt: new Date(sorted[199].created_at),
     });
 
-  // all_weekdays - unlockedAt = date of the match that completed all 5 workdays (Mon–Fri)
+  // all_weekdays - unlockedAt = date of the match that completed all 5 workdays (Mon-Fri)
   // getUTCDay(): 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat
   const seenWorkdays = new Set<number>();
   for (const m of sorted) {
@@ -1343,7 +1343,9 @@ export function computeAchievementProgress(
       m.team_b_player_2_id === pid;
     const wonBy = (m: Match, pid: string) => {
       const inA = m.team_a_player_1_id === pid || m.team_a_player_2_id === pid;
-      return (inA && m.winning_team === "A") || (!inA && m.winning_team === "B");
+      return (
+        (inA && m.winning_team === "A") || (!inA && m.winning_team === "B")
+      );
     };
     const sortedAll = [...matches].sort(
       (a, b) =>

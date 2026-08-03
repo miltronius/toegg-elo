@@ -1,7 +1,14 @@
-// Mirrors the pure ELO math in supabase/functions/calculate-elo/index.ts so the
-// match form can preview win probability and projected ELO before recording a
-// match. Duplicated rather than imported because the edge function runs on Deno
-// and isn't reachable from the Vite build (same reasoning as elo_test.ts).
+// Match-form preview: win probability and projected ELO before a series is
+// recorded. The math itself lives in ./elo, which is mirrored byte-for-byte into
+// supabase/functions/_shared/elo.ts - so what the form shows and what the edge
+// function writes cannot drift.
+
+import {
+  DEFAULT_PARTNER_WEIGHT,
+  expectedScores,
+  rateSeries,
+  teamWinProbability,
+} from "./elo";
 
 export type PlayerInput = {
   id: string;
@@ -11,8 +18,11 @@ export type PlayerInput = {
 export type PlayerProjection = {
   playerId: string;
   currentElo: number;
+  /** Elo after winning one game, then after losing one. */
   winElo: number;
   loseElo: number;
+  /** Per-game expected score, so any series tally can be priced from it. */
+  expected: number;
 };
 
 export type MatchPrediction = {
@@ -22,56 +32,86 @@ export type MatchPrediction = {
   teamB: [PlayerProjection, PlayerProjection];
 };
 
-function getExpectedScore(playerElo: number, opponentElo: number): number {
-  return 1 / (1 + Math.pow(10, (opponentElo - playerElo) / 400));
-}
-
-function calculateNewElo(
-  playerElo: number,
-  opponent1Elo: number,
-  opponent2Elo: number,
-  won: boolean,
-  kFactor: number,
-): number {
-  const expectedScore =
-    (getExpectedScore(playerElo, opponent1Elo) + getExpectedScore(playerElo, opponent2Elo)) / 2;
-  return Math.round(playerElo + kFactor * ((won ? 1 : 0) - expectedScore));
-}
-
 export function predictMatch(
   teamA: [PlayerInput, PlayerInput],
   teamB: [PlayerInput, PlayerInput],
   kFactor = 32,
+  partnerWeight = DEFAULT_PARTNER_WEIGHT,
 ): MatchPrediction {
-  const project = (player: PlayerInput, opp1Elo: number, opp2Elo: number): PlayerProjection => ({
-    playerId: player.id,
-    currentElo: player.elo,
-    winElo: calculateNewElo(player.elo, opp1Elo, opp2Elo, true, kFactor),
-    loseElo: calculateNewElo(player.elo, opp1Elo, opp2Elo, false, kFactor),
-  });
+  const ratingsA: [number, number] = [teamA[0].elo, teamA[1].elo];
+  const ratingsB: [number, number] = [teamB[0].elo, teamB[1].elo];
 
-  const teamAProjections: [PlayerProjection, PlayerProjection] = [
-    project(teamA[0], teamB[0].elo, teamB[1].elo),
-    project(teamA[1], teamB[0].elo, teamB[1].elo),
-  ];
-  const teamBProjections: [PlayerProjection, PlayerProjection] = [
-    project(teamB[0], teamA[0].elo, teamA[1].elo),
-    project(teamB[1], teamA[0].elo, teamA[1].elo),
-  ];
-
-  // Average of all 4 pairwise expected scores between team A and team B players.
-  // Complementary by construction, so teamBWinProbability = 1 - teamAWinProbability.
-  const teamAWinProbability =
-    (getExpectedScore(teamA[0].elo, teamB[0].elo) +
-      getExpectedScore(teamA[0].elo, teamB[1].elo) +
-      getExpectedScore(teamA[1].elo, teamB[0].elo) +
-      getExpectedScore(teamA[1].elo, teamB[1].elo)) /
-    4;
+  const expected = expectedScores(ratingsA, ratingsB, partnerWeight);
+  // A single game either way, which is what the chips show before any game has
+  // been entered.
+  const aWins = rateSeries(ratingsA, ratingsB, 1, 0, kFactor, partnerWeight);
+  const bWins = rateSeries(ratingsA, ratingsB, 0, 1, kFactor, partnerWeight);
 
   return {
-    teamAWinProbability,
-    teamBWinProbability: 1 - teamAWinProbability,
-    teamA: teamAProjections,
-    teamB: teamBProjections,
+    teamAWinProbability: teamWinProbability(ratingsA, ratingsB, partnerWeight),
+    teamBWinProbability: teamWinProbability(ratingsB, ratingsA, partnerWeight),
+    teamA: [
+      {
+        playerId: teamA[0].id,
+        currentElo: teamA[0].elo,
+        winElo: teamA[0].elo + aWins.a1,
+        loseElo: teamA[0].elo + bWins.a1,
+        expected: expected.a1,
+      },
+      {
+        playerId: teamA[1].id,
+        currentElo: teamA[1].elo,
+        winElo: teamA[1].elo + aWins.a2,
+        loseElo: teamA[1].elo + bWins.a2,
+        expected: expected.a2,
+      },
+    ],
+    teamB: [
+      {
+        playerId: teamB[0].id,
+        currentElo: teamB[0].elo,
+        winElo: teamB[0].elo + bWins.b1,
+        loseElo: teamB[0].elo + aWins.b1,
+        expected: expected.b1,
+      },
+      {
+        playerId: teamB[1].id,
+        currentElo: teamB[1].elo,
+        winElo: teamB[1].elo + bWins.b2,
+        loseElo: teamB[1].elo + aWins.b2,
+        expected: expected.b2,
+      },
+    ],
+  };
+}
+
+/**
+ * Where a player lands if the series ends on this tally.
+ *
+ * Recomputed from the ratings rather than scaled from the projection, because
+ * the four deltas are rounded together to keep the pool constant - doing it per
+ * player here would show a number the edge function won't write.
+ */
+export function projectSeries(
+  teamA: [PlayerInput, PlayerInput],
+  teamB: [PlayerInput, PlayerInput],
+  teamAGames: number,
+  teamBGames: number,
+  kFactor = 32,
+  partnerWeight = DEFAULT_PARTNER_WEIGHT,
+): Record<string, number> {
+  const deltas = rateSeries(
+    [teamA[0].elo, teamA[1].elo],
+    [teamB[0].elo, teamB[1].elo],
+    teamAGames,
+    teamBGames,
+    kFactor,
+    partnerWeight,
+  );
+  return {
+    [teamA[0].id]: deltas.a1,
+    [teamA[1].id]: deltas.a2,
+    [teamB[0].id]: deltas.b1,
+    [teamB[1].id]: deltas.b2,
   };
 }

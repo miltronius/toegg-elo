@@ -1,7 +1,8 @@
 import type { EloHistory } from "./supabase";
+import { didLose, didWin } from "./eloHistory";
 
 export interface WeekdayStat {
-  /** Short weekday label, Monday–Friday. */
+  /** Short weekday label, Monday-Friday. */
   day: string;
   /** Total games played that weekday. */
   games: number;
@@ -11,7 +12,7 @@ export interface WeekdayStat {
   winrate: number | null;
 }
 
-// Monday–Friday only (foosball is played on working days). getDay() returns
+// Monday-Friday only (foosball is played on working days). getDay() returns
 // 0=Sun..6=Sat, so Mon..Fri map to 1..5 → indices 0..4 here.
 const WEEKDAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri"];
 
@@ -22,8 +23,9 @@ const WEEKDAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri"];
  *   are skipped.
  * - When `seasonId` is provided, only that season's rows are counted; pass null
  *   for all-time. (Mirrors the season filtering used elsewhere in PlayerDetail.)
- * - Win/loss is derived from the sign of elo_change, consistent with the rest of
- *   the app (a rare 0-change game counts toward `games` but not wins/losses).
+ * - Win/loss comes from the row's recorded result, consistent with the rest of
+ *   the app - not from the sign of elo_change, which a narrow win by a heavy
+ *   favourite can turn negative (see eloHistory.ts).
  */
 export function computeWeekdayStats(
   history: EloHistory[],
@@ -44,8 +46,8 @@ export function computeWeekdayStats(
     if (dow < 1 || dow > 5) continue; // skip weekends
     const s = stats[dow - 1];
     s.games++;
-    if (h.elo_change > 0) s.wins++;
-    else if (h.elo_change < 0) s.losses++;
+    if (didWin(h)) s.wins++;
+    else if (didLose(h)) s.losses++;
   }
 
   for (const s of stats) {

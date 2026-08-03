@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { recomputeAllAchievements } from "./achievements";
+import { didLose, didWin } from "./eloHistory";
 
 // The anon key is also known as the publishable key in Supabase
 // Both refer to the same public key found in your project settings
@@ -73,13 +74,29 @@ export type Player = {
   anonymous_name: string | null;
 };
 
+/**
+ * One game of a recorded series. `w` is always set; the goals are optional, so
+ * a session can be entered as a plain tally of winners when nobody kept score.
+ * Goals are display-only and never enter the ELO math.
+ */
+export type MatchGame = {
+  w: "A" | "B";
+  a: number | null;
+  b: number | null;
+};
+
 export type Match = {
   id: string;
   team_a_player_1_id: string;
   team_a_player_2_id: string;
   team_b_player_1_id: string;
   team_b_player_2_id: string;
+  /** Derived from the game tally; kept because every aggregation reads it. */
   winning_team: "A" | "B";
+  team_a_games: number;
+  team_b_games: number;
+  /** null on matches recorded before series existed - no breakdown to show. */
+  games: MatchGame[] | null;
   season_id: string | null;
   created_at: string;
 };
@@ -92,6 +109,12 @@ export type EloHistory = {
   elo_before: number;
   elo_after: number;
   elo_change: number;
+  /**
+   * The recorded result. null on inactivity-penalty rows and on anything
+   * written before the column existed - read it through `didWin`/`didLose` in
+   * lib/eloHistory.ts rather than directly.
+   */
+  won: boolean | null;
   created_at: string;
 };
 
@@ -120,12 +143,16 @@ export async function createPlayer(
   return data;
 }
 
+/**
+ * Record a series. The edge function derives the game tally and the winning
+ * team from `games`, so a level series is rejected there as well as in the form.
+ */
 export async function recordMatch(
   teamAPlayer1Id: string,
   teamAPlayer2Id: string,
   teamBPlayer1Id: string,
   teamBPlayer2Id: string,
-  winningTeam: "A" | "B",
+  games: MatchGame[],
 ) {
   markLocalMutation();
   const response = await supabase.functions.invoke("calculate-elo", {
@@ -134,7 +161,7 @@ export async function recordMatch(
       teamAPlayer2Id,
       teamBPlayer1Id,
       teamBPlayer2Id,
-      winningTeam,
+      games,
     },
   });
 
@@ -213,8 +240,8 @@ export async function deleteMatch(matchId: string) {
         .update({
           current_elo: lastEntry.elo_after,
           matches_played: matchOnlyHistory.length,
-          wins: matchOnlyHistory.filter((h) => h.elo_change > 0).length,
-          losses: matchOnlyHistory.filter((h) => h.elo_change < 0).length,
+          wins: matchOnlyHistory.filter(didWin).length,
+          losses: matchOnlyHistory.filter(didLose).length,
         })
         .eq("id", playerId);
     } else {
@@ -258,8 +285,8 @@ export async function deleteMatch(matchId: string) {
           .from("player_season_stats")
           .update({
             current_season_elo: currentSeasonElo,
-            wins: seasonMatchHistory.filter((h) => h.elo_change > 0).length,
-            losses: seasonMatchHistory.filter((h) => h.elo_change < 0).length,
+            wins: seasonMatchHistory.filter(didWin).length,
+            losses: seasonMatchHistory.filter(didLose).length,
             last_match_at: seasonMatchHistory[0]?.created_at ?? null,
           })
           .eq("player_id", playerId)
@@ -322,6 +349,12 @@ export type Season = {
   number: number;
   name: string;
   k_factor: number;
+  /**
+   * How far each player's rating is pulled towards their partner's before
+   * expectations are computed: 0 ignores the partner, 0.5 is the plain
+   * team-average model. See lib/elo.ts.
+   */
+  partner_weight: number;
   inactivity_penalty_percent: number;
   started_at: string;
   ended_at: string | null;
@@ -383,12 +416,14 @@ export async function endSeasonAndStartNew(
   newSeasonName: string,
   newKFactor: number,
   newPenaltyPercent: number,
+  newPartnerWeight: number,
 ): Promise<void> {
   markLocalMutation();
   const { error } = await supabase.rpc("end_season_and_start_new", {
     new_season_name: newSeasonName,
     new_k_factor: newKFactor,
     new_penalty_percent: newPenaltyPercent,
+    new_partner_weight: newPartnerWeight,
   });
   if (error) throw error;
 }

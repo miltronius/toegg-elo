@@ -7,17 +7,26 @@ import type { EloHistory } from "./supabase";
 const eh = (
   created_at: string,
   elo_change: number,
-  opts: { match_id?: string | null; season_id?: string | null } = {},
-): EloHistory => ({
-  id: created_at + ":" + elo_change,
-  player_id: "p1",
-  match_id: opts.match_id === undefined ? "m" : opts.match_id,
-  season_id: opts.season_id === undefined ? "s1" : opts.season_id,
-  elo_before: 1500,
-  elo_after: 1500 + elo_change,
-  elo_change,
-  created_at,
-});
+  opts: {
+    match_id?: string | null;
+    season_id?: string | null;
+    won?: boolean | null;
+  } = {},
+): EloHistory => {
+  const match_id = opts.match_id === undefined ? "m" : opts.match_id;
+  return {
+    id: created_at + ":" + elo_change,
+    player_id: "p1",
+    match_id,
+    season_id: opts.season_id === undefined ? "s1" : opts.season_id,
+    elo_before: 1500,
+    elo_after: 1500 + elo_change,
+    elo_change,
+    // Penalty rows have no result; match rows default to what the delta says.
+    won: opts.won !== undefined ? opts.won : match_id === null ? null : elo_change > 0,
+    created_at,
+  };
+};
 
 const dayOf = (stats: ReturnType<typeof computeWeekdayStats>, day: string) =>
   stats.find((s) => s.day === day)!;
@@ -75,5 +84,17 @@ describe("computeWeekdayStats", () => {
     expect(dayOf(stats, "Thu").games).toBe(0);
     expect(dayOf(stats, "Thu").winrate).toBeNull();
     expect(dayOf(stats, "Fri").winrate).toBeNull();
+  });
+
+  it("trusts the recorded result over the sign of the delta", () => {
+    // A favourite taking a long series narrowly: won the match, lost rating.
+    const stats = computeWeekdayStats(
+      [eh("2024-01-04T12:00:00Z", -8, { won: true })],
+      null,
+    );
+    const thu = dayOf(stats, "Thu");
+    expect(thu.wins).toBe(1);
+    expect(thu.losses).toBe(0);
+    expect(thu.winrate).toBe(100);
   });
 });

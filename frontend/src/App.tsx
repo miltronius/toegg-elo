@@ -21,6 +21,7 @@ import {
   Banner,
 } from "./lib/supabase";
 import type { PlayerAchievementRow } from "./lib/achievements";
+import { DEFAULT_PARTNER_WEIGHT } from "./lib/elo";
 import { useAuth } from "./contexts/AuthContext";
 import { useTheme } from "./contexts/ThemeContext";
 import { useToast } from "./contexts/ToastContext";
@@ -420,6 +421,7 @@ function App() {
             playerSeasonStats={playerSeasonStats}
             teamNames={teamNames}
             kFactor={activeSeason?.k_factor ?? 32}
+            partnerWeight={activeSeason?.partner_weight ?? DEFAULT_PARTNER_WEIGHT}
             matches={matches}
           />
         )}

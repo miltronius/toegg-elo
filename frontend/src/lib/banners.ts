@@ -104,7 +104,7 @@ export function forAudience(banner: Banner, signedIn: boolean): boolean {
  * The admin's hand-set order first, newest-first within a tie.
  *
  * Everything starts at `sort_order` 0, so until someone drags a row this is
- * purely newest-first — and a banner created after a reorder also lands at 0,
+ * purely newest-first - and a banner created after a reorder also lands at 0,
  * keeping "the latest announcement leads" for anything not hand-placed.
  */
 export function orderBanners(banners: Banner[]): Banner[] {
@@ -135,7 +135,8 @@ export function visibleBanners(
  */
 export function moveItem<T>(list: T[], from: number, to: number): T[] {
   if (from === to) return list;
-  if (from < 0 || from >= list.length || to < 0 || to >= list.length) return list;
+  if (from < 0 || from >= list.length || to < 0 || to >= list.length)
+    return list;
 
   const next = [...list];
   const [moved] = next.splice(from, 1);
@@ -179,7 +180,7 @@ export function toSwissDateTime(iso: string | null): string {
  * Format keystrokes into `dd.mm.yyyy hh:mm` as the admin types.
  *
  * Works off the digits alone and re-inserts every separator, so the punctuation
- * can never end up doubled or in the wrong place however the field is edited —
+ * can never end up doubled or in the wrong place however the field is edited -
  * pasting `03082026 1800`, typing the dots by hand, and backspacing all land on
  * the same result. Trailing separators are only added once a digit follows, so
  * deleting backwards doesn't fight the mask by re-adding the character just
@@ -207,7 +208,7 @@ export function maskSwissDateTime(value: string): string {
 
 /**
  * Three outcomes, not two: a blank field means "no bound", but a typo has to be
- * reported rather than silently dropped — quietly treating `31.02.2026` as "no
+ * reported rather than silently dropped - quietly treating `31.02.2026` as "no
  * end date" would publish a banner that never stops.
  */
 export type ParsedMoment =

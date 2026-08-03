@@ -57,7 +57,7 @@ body {
      perceptually distinct colours, so names carry identity and these six are
      assigned by graph colouring (see assignColorSlots) purely so no two linked
      players ever match. Validated all-pairs against the white card surface:
-     worst normal-vision ΔE 15.6, worst CVD ΔE 6.9 - the 6–8 CVD band is legal
+     worst normal-vision ΔE 15.6, worst CVD ΔE 6.9 - the 6-8 CVD band is legal
      here because every node is directly labelled. Six is the measured ceiling;
      a seventh hue drops the worst pair below the ΔE 15 floor. */
   --relgraph-c1: #3987e5;
@@ -941,7 +941,9 @@ td.winrate {
   cursor: pointer;
 }
 /* `.active` is the keyboard/hover highlight, `.selected` is the current value -
-   both can apply at once, so they differ in weight rather than fighting. */
+   both can apply at once, so they differ in weight rather than fighting.
+   Hover is driven from JS (onMouseEnter moves the highlight) rather than a CSS
+   `:hover`, so a hovered row and an arrowed-to row can never glow at once. */
 .player-ac-option.active {
   background: var(--color-bg-light);
 }
@@ -959,6 +961,13 @@ td.winrate {
   padding: 0.5rem 0.6rem;
   font-size: 0.85rem;
   color: var(--color-text-light);
+}
+/* In this theme --color-bg-light *is* --card-bg (both #1f2937), so the default
+   highlight above lands invisible - the list looked like it had no hover at
+   all. Step away from the card the other way instead, which is what the
+   leaderboard's row hover already does. */
+[data-theme="dark"] .player-ac-option.active {
+  background: var(--color-bg);
 }
 [data-theme="win95"] .player-ac-list,
 [data-theme="win95"] .player-ac-option {
@@ -994,6 +1003,126 @@ td.winrate {
 .banner-row.dragging {
   opacity: 0.55;
   border-color: var(--color-primary);
+}
+
+/* ── Match form: team Elo badge + its hover breakdown ────────────── */
+.team-elo {
+  position: relative;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  flex-shrink: 0;
+  padding: 0.15rem 0.45rem;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  cursor: help;
+}
+.team-elo:hover,
+.team-elo:focus-visible {
+  border-color: var(--color-primary);
+  outline: none;
+}
+.team-elo-label {
+  font-size: 0.7rem;
+  color: var(--color-text-light);
+}
+.team-elo-value {
+  font-size: 0.9rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+/* Flies out below the badge, right-aligned: the team cards are narrow and sit
+   at the outer edges of the form, so there is no room to either side. */
+.team-elo-tip {
+  position: absolute;
+  z-index: 40;
+  top: calc(100% + 8px);
+  right: 0;
+  width: max-content;
+  max-width: min(22rem, 80vw);
+  padding: 0.65rem 0.8rem;
+  background: var(--tooltip-bg);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  text-align: left;
+  font-weight: 400;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(-4px);
+  transition:
+    opacity 0.15s,
+    transform 0.15s;
+}
+.team-elo:hover .team-elo-tip,
+.team-elo:focus-visible .team-elo-tip {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+.team-elo-tip-head {
+  font-size: 0.85rem;
+}
+.team-elo-tip-sum {
+  margin-bottom: 0.6rem;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--tooltip-sub);
+}
+.team-elo-tip-title {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--tooltip-sub);
+}
+.team-elo-tip-list {
+  margin: 0.2rem 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.78rem;
+}
+.team-elo-tip-list li {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.1rem 0;
+}
+.team-elo-tip-total {
+  margin-top: 0.15rem;
+  padding-top: 0.2rem;
+  border-top: 1px solid var(--color-border);
+}
+.team-elo-tip-name {
+  white-space: nowrap;
+}
+.team-elo-tip-calc {
+  font-variant-numeric: tabular-nums;
+  color: var(--tooltip-sub);
+  white-space: nowrap;
+}
+.team-elo-tip-calc strong {
+  color: var(--color-text);
+}
+.team-elo-tip-note {
+  margin: 0.5rem 0 0;
+  font-size: 0.7rem;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--tooltip-sub);
+}
+[data-theme="win95"] .team-elo,
+[data-theme="win95"] .team-elo-tip {
+  border-radius: 0;
 }
 
 /* ── Team tooltip ────────────────────────────────────────────────── */
@@ -1504,6 +1633,12 @@ td.winrate {
 }
 .dashboard-match-vs {
   color: var(--color-text-light);
+}
+/* Series tally, from the winning team's side. Absent on pre-series matches. */
+.dashboard-match-score {
+  margin: 0 0.35rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
 .dashboard-match-sep {
   color: var(--color-text-light);
@@ -2382,7 +2517,9 @@ td.winrate {
   top: calc(100% + 8px);
   transform: translateY(-6px);
 }
-[data-theme="win95"] .achievements-overview-row:hover .achievements-overview-tooltip {
+[data-theme="win95"]
+  .achievements-overview-row:hover
+  .achievements-overview-tooltip {
   transform: translateY(0);
 }
 [data-theme="win95"] .achievements-overview-tooltip::before {
