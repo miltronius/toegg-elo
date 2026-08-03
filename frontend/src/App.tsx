@@ -246,6 +246,17 @@ function App() {
       : EMPTY_SEASON_STATS;
   }, [allPlayerSeasonStats, effectiveSeason, activeSeason]);
 
+  // A match is always recorded into - and rated against - the active season, so
+  // the form's Elo has to come from there rather than from whichever season the
+  // leaderboard happens to be showing. Same reason its k_factor and
+  // partner_weight are read off `activeSeason`.
+  const activeSeasonStats = useMemo(() => {
+    const activeId = activeSeason?.id;
+    return activeId
+      ? allPlayerSeasonStats.filter((s) => s.season_id === activeId)
+      : EMPTY_SEASON_STATS;
+  }, [allPlayerSeasonStats, activeSeason]);
+
   const handleSeasonSelect = (season: Season | null) =>
     setSelectedSeason(season);
 
@@ -418,7 +429,7 @@ function App() {
               refresh();
               setActiveTab("timeline");
             }}
-            playerSeasonStats={playerSeasonStats}
+            playerSeasonStats={activeSeasonStats}
             teamNames={teamNames}
             kFactor={activeSeason?.k_factor ?? 32}
             partnerWeight={activeSeason?.partner_weight ?? DEFAULT_PARTNER_WEIGHT}
