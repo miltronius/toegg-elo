@@ -128,6 +128,51 @@ describe("PlayerAutocomplete", () => {
     expect(onChange).toHaveBeenCalledWith("");
   });
 
+  describe("hover highlight", () => {
+    it("moves the highlight onto a hovered option", async () => {
+      const user = userEvent.setup();
+      const { input } = setup();
+      await user.click(input);
+
+      const [first, second] = screen.getAllByRole("option");
+      await user.hover(second);
+      expect(second).toHaveClass("active");
+      expect(first).not.toHaveClass("active");
+
+      await user.hover(first);
+      expect(first).toHaveClass("active");
+      expect(second).not.toHaveClass("active");
+    });
+
+    it("highlights the empty choice on hover too", async () => {
+      const user = userEvent.setup();
+      const { input } = setup({ value: "p2", emptyLabel: "All players" });
+      await user.click(input);
+
+      const empty = screen.getByRole("option", { name: "All players" });
+      expect(empty).not.toHaveClass("active");
+
+      await user.hover(empty);
+      expect(empty).toHaveClass("active");
+    });
+
+    it("never lights a hovered row and an arrowed-to row at once", async () => {
+      const user = userEvent.setup();
+      const { input } = setup({ emptyLabel: "All players" });
+      await user.click(input);
+
+      await user.hover(screen.getByRole("option", { name: "All players" }));
+      // Arrow keys skip the empty entry, so the highlight has to leave it.
+      await user.keyboard("{ArrowDown}");
+
+      const active = screen
+        .getAllByRole("option")
+        .filter((o) => o.classList.contains("active"));
+      expect(active).toHaveLength(1);
+      expect(active[0]).not.toHaveTextContent("All players");
+    });
+  });
+
   it("says so when nothing matches", async () => {
     const user = userEvent.setup();
     const { input } = setup();

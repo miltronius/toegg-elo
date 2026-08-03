@@ -40,6 +40,7 @@ const SEASONS: Season[] = [
     number: 2,
     name: "Summer Slam",
     k_factor: 32,
+    partner_weight: 0.333,
     inactivity_penalty_percent: 0,
     started_at: iso(-DAY_MS),
     ended_at: null,
@@ -48,7 +49,9 @@ const SEASONS: Season[] = [
   },
 ];
 
-function setup(props: Partial<React.ComponentProps<typeof MessageBanner>> = {}) {
+function setup(
+  props: Partial<React.ComponentProps<typeof MessageBanner>> = {},
+) {
   return render(
     <MessageBanner
       banners={[]}
@@ -93,9 +96,9 @@ describe("MessageBanner", () => {
   });
 
   it("shows an admin's override instead of the translated season text", () => {
-    setup({ banners: [seasonBanner({ message: "Season 2 — fight!" })] });
+    setup({ banners: [seasonBanner({ message: "Season 2 - fight!" })] });
     const text = marqueeText();
-    expect(text).toContain("Season 2 — fight!");
+    expect(text).toContain("Season 2 - fight!");
     expect(text).not.toContain("Summer Slam");
   });
 
@@ -146,7 +149,7 @@ describe("MessageBanner", () => {
     const { container } = setup({ banners: [banner()] });
     const copies = container.querySelectorAll(".banner-marquee-copy");
     // Three, so the strip still covers the screen after a cycle shifts it left
-    // by one copy — however short the message is.
+    // by one copy - however short the message is.
     expect(copies).toHaveLength(3);
     expect(copies[0]).not.toHaveAttribute("aria-hidden");
     expect(copies[1]).toHaveAttribute("aria-hidden", "true");
@@ -166,17 +169,24 @@ describe("MessageBanner", () => {
   });
 
   it("paces the scroll so a longer announcement takes longer per cycle", () => {
-    const { container, rerender } = setup({ banners: [banner({ message: "Short" })] });
-    const track = () => container.querySelector(".banner-marquee-track") as HTMLElement;
+    const { container, rerender } = setup({
+      banners: [banner({ message: "Short" })],
+    });
+    const track = () =>
+      container.querySelector(".banner-marquee-track") as HTMLElement;
     const shortDuration = parseFloat(track().style.animationDuration);
 
     rerender(
       <MessageBanner
-        banners={[banner({ message: "A very much longer announcement ".repeat(20) })]}
+        banners={[
+          banner({ message: "A very much longer announcement ".repeat(20) }),
+        ]}
         seasons={SEASONS}
         signedIn={false}
       />,
     );
-    expect(parseFloat(track().style.animationDuration)).toBeGreaterThan(shortDuration);
+    expect(parseFloat(track().style.animationDuration)).toBeGreaterThan(
+      shortDuration,
+    );
   });
 });

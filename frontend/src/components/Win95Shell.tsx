@@ -79,7 +79,7 @@ export function Win95Shell({ children }: { children: React.ReactNode }) {
           }}
         >
           <span style={{ fontSize: "12px", fontFamily: FONT }}>
-            ⚽ TöggElo – Elo Tracker
+            ⚽ TöggElo - Elo Tracker
           </span>
           <div style={{ display: "flex" }}>
             <button style={titleBtnBase}>_</button>

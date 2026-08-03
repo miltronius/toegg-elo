@@ -9,6 +9,7 @@ import {
 } from "../lib/supabase";
 import type { PlayerAchievementRow } from "../lib/achievements";
 import { DATE_LOCALE } from "../lib/i18n";
+import { DEFAULT_PARTNER_WEIGHT } from "../lib/elo";
 import { SeasonStats } from "./SeasonStats";
 
 interface SeasonDialogProps {
@@ -37,8 +38,11 @@ export function SeasonDialog({
   const [open, setOpen] = useState(false);
   const [view, setView] = useState<"info" | "new-season">("info");
   const [newName, setNewName] = useState("");
-  const [newKFactor, setNewKFactor] = useState<32 | 64 | 128>(64);
+  const [newKFactor, setNewKFactor] = useState<number>(48);
   const [newPenalty, setNewPenalty] = useState<number>(2);
+  const [newPartnerWeight, setNewPartnerWeight] = useState<number>(
+    DEFAULT_PARTNER_WEIGHT,
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -67,7 +71,12 @@ export function SeasonDialog({
     setLoading(true);
     setError(null);
     try {
-      await endSeasonAndStartNew(newName.trim(), newKFactor, newPenalty);
+      await endSeasonAndStartNew(
+        newName.trim(),
+        newKFactor,
+        newPenalty,
+        newPartnerWeight,
+      );
       close();
       onSeasonChanged();
     } catch (e) {
@@ -122,6 +131,17 @@ export function SeasonDialog({
                     {t("seasonDialog.kFactor")}
                   </dt>
                   <dd className="m-0">{activeSeason?.k_factor ?? "-"}</dd>
+
+                  <dt className="font-semibold text-text-light whitespace-nowrap">
+                    {t("seasonDialog.partnerWeight")}
+                  </dt>
+                  <dd className="m-0">
+                    {activeSeason
+                      ? t("seasonDialog.partnerWeightValue", {
+                          percent: Math.round(activeSeason.partner_weight * 100),
+                        })
+                      : "-"}
+                  </dd>
 
                   <dt className="font-semibold text-text-light whitespace-nowrap">
                     {t("seasonDialog.inactivityPenalty")}
@@ -202,15 +222,39 @@ export function SeasonDialog({
                   <select
                     id="season-kfactor"
                     value={newKFactor}
-                    onChange={(e) =>
-                      setNewKFactor(Number(e.target.value) as 32 | 64 | 128)
-                    }
+                    onChange={(e) => setNewKFactor(Number(e.target.value))}
                     disabled={loading}
                   >
+                    <option value={16}>{t("seasonDialog.kCalm")}</option>
+                    <option value={24}>{t("seasonDialog.kSteady")}</option>
                     <option value={32}>{t("seasonDialog.kStandard")}</option>
-                    <option value={64}>{t("seasonDialog.kFaster")}</option>
-                    <option value={128}>{t("seasonDialog.kVeryFast")}</option>
+                    <option value={48}>{t("seasonDialog.kFaster")}</option>
+                    <option value={64}>{t("seasonDialog.kVeryFast")}</option>
                   </select>
+                  <span className="block text-[0.78rem] text-text-light mt-1">
+                    {t("seasonDialog.kHint")}
+                  </span>
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="season-partner-weight">
+                    {t("seasonDialog.partnerWeight")}
+                  </label>
+                  <select
+                    id="season-partner-weight"
+                    value={newPartnerWeight}
+                    onChange={(e) => setNewPartnerWeight(Number(e.target.value))}
+                    disabled={loading}
+                  >
+                    <option value={0}>{t("seasonDialog.partnerNone")}</option>
+                    <option value={DEFAULT_PARTNER_WEIGHT}>
+                      {t("seasonDialog.partnerThird")}
+                    </option>
+                    <option value={0.5}>{t("seasonDialog.partnerHalf")}</option>
+                  </select>
+                  <span className="block text-[0.78rem] text-text-light mt-1">
+                    {t("seasonDialog.partnerWeightHint")}
+                  </span>
                 </div>
 
                 <div className="form-group">

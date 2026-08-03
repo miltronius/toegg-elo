@@ -8,7 +8,6 @@ import {
   teamColor,
 } from "../lib/teamUtils";
 
-
 interface TeamDetailProps {
   team: TeamStats;
   players: Player[];
@@ -50,8 +49,10 @@ export function TeamDetail({
     for (const t of allTeams) {
       if (t.key === team.key) continue;
       if (t.nameRow?.name) takenNames.add(t.nameRow.name.trim().toLowerCase());
-      if (t.nameRow?.alias_1) takenNames.add(t.nameRow.alias_1.trim().toLowerCase());
-      if (t.nameRow?.alias_2) takenNames.add(t.nameRow.alias_2.trim().toLowerCase());
+      if (t.nameRow?.alias_1)
+        takenNames.add(t.nameRow.alias_1.trim().toLowerCase());
+      if (t.nameRow?.alias_2)
+        takenNames.add(t.nameRow.alias_2.trim().toLowerCase());
     }
 
     const toCheck = [name, alias1, alias2].map((v) => v.trim()).filter(Boolean);
@@ -89,15 +90,27 @@ export function TeamDetail({
       >
         <div
           className="flex items-center justify-between mb-4"
-          style={{ borderLeft: `4px solid ${teamColor(team)}`, paddingLeft: "0.75rem" }}
+          style={{
+            borderLeft: `4px solid ${teamColor(team)}`,
+            paddingLeft: "0.75rem",
+          }}
         >
           <div className="flex items-center gap-2 min-w-0">
-            <h2 className="text-2xl font-bold text-text m-0">{getTeamDisplayName(team, players)}</h2>
+            <h2 className="text-2xl font-bold text-text m-0">
+              {getTeamDisplayName(team, players)}
+            </h2>
             {team.currentStreak > 0 && (
-              <span className="streak-badge" title={t("teamDetail.winstreak")}>🔥{team.currentStreak}</span>
+              <span className="streak-badge" title={t("teamDetail.winstreak")}>
+                🔥{team.currentStreak}
+              </span>
             )}
             {team.currentLoseStreak > 0 && (
-              <span className="streak-badge lose" title={t("teamDetail.losestreak")}>🥶{team.currentLoseStreak}</span>
+              <span
+                className="streak-badge lose"
+                title={t("teamDetail.losestreak")}
+              >
+                🥶{team.currentLoseStreak}
+              </span>
             )}
           </div>
           <button className="close-btn" onClick={onClose}>
@@ -111,9 +124,14 @@ export function TeamDetail({
             .filter((p): p is NonNullable<typeof p> => p != null)
             .sort((a, b) => b.current_elo - a.current_elo)
             .map((p) => (
-              <div key={p.id} className="flex items-center justify-between p-3 bg-bg rounded-md border border-border flex-1">
+              <div
+                key={p.id}
+                className="flex items-center justify-between p-3 bg-bg rounded-md border border-border flex-1"
+              >
                 <span className="font-semibold text-text">{p.name}</span>
-                <span className="text-primary font-bold text-lg">{p.current_elo}</span>
+                <span className="text-primary font-bold text-lg">
+                  {p.current_elo}
+                </span>
               </div>
             ))}
         </div>
@@ -129,14 +147,12 @@ export function TeamDetail({
           </div>
           <div className="stat-card">
             <div className="stat-label">{t("teamDetail.winRate")}</div>
-            <div className="stat-value">
-              {(team.winRate * 100).toFixed(0)}%
-            </div>
+            <div className="stat-value">{(team.winRate * 100).toFixed(0)}%</div>
           </div>
           <div className="stat-card">
             <div className="stat-label">{t("teamDetail.record")}</div>
             <div className="stat-value" style={{ fontSize: "1.1rem" }}>
-              {team.wins} – {team.losses}
+              {team.wins} - {team.losses}
             </div>
           </div>
         </div>
@@ -156,7 +172,9 @@ export function TeamDetail({
                 <button
                   type="button"
                   className="btn-secondary"
-                  onClick={() => setColor(teamColor({ ...team, nameRow: null }))}
+                  onClick={() =>
+                    setColor(teamColor({ ...team, nameRow: null }))
+                  }
                   disabled={saving}
                 >
                   {t("teamDetail.reset")}
@@ -210,16 +228,29 @@ export function TeamDetail({
 
         {team.rivals.length > 0 && (
           <div className="mt-4 pt-4 border-t border-border">
-            <h3 className="text-base font-semibold text-text mb-3">{t("teamDetail.topRivals")}</h3>
+            <h3 className="text-base font-semibold text-text mb-3">
+              {t("teamDetail.topRivals")}
+            </h3>
             <div className="flex flex-col">
               {team.rivals.map((rival) => (
-                <div key={rival.key} className="flex items-center justify-between py-2 border-b border-border-light last:border-b-0">
-                  <span className="text-sm text-text">{rivalTeamName(rival.key)}</span>
+                <div
+                  key={rival.key}
+                  className="flex items-center justify-between py-2 border-b border-border-light last:border-b-0"
+                >
+                  <span className="text-sm text-text">
+                    {rivalTeamName(rival.key)}
+                  </span>
                   <span className="flex items-center gap-2 text-sm">
-                    <span className="text-success font-semibold">{rival.wins}W</span>
-                    {" – "}
-                    <span className="text-error font-semibold">{rival.losses}L</span>
-                    <span className="text-text-light">{rival.matchesPlayed}×</span>
+                    <span className="text-success font-semibold">
+                      {rival.wins}W
+                    </span>
+                    {" - "}
+                    <span className="text-error font-semibold">
+                      {rival.losses}L
+                    </span>
+                    <span className="text-text-light">
+                      {rival.matchesPlayed}×
+                    </span>
                   </span>
                 </div>
               ))}

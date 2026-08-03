@@ -1,7 +1,7 @@
 import type { Match, Player, EloHistory } from "./supabase";
 import type { PlayerAchievementRow } from "./achievements";
 
-// Monday–Friday only - foosball is played on working days, consistent with
+// Monday-Friday only - foosball is played on working days, consistent with
 // weekdayStats.ts and the all_weekdays achievement. getDay(): 0=Sun..6=Sat.
 const WEEKDAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri"];
 
@@ -17,7 +17,7 @@ export interface SeasonStats {
   activePlayers: number;
   /** Distinct calendar days on which at least one match was played. */
   gameDays: number;
-  /** Match counts per workday (Mon–Fri). */
+  /** Match counts per workday (Mon-Fri). */
   weekday: WeekdayGames[];
   /** Per-calendar-day match counts (days with ≥1 match), ascending by day. */
   activity: { day: string; games: number }[];
@@ -92,7 +92,7 @@ export function computeSeasonStats(
     (h) => h.match_id != null && (seasonId == null || h.season_id === seasonId),
   );
 
-  // Games per weekday (Mon–Fri) + busiest calendar day, games & wins per player.
+  // Games per weekday (Mon-Fri) + busiest calendar day, games & wins per player.
   const weekday: WeekdayGames[] = WEEKDAY_LABELS.map((day) => ({
     day,
     games: 0,

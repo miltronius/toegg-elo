@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
 import { Player, Match, EloHistory, Season } from "../lib/supabase";
+import { didLose, didWin } from "../lib/eloHistory";
 import { DATE_LOCALE } from "../lib/i18n";
 import type { PlayerAchievementRow } from "../lib/achievements";
 import { ACHIEVEMENT_DEFINITIONS } from "../lib/achievements";
@@ -203,10 +204,10 @@ function buildTimeline(
       const delta = entry.elo_after - entry.elo_before;
       elosForSeason.set(entry.player_id, current + delta);
       seasonActivePlayers.add(entry.player_id);
-      if (entry.elo_change > 0) {
+      if (didWin(entry)) {
         const w = getSeasonWins(seasonId);
         w.set(entry.player_id, (w.get(entry.player_id) ?? 0) + 1);
-      } else if (entry.elo_change < 0) {
+      } else if (didLose(entry)) {
         const l = getSeasonLosses(seasonId);
         l.set(entry.player_id, (l.get(entry.player_id) ?? 0) + 1);
       }
@@ -561,6 +562,15 @@ export function Timeline({
                                   {renderPlayer(id, true)}
                                 </span>
                               ))}
+                              {/* Only on recorded series - a legacy match has
+                                  no tally, just a winner. */}
+                              {m.games && (
+                                <span className="dashboard-match-score">
+                                  {aWon ? m.team_a_games : m.team_b_games}
+                                  {"-"}
+                                  {aWon ? m.team_b_games : m.team_a_games}
+                                </span>
+                              )}
                               <span className="dashboard-match-vs">
                                 {t("timeline.wonVs")}
                               </span>

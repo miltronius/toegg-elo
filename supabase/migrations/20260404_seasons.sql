@@ -193,7 +193,7 @@ BEGIN
     RETURN;
   END IF;
 
-  -- 7 calendar days back (covers 5 business days for a Mon–Fri week)
+  -- 7 calendar days back (covers 5 business days for a Mon-Fri week)
   v_cutoff := NOW() - INTERVAL '7 days';
 
   FOR r IN

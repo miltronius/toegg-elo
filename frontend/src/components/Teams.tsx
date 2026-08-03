@@ -364,7 +364,7 @@ export function Teams({
                   </td>
                   <td className="elo">{team.combinedElo}</td>
                   <td className="record">
-                    {team.wins} – {team.losses}
+                    {team.wins} - {team.losses}
                   </td>
                   <td
                     className="winrate"
@@ -466,7 +466,7 @@ export function Teams({
                   {team.combinedElo}
                 </span>
                 <span className="text-[0.85rem] text-text-light">
-                  {team.wins} – {team.losses}
+                  {team.wins} - {team.losses}
                 </span>
                 <span
                   className="text-[0.85rem] font-semibold"

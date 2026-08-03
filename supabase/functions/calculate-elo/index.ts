@@ -1,5 +1,10 @@
 import { createClient } from "@supabase/supabase-js";
 import { recomputeAllAchievements } from "../_shared/achievements.ts";
+import {
+  DEFAULT_PARTNER_WEIGHT,
+  MAX_SERIES_GAMES,
+  rateSeries,
+} from "../_shared/elo.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -7,12 +12,22 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
+/** One game of a series. Goals are optional and never touch the ELO math. */
+interface GameInput {
+  w: "A" | "B";
+  a: number | null;
+  b: number | null;
+}
+
 interface MatchRequest {
   teamAPlayer1Id: string;
   teamAPlayer2Id: string;
   teamBPlayer1Id: string;
   teamBPlayer2Id: string;
-  winningTeam: "A" | "B";
+  /** Absent on a pre-series client; see parseSeries. */
+  games?: GameInput[];
+  /** Only read when `games` is absent. */
+  winningTeam?: "A" | "B";
 }
 
 interface PlayerElo {
@@ -25,35 +40,88 @@ interface EloChange {
   eloBefore: number;
   eloAfter: number;
   eloChange: number;
+  /**
+   * Recorded rather than derived from the sign of eloChange: summing per-game
+   * residuals means a favourite can win a series and still lose rating.
+   */
+  won: boolean;
 }
 
-// Calculate expected score against a single opponent
-function getExpectedScore(playerElo: number, opponentElo: number): number {
-  return 1 / (1 + Math.pow(10, (opponentElo - playerElo) / 400));
-}
+type Series = {
+  games: GameInput[] | null;
+  teamAGames: number;
+  teamBGames: number;
+  winningTeam: "A" | "B";
+};
 
-// ELO calculation for 2v2 - player faces both opponents
-function calculateNewElo(
-  playerElo: number,
-  opponent1Elo: number,
-  opponent2Elo: number,
-  won: boolean,
-  kFactor: number = 32,
-): number {
-  // Expected score against each opponent
-  const expectedVsOpp1 = getExpectedScore(playerElo, opponent1Elo);
-  const expectedVsOpp2 = getExpectedScore(playerElo, opponent2Elo);
+const MAX_GOALS = 99;
 
-  // Average expected score (player faces both opponents)
-  const expectedScore = (expectedVsOpp1 + expectedVsOpp2) / 2;
+const isGoals = (value: unknown): value is number =>
+  value === null ||
+  (typeof value === "number" && Number.isInteger(value) && value >= 0 &&
+    value <= MAX_GOALS);
 
-  // Actual score (1 for win, 0 for loss)
-  const actualScore = won ? 1 : 0;
+/**
+ * Normalise the request into a series, or return why it can't be one.
+ *
+ * A body with no `games` is read as a single 1-0 game, which is exactly how
+ * every match was recorded before series existed. That keeps a browser holding
+ * an old bundle working through a deploy instead of failing every submission.
+ */
+function parseSeries(body: MatchRequest): { series: Series } | { error: string } {
+  if (body.games === undefined) {
+    if (body.winningTeam !== "A" && body.winningTeam !== "B") {
+      return { error: "Missing games" };
+    }
+    return {
+      series: {
+        games: null,
+        teamAGames: body.winningTeam === "A" ? 1 : 0,
+        teamBGames: body.winningTeam === "B" ? 1 : 0,
+        winningTeam: body.winningTeam,
+      },
+    };
+  }
 
-  // New ELO
-  const newElo = playerElo + kFactor * (actualScore - expectedScore);
+  const games = body.games;
+  if (!Array.isArray(games) || games.length === 0) {
+    return { error: "A match needs at least one game" };
+  }
+  if (games.length > MAX_SERIES_GAMES) {
+    return { error: `A match can hold at most ${MAX_SERIES_GAMES} games` };
+  }
 
-  return Math.round(newElo);
+  for (const game of games) {
+    if (game?.w !== "A" && game?.w !== "B") {
+      return { error: "Every game needs a winner" };
+    }
+    if (!isGoals(game.a) || !isGoals(game.b)) {
+      return { error: "Goals must be whole numbers between 0 and 99" };
+    }
+    // Goals are optional, but if both are given they have to agree with the
+    // winner - otherwise the stored detail would contradict the rating.
+    if (game.a !== null && game.b !== null) {
+      if (game.a === game.b) return { error: "A game cannot end level" };
+      if ((game.a > game.b) !== (game.w === "A")) {
+        return { error: "Game score contradicts its winner" };
+      }
+    }
+  }
+
+  const teamAGames = games.filter((g) => g.w === "A").length;
+  const teamBGames = games.length - teamAGames;
+  if (teamAGames === teamBGames) {
+    return { error: "A match cannot end level" };
+  }
+
+  return {
+    series: {
+      games,
+      teamAGames,
+      teamBGames,
+      winningTeam: teamAGames > teamBGames ? "A" : "B",
+    },
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -64,16 +132,20 @@ Deno.serve(async (req) => {
     return new Response("ok", { headers: corsHeaders });
   }
 
+  const fail = (message: string, status = 400) =>
+    new Response(JSON.stringify({ error: message }), {
+      status,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+
   try {
     const matchData: MatchRequest = await req.json();
 
-    // Validate input
     const {
       teamAPlayer1Id,
       teamAPlayer2Id,
       teamBPlayer1Id,
       teamBPlayer2Id,
-      winningTeam,
     } = matchData;
 
     if (
@@ -82,11 +154,12 @@ Deno.serve(async (req) => {
       !teamBPlayer1Id ||
       !teamBPlayer2Id
     ) {
-      return new Response(JSON.stringify({ error: "Missing player IDs" }), {
-        status: 400,
-        headers: corsHeaders,
-      });
+      return fail("Missing player IDs");
     }
+
+    const parsed = parseSeries(matchData);
+    if ("error" in parsed) return fail(parsed.error);
+    const { games, teamAGames, teamBGames, winningTeam } = parsed.series;
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
@@ -97,22 +170,24 @@ Deno.serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Fetch active season to get k_factor and season_id
+    // Fetch active season for the rating parameters and season_id
     const { data: activeSeason, error: seasonError } = await supabase
       .from("seasons")
-      .select("id, k_factor")
+      .select("id, k_factor, partner_weight")
       .eq("is_active", true)
       .single();
 
     if (seasonError || !activeSeason) {
-      return new Response(JSON.stringify({ error: "No active season found" }), {
-        status: 400,
-        headers: corsHeaders,
-      });
+      return fail("No active season found");
     }
 
     const seasonId = activeSeason.id;
     const kFactor: number = activeSeason.k_factor;
+    // Coerced because a numeric column can arrive as a string, and defaulted
+    // because a database that predates the column should not rate at w = 0.
+    const partnerWeight = activeSeason.partner_weight == null
+      ? DEFAULT_PARTNER_WEIGHT
+      : Number(activeSeason.partner_weight);
 
     // Fetch all 4 players' current ELO and stats
     const { data: players, error: fetchError } = await supabase
@@ -126,10 +201,7 @@ Deno.serve(async (req) => {
       ]);
 
     if (fetchError || !players || players.length !== 4) {
-      return new Response(
-        JSON.stringify({ error: "Could not fetch player data" }),
-        { status: 400, headers: corsHeaders },
-      );
+      return fail("Could not fetch player data");
     }
 
     // Fetch season ELO for each player - use this for ELO math so all players
@@ -147,7 +219,7 @@ Deno.serve(async (req) => {
 
     const seasonEloMap = new Map<string, number>();
     (seasonStats ?? []).forEach((s) =>
-      seasonEloMap.set(s.player_id, s.current_season_elo),
+      seasonEloMap.set(s.player_id, s.current_season_elo)
     );
 
     // Returns season ELO; falls back to all-time ELO if no season stats yet.
@@ -167,50 +239,43 @@ Deno.serve(async (req) => {
       playerMap.get(teamBPlayer2Id)!,
     ];
 
-    // Calculate new ELO for each player
-    const eloChanges: EloChange[] = [];
-
-    // Season ELOs used for calculation so ratings are comparable within a season.
-    // The resulting delta is then applied to all-time current_elo for storage.
+    // Season ELOs used for calculation so ratings are comparable within a
+    // season. The resulting deltas are then applied to all-time current_elo.
     const seasonEloA0 = getSeasonElo(teamA[0].id, teamA[0].current_elo);
     const seasonEloA1 = getSeasonElo(teamA[1].id, teamA[1].current_elo);
     const seasonEloB0 = getSeasonElo(teamB[0].id, teamB[0].current_elo);
     const seasonEloB1 = getSeasonElo(teamB[1].id, teamB[1].current_elo);
 
-    const applyChange = (
-      player: PlayerElo,
-      seasonElo: number,
-      opp1SeasonElo: number,
-      opp2SeasonElo: number,
-      won: boolean,
-    ) => {
-      const newSeasonElo = calculateNewElo(
-        seasonElo,
-        opp1SeasonElo,
-        opp2SeasonElo,
-        won,
-        kFactor,
-      );
-      const delta = newSeasonElo - seasonElo;
-      eloChanges.push({
-        playerId: player.id,
-        eloBefore: player.current_elo,
-        eloAfter: player.current_elo + delta,
-        eloChange: delta,
-      });
-    };
+    // One call for all four players: the deltas have to be rounded together to
+    // keep the rating pool constant.
+    const deltas = rateSeries(
+      [seasonEloA0, seasonEloA1],
+      [seasonEloB0, seasonEloB1],
+      teamAGames,
+      teamBGames,
+      kFactor,
+      partnerWeight,
+    );
 
-    if (winningTeam === "A") {
-      applyChange(teamA[0], seasonEloA0, seasonEloB0, seasonEloB1, true);
-      applyChange(teamA[1], seasonEloA1, seasonEloB0, seasonEloB1, true);
-      applyChange(teamB[0], seasonEloB0, seasonEloA0, seasonEloA1, false);
-      applyChange(teamB[1], seasonEloB1, seasonEloA0, seasonEloA1, false);
-    } else {
-      applyChange(teamA[0], seasonEloA0, seasonEloB0, seasonEloB1, false);
-      applyChange(teamA[1], seasonEloA1, seasonEloB0, seasonEloB1, false);
-      applyChange(teamB[0], seasonEloB0, seasonEloA0, seasonEloA1, true);
-      applyChange(teamB[1], seasonEloB1, seasonEloA0, seasonEloA1, true);
-    }
+    const toChange = (
+      player: PlayerElo,
+      delta: number,
+      won: boolean,
+    ): EloChange => ({
+      playerId: player.id,
+      eloBefore: player.current_elo,
+      eloAfter: player.current_elo + delta,
+      eloChange: delta,
+      won,
+    });
+
+    const aWon = winningTeam === "A";
+    const eloChanges: EloChange[] = [
+      toChange(teamA[0], deltas.a1, aWon),
+      toChange(teamA[1], deltas.a2, aWon),
+      toChange(teamB[0], deltas.b1, !aWon),
+      toChange(teamB[1], deltas.b2, !aWon),
+    ];
 
     // Create match record
     const { data: matchResult, error: matchError } = await supabase
@@ -221,16 +286,16 @@ Deno.serve(async (req) => {
         team_b_player_1_id: teamBPlayer1Id,
         team_b_player_2_id: teamBPlayer2Id,
         winning_team: winningTeam,
+        team_a_games: teamAGames,
+        team_b_games: teamBGames,
+        games,
         season_id: seasonId,
       })
       .select()
       .single();
 
     if (matchError || !matchResult) {
-      return new Response(
-        JSON.stringify({ error: "Could not create match record" }),
-        { status: 400, headers: corsHeaders },
-      );
+      return fail("Could not create match record");
     }
 
     const matchId = matchResult.id;
@@ -239,20 +304,15 @@ Deno.serve(async (req) => {
     for (const change of eloChanges) {
       const playerData = players.find((p) => p.id === change.playerId);
 
-      // Update player ELO
+      // Update player ELO. Wins and losses count series, not games - one
+      // recorded match stays one result everywhere else in the app.
       await supabase
         .from("players")
         .update({
           current_elo: change.eloAfter,
           matches_played: (playerData?.matches_played || 0) + 1,
-          wins:
-            change.eloChange > 0
-              ? (playerData?.wins || 0) + 1
-              : playerData?.wins || 0,
-          losses:
-            change.eloChange < 0
-              ? (playerData?.losses || 0) + 1
-              : playerData?.losses || 0,
+          wins: (playerData?.wins || 0) + (change.won ? 1 : 0),
+          losses: (playerData?.losses || 0) + (change.won ? 0 : 1),
         })
         .eq("id", change.playerId);
 
@@ -264,6 +324,7 @@ Deno.serve(async (req) => {
         elo_before: change.eloBefore,
         elo_after: change.eloAfter,
         elo_change: change.eloChange,
+        won: change.won,
       });
 
       // Update per-season stats
@@ -272,7 +333,7 @@ Deno.serve(async (req) => {
         p_season_id: seasonId,
         p_elo_before: change.eloBefore,
         p_elo_after: change.eloAfter,
-        p_won: change.eloChange > 0,
+        p_won: change.won,
       });
     }
 
@@ -300,9 +361,6 @@ Deno.serve(async (req) => {
     );
   } catch (error) {
     console.error("Error:", error);
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-      headers: corsHeaders,
-    });
+    return fail(error instanceof Error ? error.message : "Unexpected error", 500);
   }
 });

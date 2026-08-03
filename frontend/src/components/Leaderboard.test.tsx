@@ -307,7 +307,7 @@ describe("Leaderboard - season view participation", () => {
     name,
     is_active,
     k_factor: 32,
-    inactivity_penalty_percent: 0,
+    partner_weight: 0.333,    inactivity_penalty_percent: 0,
     started_at: "2024-01-01T00:00:00Z",
     ended_at: is_active ? null : "2024-06-01T00:00:00Z",
     created_at: "2024-01-01T00:00:00Z",
@@ -328,6 +328,7 @@ describe("Leaderboard - season view participation", () => {
     elo_before,
     elo_after,
     elo_change: elo_after - elo_before,
+    won: elo_after > elo_before,
     created_at,
   });
 
@@ -444,7 +445,7 @@ describe("Leaderboard - season view participation", () => {
         onPlayerClick={onPlayerClick}
       />,
     );
-    // The table shows Veteran's S1 numbers (ELO 1520, 1–0), but PlayerDetail must
+    // The table shows Veteran's S1 numbers (ELO 1520, 1-0), but PlayerDetail must
     // receive the all-time player so its All-Time view isn't polluted with them.
     await userEvent.click(screen.getByText("Veteran"));
     expect(onPlayerClick).toHaveBeenCalledTimes(1);

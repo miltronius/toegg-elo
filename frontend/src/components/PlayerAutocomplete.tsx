@@ -42,6 +42,17 @@ interface PlayerAutocompleteProps {
  * back to the current selection on blur rather than leaving a half-typed name
  * looking authoritative.
  */
+/**
+ * Highlight slot for the "no player" entry.
+ *
+ * It sits outside the arrow-key index space (0..options.length-1), so keyboard
+ * navigation skips it exactly as it always has - `nextHighlight` treats any
+ * negative value as "nothing highlighted yet". Giving it a slot of its own is
+ * what lets the mouse light it up without a CSS `:hover` rule, which would let
+ * a hovered row and an arrowed-to row glow at the same time.
+ */
+const EMPTY_HIGHLIGHT = -2;
+
 export function PlayerAutocomplete({
   players,
   value,
@@ -187,7 +198,12 @@ export function PlayerAutocomplete({
                 type="button"
                 role="option"
                 aria-selected={!value}
-                className={`player-ac-option${!value ? " selected" : ""}`}
+                className={`player-ac-option${
+                  highlight === EMPTY_HIGHLIGHT ? " active" : ""
+                }${!value ? " selected" : ""}`}
+                // Pointer-down would blur the input before the click lands.
+                onMouseDown={(e) => e.preventDefault()}
+                onMouseEnter={() => setHighlight(EMPTY_HIGHLIGHT)}
                 onClick={() => commit("")}
               >
                 {emptyLabel}

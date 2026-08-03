@@ -18,17 +18,24 @@ const player = (id: string, name: string, elo = 1500): Player => ({
 });
 
 let mc = 0;
-const match = (o: Partial<Match> = {}): Match => ({
-  id: `m${++mc}`,
-  team_a_player_1_id: "p1",
-  team_a_player_2_id: "p2",
-  team_b_player_1_id: "p3",
-  team_b_player_2_id: "p4",
-  winning_team: "A",
-  season_id: "s1",
-  created_at: "2024-01-15T10:00:00Z",
-  ...o,
-});
+const match = (o: Partial<Match> = {}): Match => {
+  const winning_team = o.winning_team ?? "A";
+  return {
+    id: `m${++mc}`,
+    team_a_player_1_id: "p1",
+    team_a_player_2_id: "p2",
+    team_b_player_1_id: "p3",
+    team_b_player_2_id: "p4",
+    winning_team,
+    // Legacy shape: a 1-0 series with no per-game detail.
+    team_a_games: winning_team === "A" ? 1 : 0,
+    team_b_games: winning_team === "B" ? 1 : 0,
+    games: null,
+    season_id: "s1",
+    created_at: "2024-01-15T10:00:00Z",
+    ...o,
+  };
+};
 
 const PLAYERS = [
   player("p1", "Ann"),
@@ -43,7 +50,7 @@ const SEASONS: Season[] = [
     number: 1,
     name: "First",
     k_factor: 32,
-    inactivity_penalty_percent: 0,
+    partner_weight: 0.333,    inactivity_penalty_percent: 0,
     started_at: "2024-01-01T00:00:00Z",
     ended_at: null,
     is_active: true,

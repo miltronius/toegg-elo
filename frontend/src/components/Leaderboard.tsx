@@ -12,6 +12,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { Player, EloHistory, Season, PlayerSeasonStats } from "../lib/supabase";
+import { didLose, didWin } from "../lib/eloHistory";
 import { DATE_LOCALE } from "../lib/i18n";
 import {
   ROSTER_FILTERS,
@@ -60,15 +61,16 @@ function computePlayerStreaks(history: EloHistory[]): {
       (a, b) =>
         new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
     );
-    const last = sorted[sorted.length - 1]?.elo_change ?? 0;
+    const lastRow = sorted[sorted.length - 1];
+    if (!lastRow) continue;
+    const lastWon = didWin(lastRow);
     let streak = 0;
     for (let i = sorted.length - 1; i >= 0; i--) {
-      const change = sorted[i].elo_change;
       // Stop once the trailing run breaks (a win after losses, or vice versa).
-      if (change > 0 === last > 0 && change !== 0) streak++;
+      if (didWin(sorted[i]) === lastWon) streak++;
       else break;
     }
-    if (streak >= 2) (last > 0 ? win : lose).set(playerId, streak);
+    if (streak >= 2) (lastWon ? win : lose).set(playerId, streak);
   }
   return { win, lose };
 }
@@ -133,9 +135,9 @@ function buildSnapshots(
   matchOrder.forEach((matchId, matchIdx) => {
     for (const h of byMatch[matchId]) {
       currentElo[h.player_id] = h.elo_after;
-      if (h.elo_change > 0)
+      if (didWin(h))
         currentWins[h.player_id] = (currentWins[h.player_id] ?? 0) + 1;
-      else if (h.elo_change < 0)
+      else if (didLose(h))
         currentLosses[h.player_id] = (currentLosses[h.player_id] ?? 0) + 1;
     }
     const winrateOf = (id: string) => {

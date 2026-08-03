@@ -109,7 +109,7 @@ export function SeasonStats({
 
       {range && (
         <div className="season-stats-daterange">
-          📅 {fmtDay(range.start)} – {fmtDay(range.end)}
+          📅 {fmtDay(range.start)} - {fmtDay(range.end)}
           {season && !season.ended_at ? t("seasonStats.active") : ""}
         </div>
       )}

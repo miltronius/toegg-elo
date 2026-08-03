@@ -24,6 +24,7 @@ import {
   PlayerSeasonStats,
 } from "../lib/supabase";
 import { generateAnonymousName } from "../lib/anonymousNames";
+import { didLose, didWin } from "../lib/eloHistory";
 import { DATE_LOCALE } from "../lib/i18n";
 import {
   computeTeammateCounts,
@@ -139,7 +140,7 @@ export function PlayerDetail({
   const currentStreak = useMemo(() => {
     let streak = 0;
     for (let i = streakRows.length - 1; i >= 0; i--) {
-      if (streakRows[i].elo_change > 0) streak++;
+      if (didWin(streakRows[i])) streak++;
       else break;
     }
     return streak >= 2 ? streak : 0;
@@ -147,7 +148,7 @@ export function PlayerDetail({
   const currentLoseStreak = useMemo(() => {
     let streak = 0;
     for (let i = streakRows.length - 1; i >= 0; i--) {
-      if (streakRows[i].elo_change < 0) streak++;
+      if (didLose(streakRows[i])) streak++;
       else break;
     }
     return streak >= 2 ? streak : 0;
@@ -217,12 +218,10 @@ export function PlayerDetail({
     const eloAtStart = seasonStats?.elo_at_start;
 
     const data: ChartData[] = filtered.map((entry, index) => {
-      const cumulativeWins = filtered
-        .slice(0, index + 1)
-        .filter((h) => h.elo_change > 0).length;
+      const cumulativeWins = filtered.slice(0, index + 1).filter(didWin).length;
       const cumulativeLosses = filtered
         .slice(0, index + 1)
-        .filter((h) => h.elo_change < 0).length;
+        .filter(didLose).length;
       const total = cumulativeWins + cumulativeLosses;
       const elo =
         eloAtStart !== undefined
@@ -255,7 +254,7 @@ export function PlayerDetail({
     [matches, selectedSeason],
   );
 
-  // Games + winrate per weekday (Mon–Fri), scoped to the selected season.
+  // Games + winrate per weekday (Mon-Fri), scoped to the selected season.
   const weekdayStats = useMemo(
     () => computeWeekdayStats(rawHistory, selectedSeason?.id ?? null),
     [rawHistory, selectedSeason],
@@ -590,7 +589,7 @@ export function PlayerDetail({
                 {playerMap.get(topEnemy.playerId)?.name ?? "?"}
               </div>
               <div className="stat-sub">
-                {topEnemy.wins} – {topEnemy.losses}
+                {topEnemy.wins} - {topEnemy.losses}
               </div>
             </div>
           )}
@@ -601,7 +600,7 @@ export function PlayerDetail({
                 {playerMap.get(nemesis.playerId)?.name ?? "?"}
               </div>
               <div className="stat-sub">
-                {nemesis.wins} – {nemesis.losses}
+                {nemesis.wins} - {nemesis.losses}
               </div>
             </div>
           )}

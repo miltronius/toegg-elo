@@ -23,7 +23,7 @@ function makePlayer(id: string, name = id, elo = 1500): Player {
 
 let mc = 0;
 function makeMatch(o: Partial<Match> = {}): Match {
-  return {
+  const base: Omit<Match, "team_a_games" | "team_b_games" | "games"> = {
     id: `m${++mc}`,
     team_a_player_1_id: "p1",
     team_a_player_2_id: "p2",
@@ -32,6 +32,14 @@ function makeMatch(o: Partial<Match> = {}): Match {
     winning_team: "A",
     season_id: "s1",
     created_at: "2024-01-15T10:00:00Z",
+    ...o,
+  };
+  // Default to the legacy shape: a 1-0 series with no per-game detail.
+  return {
+    team_a_games: base.winning_team === "A" ? 1 : 0,
+    team_b_games: base.winning_team === "B" ? 1 : 0,
+    games: null,
+    ...base,
     ...o,
   };
 }

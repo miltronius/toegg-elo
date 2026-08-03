@@ -65,7 +65,7 @@ export function ActivityHeatmap({
   const weekdayLabels = showWeekends
     ? WEEKDAY_LABELS_FULL
     : WEEKDAY_LABELS_WORKDAYS;
-  const rows = weekdayLabels.length; // 5 (Mon–Fri) or 7 (Mon–Sun)
+  const rows = weekdayLabels.length; // 5 (Mon-Fri) or 7 (Mon-Sun)
 
   // Measure available width and derive how many columns fill it.
   useLayoutEffect(() => {
