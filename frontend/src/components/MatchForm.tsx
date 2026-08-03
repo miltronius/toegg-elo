@@ -21,6 +21,7 @@ import {
   DEFAULT_PARTNER_WEIGHT,
   MAX_SERIES_GAMES,
   effectiveRatings,
+  getExpectedScore,
 } from "../lib/elo";
 import { getTeamNameForPlayers, getHeadToHead } from "../lib/teamUtils";
 
@@ -130,7 +131,15 @@ type TeamBreakdown = {
   expected: [number, number];
 };
 
-const pct = (value: number) => `${Math.round(value * 100)}%`;
+/**
+ * One decimal, always - the win-chance rows show their own arithmetic, and at
+ * whole percent the rounding was visible in it: two terms displayed as 64% and
+ * 85% average to 74.5 beside a result reading 74. A tenth keeps the slack below
+ * what anyone checks by eye, and the fixed decimal keeps the column aligned
+ * under `tabular-nums`. The headline odds bar stays at whole percent, where a
+ * decimal would be false precision.
+ */
+const pct = (value: number) => `${(value * 100).toFixed(1)}%`;
 const weight = (value: number) => value.toFixed(2);
 
 /**
@@ -155,8 +164,16 @@ function TeamEloBadge({
 
   const teamElo = Math.round((members[0].elo + members[1].elo) / 2);
   const own = 1 - partnerWeight;
+  // Unrounded, because the duel percentages below are derived from it: rounding
+  // first would leave the two halves not quite averaging to the expectation the
+  // projection chips were computed from.
+  const effectiveExact = (self: Member, partner: Member) =>
+    own * self.elo + partnerWeight * partner.elo;
   const effective = (self: Member, partner: Member) =>
-    Math.round(own * self.elo + partnerWeight * partner.elo);
+    Math.round(effectiveExact(self, partner));
+  /** This player's chance against each opponent, in `opponents` order. */
+  const duels = (self: Member, partner: Member) =>
+    opponents.map((o) => getExpectedScore(effectiveExact(self, partner), o.elo));
   const teamChance = (expected[0] + expected[1]) / 2;
 
   const rows: [Member, Member][] = [
@@ -200,28 +217,36 @@ function TeamEloBadge({
 
         <div className="team-elo-tip-title">
           {t("matchForm.winChancePerGame")}
+          <span className="team-elo-tip-note">
+            {t("matchForm.versusOpponents", {
+              opponents: opponents
+                .map((o) => `${o.name} ${Math.round(o.elo)}`)
+                .join(", "),
+            })}
+          </span>
         </div>
         <ul className="team-elo-tip-list">
-          {members.map((member, i) => (
-            <li key={member.name}>
-              <span className="team-elo-tip-name">{member.name}</span>
-              <span className="team-elo-tip-calc">{pct(expected[i])}</span>
-            </li>
-          ))}
+          {rows.map(([self, partner], i) => {
+            const [vs1, vs2] = duels(self, partner);
+            return (
+              <li key={self.name}>
+                <span className="team-elo-tip-name">{self.name}</span>
+                <span className="team-elo-tip-calc">
+                  ({pct(vs1)} + {pct(vs2)}) ÷ 2 ={" "}
+                  <strong>{pct(expected[i])}</strong>
+                </span>
+              </li>
+            );
+          })}
           <li className="team-elo-tip-total">
             <span className="team-elo-tip-name">{t("matchForm.team")}</span>
             <span className="team-elo-tip-calc">
+              ({pct(expected[0])} + {pct(expected[1])}) ÷ 2 ={" "}
               <strong>{pct(teamChance)}</strong>
             </span>
           </li>
         </ul>
-        <p className="team-elo-tip-note">
-          {t("matchForm.averagedOverOpponents", {
-            opponents: opponents
-              .map((o) => `${o.name} ${Math.round(o.elo)}`)
-              .join(", "),
-          })}
-        </p>
+        <p className="team-elo-tip-note">{t("matchForm.eloCurveNote")}</p>
       </div>
     </div>
   );

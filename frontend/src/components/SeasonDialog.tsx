@@ -248,6 +248,9 @@ export function SeasonDialog({
                   >
                     <option value={0}>{t("seasonDialog.partnerNone")}</option>
                     <option value={DEFAULT_PARTNER_WEIGHT}>
+                      {t("seasonDialog.partnerQuarter")}
+                    </option>
+                    <option value={1 / 3}>
                       {t("seasonDialog.partnerThird")}
                     </option>
                     <option value={0.5}>{t("seasonDialog.partnerHalf")}</option>

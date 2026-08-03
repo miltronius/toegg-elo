@@ -20,7 +20,7 @@
  * w = 0   → the partner is ignored (the pre-2026-08 behaviour)
  * w = 0.5 → both partners share one effective rating; reduces exactly to the
  *           standard team-average model, and both get the same Δ
- * w = 1/3 → the default: the partner counts, but your own rating counts double
+ * w = 1/4 → the default: the partner counts, but your own rating counts triple
  *
  * ── The invariant: the four deltas sum to zero ──────────────────────────────
  *
@@ -40,8 +40,14 @@
  * sum to zero too (see `roundPreservingSum`).
  */
 
-/** Neither ignore the partner nor merge with them: your rating counts double. */
-export const DEFAULT_PARTNER_WEIGHT = 1 / 3;
+/**
+ * Neither ignore the partner nor merge with them: your rating counts triple.
+ *
+ * Written as 0.25 rather than 1/4 so it round-trips exactly through the
+ * `<option value>` in SeasonDialog and through `seasons.partner_weight`'s
+ * NUMERIC(4,3) - 1/3 came back from the DB as 0.333, which is not the constant.
+ */
+export const DEFAULT_PARTNER_WEIGHT = 0.25;
 
 /** A partner can never count for more than you do. */
 export const MAX_PARTNER_WEIGHT = 0.5;

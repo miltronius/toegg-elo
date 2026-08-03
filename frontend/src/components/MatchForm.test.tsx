@@ -37,7 +37,10 @@ function setup(players: Player[] = PLAYERS) {
       players={players}
       onMatchRecorded={onMatchRecorded}
       kFactor={32}
-      partnerWeight={1 / 3}
+      // Pinned rather than DEFAULT_PARTNER_WEIGHT: the expected strings below
+      // are worked out by hand from it, so a future change to the default
+      // should not fail tests that are only about how the blend is rendered.
+      partnerWeight={0.25}
     />,
   );
   return { onMatchRecorded, user: userEvent.setup() };
@@ -245,9 +248,9 @@ describe("MatchForm series entry", () => {
       // Both teams average 1500 - the blend moves credit between partners but
       // leaves their sum, and so the team average, untouched.
       expect(teamA).toHaveTextContent("(1900 + 1100) ÷ 2");
-      // 0.67x1900 + 0.33x1100 = 1633, and the mirror for Bob.
-      expect(teamA).toHaveTextContent("0.67×1900 + 0.33×1100 = 1633");
-      expect(teamA).toHaveTextContent("0.67×1100 + 0.33×1900 = 1367");
+      // 0.75x1900 + 0.25x1100 = 1700, and the mirror for Bob.
+      expect(teamA).toHaveTextContent("0.75×1900 + 0.25×1100 = 1700");
+      expect(teamA).toHaveTextContent("0.75×1100 + 0.25×1900 = 1300");
     });
 
     it("splits the per-game chance by effective rating, team stays level", async () => {
@@ -263,12 +266,35 @@ describe("MatchForm series entry", () => {
       // coin flip - but the partner weight leaves Ann and Bob at different
       // effective ratings, so their individual per-game odds differ. That gap
       // is what shows up as their unequal Elo change.
-      // Regexes because the name and the value are separate elements with no
-      // whitespace between them.
       const [teamA] = screen.getAllByRole("tooltip");
-      expect(teamA).toHaveTextContent(/Ann\s*68%/);
-      expect(teamA).toHaveTextContent(/Bob\s*32%/);
-      expect(teamA).toHaveTextContent(/Team\s*50%/);
+      expect(teamA).toHaveTextContent("(76.0% + 76.0%) ÷ 2 = 76.0%");
+      expect(teamA).toHaveTextContent("(24.0% + 24.0%) ÷ 2 = 24.0%");
+      expect(teamA).toHaveTextContent("(76.0% + 24.0%) ÷ 2 = 50.0%");
+    });
+
+    it("averages each player's chance over the two opponents separately", async () => {
+      // Opponents at different ratings, so the two duels behind each player's
+      // number actually differ - with a level pair they are identical and a
+      // version that measured one opponent twice would pass anyway.
+      const { user } = setup([
+        player("p1", "Ann", 1900),
+        player("p2", "Bob", 1100),
+        player("p3", "Cid", 1700),
+        player("p4", "Dee", 1300),
+      ]);
+      await pickPlayers(user);
+
+      const [teamA] = screen.getAllByRole("tooltip");
+      // Effective: Ann 1700, Bob 1300 vs Cid 1600, Dee 1400. Ann is +100 on Cid
+      // (64.0%) and +300 on Dee (84.9%); Bob is the mirror.
+      expect(teamA).toHaveTextContent("(64.0% + 84.9%) ÷ 2 = 74.5%");
+      expect(teamA).toHaveTextContent("(15.1% + 36.0%) ÷ 2 = 25.5%");
+      expect(teamA).toHaveTextContent("(74.5% + 25.5%) ÷ 2 = 50.0%");
+      // Each percentage is rounded on its own, so a line can still be a tenth
+      // out - Bob's two terms average to 25.55 while the exact expectation is
+      // 25.547. The result is the real number, NOT the mean of the two rounded
+      // ones, which is what keeps it equal to the value driving the chips.
+      expect(teamA).toHaveTextContent("vs Cid 1600, Dee 1400");
     });
   });
 
