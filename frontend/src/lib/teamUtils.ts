@@ -57,6 +57,13 @@ export function teamKey(idA: string, idB: string): string {
   return idA < idB ? `${idA}:${idB}` : `${idB}:${idA}`;
 }
 
+// Team table ranking: most wins, then fewest losses, then higher combined Elo.
+// Losses break the tie rather than win rate, which is 0 for every winless team
+// and so left them in whatever order they arrived in.
+export function compareTeamRank(a: TeamStats, b: TeamStats): number {
+  return b.wins - a.wins || a.losses - b.losses || b.combinedElo - a.combinedElo;
+}
+
 export function teamKeyParts(key: string): [string, string] {
   const idx = key.indexOf(":");
   return [key.slice(0, idx), key.slice(idx + 1)];

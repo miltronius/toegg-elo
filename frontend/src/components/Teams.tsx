@@ -15,6 +15,7 @@ import {
   teamKeyParts,
   teamColor,
   computeTeamStats,
+  compareTeamRank,
 } from "../lib/teamUtils";
 import { colors } from "../lib/colors";
 
@@ -156,9 +157,7 @@ export function Teams({
   );
 
   const globalRankMap = new Map(
-    [...eligible]
-      .sort((a, b) => b.wins - a.wins || b.winRate - a.winRate)
-      .map((t, i) => [t.key, i]),
+    [...eligible].sort(compareTeamRank).map((t, i) => [t.key, i]),
   );
 
   const sorted = [...filtered].sort((a, b) => {
