@@ -154,7 +154,7 @@ Deno.test("rateSeries: equal teams split evenly whatever the weight", () => {
   }
 });
 
-// ── Series scoring (sum of per-game residuals) ────────────────────────────────
+// ── Series scoring (the margin) ───────────────────────────────────────────────
 
 Deno.test("rateSeries: a 1-0 series matches a single game at the same K", () => {
   // The behaviour every pre-series match was rated with, at w=0.
@@ -171,11 +171,55 @@ Deno.test("rateSeries: a sweep is worth more than a close series", () => {
   assertEquals(close.a1, 16);
 });
 
-Deno.test("rateSeries: series length scales the swing between even teams", () => {
+Deno.test("rateSeries: margin scales the swing between even teams", () => {
   const two = rateSeries([1500, 1500], [1500, 1500], 2, 0, 32, 1 / 3);
   const three = rateSeries([1500, 1500], [1500, 1500], 3, 0, 32, 1 / 3);
   assertEquals(three.a1, 48);
   assertEquals(two.a1, 32);
+});
+
+Deno.test("rateSeries: only the margin counts, not the games played", () => {
+  // The point of the model: 2-1 and 3-2 are 1-0 with drawn pairs cancelled out,
+  // and 3-1 is a 2-0. Uneven teams, where the old sum-of-residuals model made
+  // these three diverge sharply.
+  const one = rateSeries([1700, 1700], [1400, 1400], 1, 0, 32, 1 / 3);
+  for (const [ag, bg] of [[2, 1], [3, 2], [5, 4]]) {
+    assertEquals(rateSeries([1700, 1700], [1400, 1400], ag, bg, 32, 1 / 3), one);
+  }
+
+  const two = rateSeries([1700, 1700], [1400, 1400], 2, 0, 32, 1 / 3);
+  assertEquals(rateSeries([1700, 1700], [1400, 1400], 3, 1, 32, 1 / 3), two);
+  assertEquals(two.a1 > one.a1, true);
+});
+
+Deno.test("rateSeries: winning a series never costs the winner rating", () => {
+  // Replaces the old model's documented quirk, where a heavy favourite taking a
+  // long series 3-2 came out negative. K·d·(1 − E) cannot be, since E < 1.
+  for (let favourite = 1500; favourite <= 2400; favourite += 25) {
+    for (const [ag, bg] of [[1, 0], [2, 1], [3, 2], [5, 4], [3, 1]]) {
+      const deltas = rateSeries(
+        [favourite, favourite],
+        [1200, 1200],
+        ag,
+        bg,
+        32,
+        1 / 3,
+      );
+      const label = `favourite=${favourite} series=${ag}-${bg}`;
+      assertEquals(deltas.a1 >= 0 && deltas.a2 >= 0, true, label);
+      assertEquals(deltas.b1 <= 0 && deltas.b2 <= 0, true, label);
+      assertEquals(sum(deltas), 0, label);
+    }
+  }
+});
+
+Deno.test("rateSeries: agrees with sum-of-residuals when all four are equal", () => {
+  // Where every E is 1/2 both models reduce to K·(w − l)/2, which is why the
+  // switch to margin needed no change to any season's k_factor.
+  for (const [ag, bg] of [[1, 0], [2, 0], [2, 1], [3, 0], [3, 1], [3, 2]]) {
+    const deltas = rateSeries([1500, 1500], [1500, 1500], ag, bg, 48, 1 / 3);
+    assertEquals(deltas.a1, (48 * (ag - bg)) / 2, `series=${ag}-${bg}`);
+  }
 });
 
 Deno.test("rateSeries: order of games within a series is irrelevant", () => {
@@ -185,13 +229,14 @@ Deno.test("rateSeries: order of games within a series is irrelevant", () => {
   assertEquals(a, b);
 });
 
-Deno.test("rateSeries: a heavy favourite can win a long series and lose rating", () => {
-  // ~190 points of edge puts the per-game expectation above 3/5, so taking a
-  // five-game series 3-2 is underperformance. Documented, not accidental.
-  const deltas = rateSeries([1700, 1700], [1500, 1500], 3, 2, 32, 1 / 3);
-  assertEquals(deltas.a1 < 0, true);
-  assertEquals(deltas.b1 > 0, true);
-  assertEquals(sum(deltas), 0);
+Deno.test("rateSeries: a favourite still gains less than an underdog would", () => {
+  // Margin scoring drops the series length, not the rating gap: a 3-2 by a
+  // clear favourite is a small gain, the same result the other way is a big one.
+  const favourite = rateSeries([1700, 1700], [1500, 1500], 3, 2, 32, 1 / 3);
+  const underdog = rateSeries([1500, 1500], [1700, 1700], 3, 2, 32, 1 / 3);
+  assertEquals(favourite.a1 > 0, true);
+  assertEquals(underdog.a1 > favourite.a1, true);
+  assertEquals(sum(favourite), 0);
 });
 
 Deno.test("rateSeries: upset win gains more than the expected win does", () => {

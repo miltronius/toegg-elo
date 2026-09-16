@@ -153,7 +153,18 @@ describe("projectSeries", () => {
     );
   });
 
-  it("can leave a heavy favourite worse off after a narrow series win", () => {
+  it("projects the same delta for every tally with the same margin", () => {
+    // What the chips have to show: 2-1 and 3-2 are 1-0, 3-1 is 2-0. The extra
+    // games cancel, so entering one changes nothing on screen.
+    const one = projectSeries(teamA, teamB, 1, 0, 32);
+    expect(projectSeries(teamA, teamB, 2, 1, 32)).toEqual(one);
+    expect(projectSeries(teamA, teamB, 3, 2, 32)).toEqual(one);
+    expect(projectSeries(teamA, teamB, 3, 1, 32)).toEqual(
+      projectSeries(teamA, teamB, 2, 0, 32),
+    );
+  });
+
+  it("never projects a loss for a heavy favourite that wins", () => {
     const strong: [ReturnType<typeof player>, ReturnType<typeof player>] = [
       player("a1", 1700),
       player("a2", 1700),
@@ -163,7 +174,7 @@ describe("projectSeries", () => {
       player("b2", 1500),
     ];
     const deltas = projectSeries(strong, weak, 3, 2, 32);
-    expect(deltas.a1).toBeLessThan(0);
-    expect(deltas.b1).toBeGreaterThan(0);
+    expect(deltas.a1).toBeGreaterThan(0);
+    expect(deltas.b1).toBeLessThan(0);
   });
 });
