@@ -6,7 +6,9 @@ import {
   teamColor,
   getTeamDisplayName,
   getHeadToHead,
+  compareTeamRank,
 } from "./teamUtils";
+import type { TeamStats } from "./teamUtils";
 import type { Match, Player } from "./supabase";
 import type { TeamNameRow } from "./supabase";
 
@@ -203,6 +205,52 @@ describe("computeTeamStats", () => {
     const cd = teams.find((t) => t.player_id_lo === "ccc")!;
     expect(cd.currentStreak).toBe(2);
     expect(cd.currentLoseStreak).toBe(0);
+  });
+});
+
+// ── compareTeamRank ───────────────────────────────────────────────────────────
+
+describe("compareTeamRank", () => {
+  const team = (key: string, wins: number, losses: number, combinedElo = 3000): TeamStats => ({
+    key,
+    player_id_lo: `${key}-lo`,
+    player_id_hi: `${key}-hi`,
+    matchesPlayed: wins + losses,
+    wins,
+    losses,
+    winRate: wins + losses > 0 ? wins / (wins + losses) : 0,
+    combinedElo,
+    currentStreak: 0,
+    currentLoseStreak: 0,
+    nameRow: null,
+    rivals: [],
+  });
+
+  const rank = (teams: TeamStats[]) => [...teams].sort(compareTeamRank).map((t) => t.key);
+
+  it("orders winless teams by fewest losses, not by the Elo order they arrive in", () => {
+    // Arrival order is combinedElo desc, which is how computeTeamStats returns them.
+    const teams = [
+      team("0-4", 0, 4, 3100),
+      team("0-2a", 0, 2, 3050),
+      team("0-2b", 0, 2, 3000),
+      team("0-3", 0, 3, 2950),
+      team("0-2c", 0, 2, 2900),
+      team("0-5", 0, 5, 2850),
+    ];
+    expect(rank(teams)).toEqual(["0-2a", "0-2b", "0-2c", "0-3", "0-4", "0-5"]);
+  });
+
+  it("ranks by wins first, even over a better record", () => {
+    expect(rank([team("4-0", 4, 0), team("5-5", 5, 5)])).toEqual(["5-5", "4-0"]);
+  });
+
+  it("breaks a wins tie by fewer losses", () => {
+    expect(rank([team("3-2", 3, 2), team("3-0", 3, 0)])).toEqual(["3-0", "3-2"]);
+  });
+
+  it("breaks a full record tie by higher combined Elo", () => {
+    expect(rank([team("low", 2, 1, 2900), team("high", 2, 1, 3100)])).toEqual(["high", "low"]);
   });
 });
 
