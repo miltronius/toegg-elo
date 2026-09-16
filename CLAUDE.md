@@ -95,7 +95,7 @@ Copy `frontend/.env.example` to `frontend/.env.local` and fill in:
 ### Data Flow
 1. `App.tsx` fetches everything through one TanStack Query; mutations call `refresh()` to invalidate it
 2. All DB interactions go through helper functions in `supabase.ts`
-3. Match recording invokes the `calculate-elo` Deno edge function via `supabase.functions.invoke()`
+3. Match recording invokes the `calculate-elo` Deno edge function via `supabase.functions.invoke()`, which sends the signed-in user's session token - the function refuses anyone who isn't a `user` or `admin` (see Auth & Roles)
 4. Child components call parent-provided callbacks to trigger data refresh
 
 ### Auth & Roles
@@ -106,7 +106,9 @@ Three roles enforced at DB level via Row-Level Security (RLS):
 
 A `handle_new_user()` trigger auto-creates a `viewer` profile in the `profiles` table on signup. Magic link (OTP) login is supported.
 
-**Policies are dropped by exact name, and permissive ones are OR'd.** `20260203_deletion_policies.sql` created `"Allow public delete on …"` and `20260311_auth_and_roles.sql` dropped `"Allow delete on …"`, so on prod the open policies survived beside the role-based ones - and since any one permissive policy admits a row, the anon key could delete every player, match and history row until 2026-09-16. When replacing a policy, drop it under the name it was actually created with, then compare `pg_policies` on staging and prod rather than trusting the migration files. `anon` holds table-level grants on everything in `public`, so RLS is the only thing in the way. Note the `calculate-elo` edge function writes with the service role and does not yet check the caller's role, so it is a path around RLS for recording matches.
+**Policies are dropped by exact name, and permissive ones are OR'd.** `20260203_deletion_policies.sql` created `"Allow public delete on …"` and `20260311_auth_and_roles.sql` dropped `"Allow delete on …"`, so on prod the open policies survived beside the role-based ones - and since any one permissive policy admits a row, the anon key could delete every player, match and history row until 2026-09-16. When replacing a policy, drop it under the name it was actually created with, then compare `pg_policies` on staging and prod rather than trusting the migration files. `anon` holds table-level grants on everything in `public`, so RLS is the only thing in the way.
+
+**`calculate-elo` does its own authorization** (`supabase/functions/calculate-elo/auth.ts`). It writes with the service role, so RLS never sees the caller, and the platform's `verify_jwt` gate is no substitute - it accepts the anon key (a valid JWT with no user behind it) and publishable keys, all of which ship in the bundle. Until 2026-09-16 that meant the anon key could record matches. The handler now resolves the bearer token with `auth.getUser` (the Auth server, not a local JWT decode, so a deleted user's unexpired token is refused) and requires a `user` or `admin` profile - `RECORDING_ROLES` mirrors the "Users and admins can insert matches" policy, so change both together. It runs before the body is parsed. Any future function that writes with the service role needs the same treatment.
 
 ### Database Schema (key tables)
 - `players` - name, current_elo (default 1500), matches_played, wins, losses
@@ -146,7 +148,7 @@ Two GitHub Actions workflows run on push/PR to main:
 
 ### Testing
 - **Frontend:** Vitest + React Testing Library; test files colocated with source (`*.test.ts(x)`)
-- **Edge function:** Deno test runner; `elo_test.ts` imports `_shared/elo.ts` directly (rather than keeping a third copy of the math) and covers the zero-sum invariant across weights, lineups and tallies, what each partner weight does, and series scoring. Note `deno lint` is scoped to `calculate-elo/` so it never sees `_shared/`, and `deno test` only typechecks what the tests import - run `deno check index.ts` to typecheck the function itself
+- **Edge function:** Deno test runner; `elo_test.ts` imports `_shared/elo.ts` directly (rather than keeping a third copy of the math) and covers the zero-sum invariant across weights, lineups and tallies, what each partner weight does, and series scoring. `auth_test.ts` covers the caller check through injected lookups (no network). Note `deno lint` is scoped to `calculate-elo/` so it never sees `_shared/`, and `deno test` only typechecks what the tests import - run `deno check index.ts` to typecheck the function itself
 - Imports for the edge function declared in `deno.json` (not inline `jsr:`/`https:` specifiers - enforced by linter)
 - **Re-rate script:** `deno lint && deno check rerate.ts && deno test -A` from `supabase/scripts/rerate-season/` (its own `deno.json` points at the shared import map). Neither CI nor the pre-commit hook runs it
 

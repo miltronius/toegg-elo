@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { recomputeAllAchievements } from "../_shared/achievements.ts";
+import { authorizeRecorder } from "./auth.ts";
 import {
   DEFAULT_PARTNER_WEIGHT,
   MAX_SERIES_GAMES,
@@ -139,6 +140,36 @@ Deno.serve(async (req) => {
     });
 
   try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+
+    if (!supabaseUrl || !supabaseKey) {
+      throw new Error("Missing Supabase environment variables");
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // Before the body is even read: everything below writes with the service
+    // role, so this is the only access control the recorded match gets.
+    const auth = await authorizeRecorder(req.headers.get("Authorization"), {
+      async userIdForToken(token) {
+        // Validated by the Auth server rather than by decoding the JWT here, so
+        // a signed-out or deleted user's still-unexpired token is refused too.
+        const { data, error } = await supabase.auth.getUser(token);
+        return error ? null : data.user?.id ?? null;
+      },
+      async roleForUser(userId) {
+        const { data, error } = await supabase
+          .from("profiles")
+          .select("role")
+          .eq("id", userId)
+          .maybeSingle();
+        if (error) throw error;
+        return data?.role ?? null;
+      },
+    });
+    if (!auth.ok) return fail(auth.error, auth.status);
+
     const matchData: MatchRequest = await req.json();
 
     const {
@@ -160,15 +191,6 @@ Deno.serve(async (req) => {
     const parsed = parseSeries(matchData);
     if ("error" in parsed) return fail(parsed.error);
     const { games, teamAGames, teamBGames, winningTeam } = parsed.series;
-
-    const supabaseUrl = Deno.env.get("SUPABASE_URL");
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-
-    if (!supabaseUrl || !supabaseKey) {
-      throw new Error("Missing Supabase environment variables");
-    }
-
-    const supabase = createClient(supabaseUrl, supabaseKey);
 
     // Fetch active season for the rating parameters and season_id
     const { data: activeSeason, error: seasonError } = await supabase
