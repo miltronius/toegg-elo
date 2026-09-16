@@ -3,9 +3,14 @@
  *
  * Under the old one-game model a winner's delta was always positive, so the
  * sign of `elo_change` doubled as the result and half the app read it that way.
- * Series scoring breaks that: per-game residuals are summed, so a favourite who
- * takes a 2-1 when their per-game expectation is above 2/3 wins the match and
- * still loses rating. The result is now stored on the row itself.
+ * The sum-of-residuals series model the league ran between 2026-08 and 2026-09
+ * broke that: a favourite who took a 2-1 with a per-game expectation above 2/3
+ * won the match and still lost rating. Those rows are still in the table, so
+ * the sign rule stays wrong for them and the result lives on the row itself.
+ *
+ * Margin scoring (2026-09 onwards) makes a winner's delta non-negative again,
+ * but *non-negative* is not *positive* - K·d·(1 − E) rounds to 0 across a wide
+ * enough rating gap - so `won` remains the only thing worth reading.
  *
  * `won` is null on two kinds of row, and the fallback to the old sign rule is
  * correct for both:
