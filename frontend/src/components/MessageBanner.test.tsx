@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { act, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { MessageBanner } from "./MessageBanner";
 import type { Banner } from "../lib/banners";
 import type { Season } from "../lib/supabase";
@@ -188,5 +188,76 @@ describe("MessageBanner", () => {
     expect(parseFloat(track().style.animationDuration)).toBeGreaterThan(
       shortDuration,
     );
+  });
+});
+
+describe("MessageBanner scratching", () => {
+  // performance.now() drives the hand's speed; jsdom does no layout, so the
+  // track claims three copies of 1000px.
+  let clock = 0;
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(NOW);
+    clock = 0;
+    vi.spyOn(performance, "now").mockImplementation(() => clock);
+    vi.spyOn(HTMLElement.prototype, "offsetWidth", "get").mockReturnValue(3000);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.useRealTimers();
+  });
+
+  const bar = () => screen.getByRole("region");
+  const trackOf = (container: HTMLElement) =>
+    container.querySelector(".banner-marquee-track") as HTMLElement;
+
+  it("takes hold of the strip and moves it with the hand", () => {
+    const { container } = setup({ banners: [banner()] });
+    fireEvent.pointerDown(bar(), { pointerId: 1, button: 0, clientX: 500 });
+    expect(bar()).toHaveAttribute("data-scratching");
+
+    clock = 16;
+    fireEvent.pointerMove(bar(), { pointerId: 1, clientX: 400 });
+    // Dragged left, the way the text scrolls.
+    expect(trackOf(container).style.transform).toBe("translateX(-100px)");
+  });
+
+  it("drops the strip back into its scroll where it was let go", () => {
+    const { container } = setup({ banners: [banner()] });
+    fireEvent.pointerDown(bar(), { pointerId: 1, button: 0, clientX: 500 });
+    clock = 16;
+    fireEvent.pointerMove(bar(), { pointerId: 1, clientX: 400 });
+    // Held still for a moment before letting go: no flick.
+    clock = 500;
+    fireEvent.pointerUp(bar(), { pointerId: 1, clientX: 400 });
+
+    const track = trackOf(container);
+    expect(bar()).not.toHaveAttribute("data-scratching");
+    expect(track.style.transform).toBe("");
+    // 100px into a 1000px copy: the animation resumes a tenth of the way in.
+    const cycle = parseFloat(track.style.animationDuration);
+    expect(parseFloat(track.style.animationDelay)).toBeCloseTo(-cycle / 10, 3);
+  });
+
+  it("spins on after a flick instead of stopping dead", () => {
+    setup({ banners: [banner()] });
+    fireEvent.pointerDown(bar(), { pointerId: 1, button: 0, clientX: 500 });
+    clock = 20;
+    fireEvent.pointerMove(bar(), { pointerId: 1, clientX: 300 });
+    fireEvent.pointerUp(bar(), { pointerId: 1, clientX: 300 });
+    expect(bar()).toHaveAttribute("data-scratching");
+  });
+
+  it("stays put for anyone who asked for less motion", () => {
+    window.matchMedia = vi.fn().mockReturnValue({ matches: true });
+    try {
+      setup({ banners: [banner()] });
+      fireEvent.pointerDown(bar(), { pointerId: 1, button: 0, clientX: 500 });
+      expect(bar()).not.toHaveAttribute("data-scratching");
+    } finally {
+      // @ts-expect-error jsdom has no matchMedia of its own to restore.
+      delete window.matchMedia;
+    }
   });
 });

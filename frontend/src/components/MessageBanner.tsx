@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { Banner, Season } from "../lib/supabase";
 import { marqueeSeconds, visibleBanners } from "../lib/banners";
 import { bannerDisplayText } from "../lib/bannerText";
+import { useTurntable } from "../hooks/useTurntable";
 
 interface MessageBannerProps {
   banners: Banner[];
@@ -46,6 +47,9 @@ const MARQUEE_COPIES = 3;
  * The strip is repeated `MARQUEE_COPIES` times inside the track and the
  * animation translates by exactly one copy, which makes the loop seamless. Only
  * the first copy is exposed to assistive tech, so an announcement is read once.
+ *
+ * The strip can also be grabbed and scratched like a record - see
+ * `useTurntable`.
  */
 export function MessageBanner({
   banners,
@@ -70,29 +74,39 @@ export function MessageBanner({
     [banners, seasons, signedIn, now, t],
   );
 
-  if (messages.length === 0) return null;
-
   const viewportPx =
     typeof window === "undefined" ? FALLBACK_VIEWPORT_PX : window.innerWidth;
-  const duration = `${marqueeSeconds(
-    messages.join(""),
-    viewportPx,
-    messages.length - 1,
-  ).toFixed(1)}s`;
+  // Rounded here rather than when formatted, so the scratch hand-back resumes
+  // against the duration the animation actually runs at.
+  const durationSeconds =
+    Math.round(
+      marqueeSeconds(
+        messages.join(""),
+        viewportPx,
+        Math.max(0, messages.length - 1),
+      ) * 10,
+    ) / 10;
+
+  const trackRef = useRef<HTMLDivElement>(null);
+  const turntable = useTurntable(trackRef, MARQUEE_COPIES, durationSeconds);
+
+  if (messages.length === 0) return null;
 
   return (
     <div
       className="message-banner"
       role="region"
       aria-label={t("banner.label")}
+      {...turntable}
     >
       <span className="message-banner-icon" aria-hidden="true">
         📣
       </span>
       <div className="banner-marquee">
         <div
+          ref={trackRef}
           className="banner-marquee-track"
-          style={{ animationDuration: duration }}
+          style={{ animationDuration: `${durationSeconds}s` }}
         >
           {Array.from({ length: MARQUEE_COPIES }, (_, i) => (
             <span

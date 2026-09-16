@@ -832,11 +832,35 @@ td.winrate {
     transform: translateX(-33.3333%);
   }
 }
-/* Hovering (or tabbing into) the strip holds it still so a long announcement
-   can actually be read to the end. */
-.banner-marquee:hover .banner-marquee-track,
-.banner-marquee:focus-within .banner-marquee-track {
+/* Hovering (or tabbing into) the bar holds the strip still so a long
+   announcement can actually be read to the end. The whole bar, not just the
+   strip, so it agrees with the scratch grab area below. */
+.message-banner:hover .banner-marquee-track,
+.message-banner:focus-within .banner-marquee-track {
   animation-play-state: paused;
+}
+/* Easter egg: the bar can be grabbed and scratched like a record
+   (hooks/useTurntable.ts). While data-scratching is set, JS positions the
+   track by inline transform, so the animation has to be off - it would
+   otherwise override the inline style. Turning it back on starts a fresh
+   animation, which is what lets a negative animation-delay resume it where
+   the hand left it. */
+.message-banner[data-scratching] .banner-marquee-track {
+  animation-name: none;
+}
+/* Only where the strip moves: under reduced motion it is a static copy the
+   reader scrolls themselves, which a grab cursor and pan-y would get in the
+   way of. pan-y leaves vertical swipes to the page on touch screens. */
+@media (prefers-reduced-motion: no-preference) {
+  .message-banner {
+    cursor: grab;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: pan-y;
+  }
+  .message-banner[data-scratching] {
+    cursor: grabbing;
+  }
 }
 /* Scrolling text is a classic vestibular trigger: drop to a single static copy
    the reader can scroll themselves. */
