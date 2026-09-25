@@ -372,6 +372,8 @@
     "empty": "No players yet. Create a player to get started!",
     "allTime": "All-Time",
     "startingEloLine": "Starting Elo Line",
+    "streakColumn": "Current streak",
+    "rankedBadge": "Ranked - {{min}}+ games this season",
     "roster": {
       "label": "Who to show",
       "all": "All",
@@ -380,7 +382,8 @@
       "allHint": "Show everyone on the roster, including players with no games",
       "playedHint": "Show players with at least 1 game",
       "rankedHint": "Show ranked players only - {{min}}+ games",
-      "emptyHint": "Nobody qualifies for this view yet"
+      "emptyHint": "Nobody qualifies for this view yet",
+      "seasonOnlyHint": "Only for a single season - all-time shows everyone"
     },
     "table": "Table",
     "eloChart": "ELO Chart",

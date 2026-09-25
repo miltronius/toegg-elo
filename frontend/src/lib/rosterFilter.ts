@@ -44,6 +44,21 @@ export const ROSTER_FILTERS: readonly RosterFilter[] = [
   "ranked",
 ];
 
+/**
+ * The views on offer for a scope. Ranking is a per-season idea - "3 games" means
+ * 3 games in *this* season - and all-time the only players without a game are
+ * ones added and never used, so all-time has nothing worth narrowing: it is
+ * fixed to `all`. Callers still render the toggle (locked) so the header doesn't
+ * reshuffle when switching between a season and all-time.
+ */
+export function rosterFiltersFor(
+  isSeasonView: boolean,
+): readonly RosterFilter[] {
+  return isSeasonView ? ROSTER_FILTERS : ALL_TIME_FILTERS;
+}
+
+const ALL_TIME_FILTERS: readonly RosterFilter[] = ["all"];
+
 /** How many players each view would show. */
 export type RosterCounts = Record<RosterFilter, number>;
 
@@ -104,22 +119,29 @@ export function isFilterAvailable(
  * would show a board of one or two - `AUTO_SELECT_MIN_ENTRIES` stops that,
  * while still letting the played view take over from the very first match.
  */
-export function defaultRosterFilter(counts: RosterCounts): RosterFilter {
-  if (counts.ranked >= AUTO_SELECT_MIN_ENTRIES) return "ranked";
-  if (counts.played >= AUTO_SELECT_MIN_ENTRIES) return "played";
+export function defaultRosterFilter(
+  counts: RosterCounts,
+  offered: readonly RosterFilter[] = ROSTER_FILTERS,
+): RosterFilter {
+  const readable = (f: RosterFilter) =>
+    offered.includes(f) && counts[f] >= AUTO_SELECT_MIN_ENTRIES;
+  if (readable("ranked")) return "ranked";
+  if (readable("played")) return "played";
   return "all";
 }
 
 /**
  * A pinned choice only holds while it has data - switching to a season where
  * nobody qualifies drops back to the default instead of stranding the user on
- * an empty board whose own button is disabled.
+ * an empty board whose own button is disabled. Likewise a choice the scope
+ * doesn't offer at all (ranked, carried over into all-time).
  */
 export function resolveRosterFilter(
   choice: RosterFilter | null,
   counts: RosterCounts,
+  offered: readonly RosterFilter[] = ROSTER_FILTERS,
 ): RosterFilter {
-  return choice && isFilterAvailable(choice, counts)
+  return choice && offered.includes(choice) && isFilterAvailable(choice, counts)
     ? choice
-    : defaultRosterFilter(counts);
+    : defaultRosterFilter(counts, offered);
 }
