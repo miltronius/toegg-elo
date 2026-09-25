@@ -35,6 +35,61 @@ const PLAYERS: Player[] = [
 ];
 const NO_HISTORY: EloHistory[] = [];
 
+const season = (
+  id: string,
+  number: number,
+  name: string,
+  is_active = false,
+): Season => ({
+  id,
+  number,
+  name,
+  is_active,
+  k_factor: 32,
+  partner_weight: 0.333,
+  inactivity_penalty_percent: 0,
+  started_at: "2024-01-01T00:00:00Z",
+  ended_at: is_active ? null : "2024-06-01T00:00:00Z",
+  created_at: "2024-01-01T00:00:00Z",
+});
+
+const pss = (
+  player_id: string,
+  season_id: string,
+  current_season_elo = 1500,
+  wins = 0,
+  losses = 0,
+): PlayerSeasonStats => ({
+  id: `${player_id}-${season_id}`,
+  player_id,
+  season_id,
+  elo_at_start: 1500,
+  current_season_elo,
+  wins,
+  losses,
+  last_match_at: null,
+  created_at: "2024-01-01T00:00:00Z",
+});
+
+/** The active season the roster-filter tests run in; ranking only exists there. */
+const CURRENT = season("cur", 1, "Current", true);
+
+/** Render `field` as the current season, its season stats mirroring each player. */
+const renderSeason = (field: Player[]) =>
+  render(
+    <Leaderboard
+      players={field}
+      history={NO_HISTORY}
+      seasons={[CURRENT]}
+      selectedSeason={CURRENT}
+      playerSeasonStats={field.map((p) =>
+        pss(p.id, CURRENT.id, p.current_elo, p.wins, p.losses),
+      )}
+    />,
+  );
+
+const RANKED_TITLE = "Ranked - 3+ games this season";
+
 // ── unauthenticated / read-only view ──────────────────────────────────────────
 
 describe("Leaderboard - unauthenticated (no onPlayerClick)", () => {
@@ -165,7 +220,7 @@ describe("Leaderboard - winrate", () => {
     expect(screen.getByText("0%")).toBeInTheDocument();
   });
 
-  it("hides players with no matches from the first match onwards", () => {
+  it("hides players with no matches from a season's first match onwards", () => {
     // One 2v2 game = 4 players with a game, which is enough to select Played.
     const field = [
       ...Array.from({ length: 4 }, (_, i) =>
@@ -173,7 +228,7 @@ describe("Leaderboard - winrate", () => {
       ),
       player("zzz", "Newbie", 1400, 0, 0),
     ];
-    render(<Leaderboard players={field} history={NO_HISTORY} />);
+    renderSeason(field);
     expect(screen.getByText("P0")).toBeInTheDocument();
     expect(screen.queryByText("Newbie")).not.toBeInTheDocument();
   });
@@ -191,15 +246,16 @@ describe("Leaderboard - roster filter", () => {
   ];
 
   const seg = (name: string) => screen.getByRole("button", { name });
+  const rowOf = (name: string) => screen.getByText(name).closest("tr")!;
 
   it("defaults to All when no narrower view has enough entries", () => {
-    render(<Leaderboard players={SMALL} history={NO_HISTORY} />);
+    renderSeason(SMALL);
     expect(seg("All")).toHaveClass("active");
     expect(screen.getByText("Dana")).toBeInTheDocument();
   });
 
   it("shows only players with 3+ games under Ranked", () => {
-    render(<Leaderboard players={SMALL} history={NO_HISTORY} />);
+    renderSeason(SMALL);
     fireEvent.click(seg("Ranked"));
     expect(screen.getByText("Alice")).toBeInTheDocument(); // 10 games
     expect(screen.queryByText("Bob")).not.toBeInTheDocument(); // 2 games
@@ -208,14 +264,14 @@ describe("Leaderboard - roster filter", () => {
   });
 
   it("drops never-played players under Played", () => {
-    render(<Leaderboard players={SMALL} history={NO_HISTORY} />);
+    renderSeason(SMALL);
     fireEvent.click(seg("Played"));
     expect(screen.getByText("Carl")).toBeInTheDocument();
     expect(screen.queryByText("Dana")).not.toBeInTheDocument();
   });
 
   it("ranks over the visible players only", () => {
-    render(<Leaderboard players={SMALL} history={NO_HISTORY} />);
+    renderSeason(SMALL);
     fireEvent.click(seg("Ranked"));
     const rows = screen.getAllByRole("row").slice(1);
     expect(rows).toHaveLength(1);
@@ -231,7 +287,7 @@ describe("Leaderboard - roster filter", () => {
       player("d", "Dee", 1550, 3, 1),
       player("f", "Fay", 1450, 1, 0), // 1 game - excluded by the default
     ];
-    render(<Leaderboard players={field} history={NO_HISTORY} />);
+    renderSeason(field);
     expect(seg("Ranked")).toHaveClass("active");
     expect(screen.getByText("Ann")).toBeInTheDocument();
     expect(screen.queryByText("Fay")).not.toBeInTheDocument();
@@ -244,7 +300,7 @@ describe("Leaderboard - roster filter", () => {
       player("c", "Cid", 1600, 3, 1),
       player("f", "Fay", 1450, 1, 0),
     ];
-    render(<Leaderboard players={field} history={NO_HISTORY} />);
+    renderSeason(field);
     expect(seg("Played")).toHaveClass("active");
     expect(seg("Ranked")).toBeEnabled();
     expect(screen.getByText("Fay")).toBeInTheDocument();
@@ -254,7 +310,7 @@ describe("Leaderboard - roster filter", () => {
     const field = Array.from({ length: 10 }, (_, i) =>
       player(`p${i}`, `P${i}`, 1500 + i, 1, 0),
     );
-    render(<Leaderboard players={field} history={NO_HISTORY} />);
+    renderSeason(field);
     expect(seg("Played")).toHaveClass("active");
     expect(screen.getByText("P0")).toBeInTheDocument();
   });
@@ -263,7 +319,7 @@ describe("Leaderboard - roster filter", () => {
     const field = Array.from({ length: 10 }, (_, i) =>
       player(`p${i}`, `P${i}`, 1500 + i, 1, 0),
     );
-    render(<Leaderboard players={field} history={NO_HISTORY} />);
+    renderSeason(field);
     expect(seg("Ranked")).toBeDisabled();
     expect(seg("Played")).toBeEnabled();
   });
@@ -272,7 +328,7 @@ describe("Leaderboard - roster filter", () => {
     const field = Array.from({ length: 6 }, (_, i) =>
       player(`p${i}`, `P${i}`, 1500, 0, 0),
     );
-    render(<Leaderboard players={field} history={NO_HISTORY} />);
+    renderSeason(field);
     expect(seg("Played")).toBeDisabled();
     expect(seg("Ranked")).toBeDisabled();
     expect(seg("All")).toBeEnabled();
@@ -286,33 +342,131 @@ describe("Leaderboard - roster filter", () => {
         player(`p${i}`, `P${i}`, 1500, 1, 0),
       ),
     ];
-    render(<Leaderboard players={field} history={NO_HISTORY} />);
+    renderSeason(field);
     // Only one qualifier - offered, but not auto-selected.
     expect(seg("Ranked")).toBeEnabled();
     expect(seg("Played")).toHaveClass("active");
+  });
+
+  it("marks ranked players under All and Played", () => {
+    renderSeason(SMALL);
+    // Alice has 10 games this season; Bob, Carl and Dana are short of 3.
+    expect(screen.getAllByTitle(RANKED_TITLE)).toHaveLength(1);
+    expect(rowOf("Alice")).toContainElement(screen.getByTitle(RANKED_TITLE));
+    fireEvent.click(seg("Played"));
+    expect(screen.getAllByTitle(RANKED_TITLE)).toHaveLength(1);
+  });
+
+  it("keeps the badges in their own column before the name, so they align", () => {
+    renderSeason(SMALL);
+    const header = screen.getAllByRole("columnheader");
+    expect(header).toHaveLength(5);
+    expect(header[1]).toHaveAccessibleName(RANKED_TITLE);
+    // Every row has the cell, badge or not; the name is always the next one.
+    for (const name of ["Alice", "Bob", "Dana"]) {
+      const cells = rowOf(name).querySelectorAll("td");
+      expect(cells[1]).toHaveClass("ranked-col");
+      expect(cells[2]).toHaveTextContent(name);
+    }
+    expect(rowOf("Alice").querySelectorAll("td")[1]).toContainElement(
+      screen.getByTitle(RANKED_TITLE),
+    );
+  });
+
+  it("drops the badge under Ranked, where every row would carry it", () => {
+    renderSeason(SMALL);
+    fireEvent.click(seg("Ranked"));
+    expect(screen.queryByTitle(RANKED_TITLE)).not.toBeInTheDocument();
+    expect(screen.getAllByRole("columnheader")).toHaveLength(4);
+  });
+});
+
+describe("Leaderboard - all-time roster filter", () => {
+  const seg = (name: string) => screen.queryByRole("button", { name });
+  const QUALIFIED = [
+    player("a", "Ann", 1700, 3, 1),
+    player("b", "Ben", 1650, 3, 1),
+    player("c", "Cid", 1600, 3, 1),
+    player("d", "Dee", 1550, 3, 1),
+    player("f", "Fay", 1450, 1, 0),
+  ];
+
+  it("locks the roster toggle on All, so the header holds still", () => {
+    const idle = player("z", "Zed", 1500, 0, 0);
+    render(<Leaderboard players={[...QUALIFIED, idle]} history={NO_HISTORY} />);
+    for (const name of ["All", "Played", "Ranked"])
+      expect(seg(name)).toBeDisabled();
+    // 4 players with 3+ games would pick Ranked in a season; here it's All.
+    expect(seg("All")).toHaveClass("active");
+    expect(seg("Ranked")).toHaveAttribute(
+      "title",
+      "Only for a single season - all-time shows everyone",
+    );
+    expect(screen.getByText("Zed")).toBeInTheDocument();
+  });
+
+  it("shows no ranked badge", () => {
+    render(<Leaderboard players={QUALIFIED} history={NO_HISTORY} />);
+    expect(screen.queryByTitle(RANKED_TITLE)).not.toBeInTheDocument();
+    expect(screen.getAllByRole("columnheader")).toHaveLength(4);
+  });
+});
+
+describe("Leaderboard - streak column", () => {
+  const row = (
+    player_id: string,
+    match_id: string,
+    won: boolean,
+    created_at: string,
+  ): EloHistory => ({
+    id: `${player_id}-${match_id}`,
+    player_id,
+    match_id,
+    season_id: "s1",
+    elo_before: 1500,
+    elo_after: won ? 1510 : 1490,
+    elo_change: won ? 10 : -10,
+    won,
+    created_at,
+  });
+  const at = (day: number) => `2024-01-0${day}T00:00:00Z`;
+  const cellsOf = (name: string) =>
+    screen.getByText(name).closest("tr")!.querySelectorAll("td");
+
+  it("puts win and lose streaks in one column before the name", () => {
+    const history = [
+      row("aaa", "m1", true, at(1)),
+      row("aaa", "m2", true, at(2)),
+      row("ccc", "m1", false, at(1)),
+      row("ccc", "m2", false, at(2)),
+      row("ccc", "m3", false, at(3)),
+    ];
+    render(<Leaderboard players={PLAYERS} history={history} />);
+    expect(screen.getAllByRole("columnheader")[1]).toHaveAccessibleName(
+      "Current streak",
+    );
+    // Alice 🔥2, Bob nothing, Carl 🥶3 - same column, name always next.
+    const [alice, bob, carl] = ["Alice", "Bob", "Carl"].map(cellsOf);
+    expect(alice[1]).toHaveTextContent("🔥2");
+    expect(bob[1]).toBeEmptyDOMElement();
+    expect(carl[1]).toHaveTextContent("🥶3");
+    for (const [cells, name] of [
+      [alice, "Alice"],
+      [bob, "Bob"],
+      [carl, "Carl"],
+    ] as const)
+      expect(cells[2]).toHaveTextContent(new RegExp(`^${name}$`));
+  });
+
+  it("drops the column while nobody is on a streak", () => {
+    render(<Leaderboard players={PLAYERS} history={NO_HISTORY} />);
+    expect(screen.getAllByRole("columnheader")).toHaveLength(4);
   });
 });
 
 // ── season view: exclude players who didn't exist that season ──────────────────
 
 describe("Leaderboard - season view participation", () => {
-  const season = (
-    id: string,
-    number: number,
-    name: string,
-    is_active = false,
-  ): Season => ({
-    id,
-    number,
-    name,
-    is_active,
-    k_factor: 32,
-    partner_weight: 0.333,    inactivity_penalty_percent: 0,
-    started_at: "2024-01-01T00:00:00Z",
-    ended_at: is_active ? null : "2024-06-01T00:00:00Z",
-    created_at: "2024-01-01T00:00:00Z",
-  });
-
   const eh = (
     player_id: string,
     season_id: string,
@@ -330,24 +484,6 @@ describe("Leaderboard - season view participation", () => {
     elo_change: elo_after - elo_before,
     won: elo_after > elo_before,
     created_at,
-  });
-
-  const pss = (
-    player_id: string,
-    season_id: string,
-    current_season_elo = 1500,
-    wins = 0,
-    losses = 0,
-  ): PlayerSeasonStats => ({
-    id: `${player_id}-${season_id}`,
-    player_id,
-    season_id,
-    elo_at_start: 1500,
-    current_season_elo,
-    wins,
-    losses,
-    last_match_at: null,
-    created_at: "2024-01-01T00:00:00Z",
   });
 
   const S1 = season("s1", 1, "Spring");

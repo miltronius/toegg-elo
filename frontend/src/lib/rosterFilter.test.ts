@@ -9,6 +9,7 @@ import {
   minGamesFor,
   resolveRosterFilter,
   rosterCounts,
+  rosterFiltersFor,
 } from "./rosterFilter";
 
 const p = (matches_played: number) => ({ matches_played });
@@ -151,5 +152,32 @@ describe("resolveRosterFilter", () => {
     expect(resolveRosterFilter("ranked", counts(12, 9, 0))).toBe("played");
     expect(resolveRosterFilter("ranked", counts(12, 3, 0))).toBe("all");
     expect(resolveRosterFilter("played", counts(12, 0, 0))).toBe("all");
+  });
+});
+
+describe("rosterFiltersFor", () => {
+  it("offers all three views for a season", () => {
+    expect(rosterFiltersFor(true)).toEqual(["all", "played", "ranked"]);
+  });
+
+  it("fixes all-time to the whole roster", () => {
+    expect(rosterFiltersFor(false)).toEqual(["all"]);
+  });
+});
+
+describe("roster filters restricted to all-time", () => {
+  const allTime = rosterFiltersFor(false);
+
+  it("never auto-selects a narrowing view, however many would qualify", () => {
+    expect(defaultRosterFilter(counts(12, 10, 6), allTime)).toBe("all");
+  });
+
+  it("drops a narrowing pin carried over from a season", () => {
+    expect(resolveRosterFilter("ranked", counts(12, 10, 6), allTime)).toBe(
+      "all",
+    );
+    expect(resolveRosterFilter("played", counts(12, 10, 6), allTime)).toBe(
+      "all",
+    );
   });
 });

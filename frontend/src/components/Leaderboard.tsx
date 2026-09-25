@@ -15,13 +15,15 @@ import { Player, EloHistory, Season, PlayerSeasonStats } from "../lib/supabase";
 import { didLose, didWin } from "../lib/eloHistory";
 import { DATE_LOCALE } from "../lib/i18n";
 import {
-  ROSTER_FILTERS,
   RANKED_MIN_GAMES,
+  ROSTER_FILTERS,
   RosterFilter,
   filterRoster,
   isFilterAvailable,
+  isRanked,
   resolveRosterFilter,
   rosterCounts,
+  rosterFiltersFor,
 } from "../lib/rosterFilter";
 
 interface LeaderboardProps {
@@ -415,8 +417,25 @@ export function Leaderboard({
   // scopedPlayers already carries the season's own matches_played (see
   // effectivePlayers), so "3 games" means 3 games *this season*.
   const filterCounts = rosterCounts(scopedPlayers);
-  const rosterFilter = resolveRosterFilter(rosterChoice, filterCounts);
+  const offeredFilters = rosterFiltersFor(isSeasonView);
+  const rosterFilter = resolveRosterFilter(
+    rosterChoice,
+    filterCounts,
+    offeredFilters,
+  );
+  // Under Ranked every row would carry the badge, so it only marks the players
+  // who'd survive Ranked while a wider view mixes them with everyone else.
+  const showRankedBadge = isSeasonView && rosterFilter !== "ranked";
+  const rankedLabel = t("leaderboard.rankedBadge", { min: RANKED_MIN_GAMES });
   const visiblePlayers = filterRoster(scopedPlayers, rosterFilter);
+  // Badges get their own narrow columns before the name rather than riding
+  // after it, so they line up down the table whatever the name lengths. A
+  // column only appears when some visible row has something to put in it.
+  // Win and lose streaks share one: a current streak is one or the other.
+  const showStreakColumn = visiblePlayers.some(
+    (p) => playerStreaks.has(p.id) || playerLoseStreaks.has(p.id),
+  );
+  const columnCount = 4 + Number(showRankedBadge) + Number(showStreakColumn);
 
   const anyAtStartingElo = visiblePlayers.some((p) => p.current_elo === 1500);
 
@@ -641,21 +660,28 @@ export function Leaderboard({
               </button>
             </div>
           )}
+          {/* Rendered even when there's no choice (all-time), locked on the one
+              view it offers, so the header holds still across the switch. */}
           <div className="lb-toggle" title={t("leaderboard.roster.label")}>
             {ROSTER_FILTERS.map((f) => {
-              const available = isFilterAvailable(f, filterCounts);
+              const locked = offeredFilters.length < 2;
+              const available =
+                offeredFilters.includes(f) &&
+                isFilterAvailable(f, filterCounts);
               return (
                 <button
                   key={f}
                   className={`lb-toggle-btn${rosterFilter === f ? " active" : ""}`}
                   onClick={() => setRosterChoice(f)}
-                  disabled={!available}
+                  disabled={locked || !available}
                   title={
-                    available
-                      ? t(`leaderboard.roster.${f}Hint`, {
-                          min: RANKED_MIN_GAMES,
-                        })
-                      : t("leaderboard.roster.emptyHint")
+                    locked
+                      ? t("leaderboard.roster.seasonOnlyHint")
+                      : available
+                        ? t(`leaderboard.roster.${f}Hint`, {
+                            min: RANKED_MIN_GAMES,
+                          })
+                        : t("leaderboard.roster.emptyHint")
                   }
                 >
                   {t(`leaderboard.roster.${f}`)}
@@ -704,6 +730,15 @@ export function Leaderboard({
           <thead>
             <tr>
               <th>{t("leaderboard.rank")}</th>
+              {showRankedBadge && (
+                <th className="badge-col ranked-col" aria-label={rankedLabel} />
+              )}
+              {showStreakColumn && (
+                <th
+                  className="badge-col streak-col"
+                  aria-label={t("leaderboard.streakColumn")}
+                />
+              )}
               <th
                 style={{ cursor: "pointer" }}
                 onClick={() => handleSort("name")}
@@ -753,25 +788,39 @@ export function Leaderboard({
                     className={`clickable-row${rowClass ? ` ${rowClass}` : ""}`}
                   >
                     <td className="rank">#{rank}</td>
-                    <td className="name">
-                      {player.name}
-                      {playerStreaks.get(player.id) && (
-                        <span
-                          className="streak-badge"
-                          title={t("leaderboard.winstreak")}
-                        >
-                          🔥{playerStreaks.get(player.id)}
-                        </span>
-                      )}
-                      {playerLoseStreaks.get(player.id) && (
-                        <span
-                          className="streak-badge lose"
-                          title={t("leaderboard.losestreak")}
-                        >
-                          🥶{playerLoseStreaks.get(player.id)}
-                        </span>
-                      )}
-                    </td>
+                    {showRankedBadge && (
+                      <td className="badge-col ranked-col">
+                        {isRanked(player) && (
+                          <span
+                            className="streak-badge ranked"
+                            title={rankedLabel}
+                          >
+                            🏅
+                          </span>
+                        )}
+                      </td>
+                    )}
+                    {showStreakColumn && (
+                      <td className="badge-col streak-col">
+                        {playerStreaks.get(player.id) && (
+                          <span
+                            className="streak-badge"
+                            title={t("leaderboard.winstreak")}
+                          >
+                            🔥{playerStreaks.get(player.id)}
+                          </span>
+                        )}
+                        {playerLoseStreaks.get(player.id) && (
+                          <span
+                            className="streak-badge lose"
+                            title={t("leaderboard.losestreak")}
+                          >
+                            🥶{playerLoseStreaks.get(player.id)}
+                          </span>
+                        )}
+                      </td>
+                    )}
+                    <td className="name">{player.name}</td>
                     <td className="elo">{player.current_elo}</td>
                     <td className="winrate">{winrate}%</td>
                   </tr>
@@ -786,7 +835,7 @@ export function Leaderboard({
                   ? [
                       row,
                       <tr key="sep-1500" className="elo-1500-sep">
-                        <td colSpan={4} />
+                        <td colSpan={columnCount} />
                       </tr>,
                     ]
                   : [row];
