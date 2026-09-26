@@ -101,6 +101,18 @@
     "label": "Ankündigungen",
     "seasonStarted": "🏆 Eine neue Saison hat begonnen - Saison {{number}}: {{name}}. Alle starten wieder bei 1500 Elo. Viel Erfolg!"
   },
+  "changelog": {
+    "title": "Was ist neu",
+    "open": "Neuigkeiten anzeigen",
+    "close": "Schliessen",
+    "empty": "Noch keine Releases.",
+    "details": "Details",
+    "kinds": {
+      "major": "Grosse Änderungen",
+      "minor": "Neu",
+      "patch": "Fehlerbehebungen"
+    }
+  },
   "bannerAdmin": {
     "title": "Laufschrift-Banner",
     "hint": "Ankündigungen laufen oben durch die App. Eine neue Saison erstellt automatisch ihr eigenes Banner mit einer Laufzeit von {{days}} Tagen - unten wie jedes andere bearbeitbar.",

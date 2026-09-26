@@ -101,6 +101,18 @@
     "label": "Announcements",
     "seasonStarted": "🏆 A new season has started - Season {{number}}: {{name}}. Everyone is back at 1500 Elo. Good luck!"
   },
+  "changelog": {
+    "title": "What's new",
+    "open": "Show what's new",
+    "close": "Close",
+    "empty": "No releases yet.",
+    "details": "Details",
+    "kinds": {
+      "major": "Big changes",
+      "minor": "New",
+      "patch": "Fixes"
+    }
+  },
   "bannerAdmin": {
     "title": "Message Banner",
     "hint": "Announcements scroll across the top of the app. A new season creates its own banner automatically, running for {{days}} days - edit it below like any other.",

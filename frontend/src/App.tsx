@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -35,6 +35,8 @@ import { PlayerDetail } from "./components/PlayerDetail";
 import { UserManagement } from "./components/UserManagement";
 import { BannerAdmin } from "./components/BannerAdmin";
 import { MessageBanner } from "./components/MessageBanner";
+import { ChangelogDialog } from "./components/ChangelogDialog";
+import { APP_VERSION, RELEASES } from "./lib/appChangelog";
 import { Teams } from "./components/Teams";
 import { TeamDetail } from "./components/TeamDetail";
 import { RelationshipGraph } from "./components/RelationshipGraph";
@@ -194,6 +196,15 @@ function App() {
   const [selectedTeam, setSelectedTeam] = useState<TeamStats | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [authOpen, setAuthOpen] = useState(false);
+  // null = closed. `focus` is the release to scroll to (a release banner
+  // passes its version); the header chip opens at the top.
+  const [changelog, setChangelog] = useState<{ focus: string | null } | null>(
+    null,
+  );
+  const openChangelog = useCallback(
+    (version: string | null) => setChangelog({ focus: version }),
+    [],
+  );
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
   const [playerDetailInitialTab, setPlayerDetailInitialTab] = useState<
     "stats" | "achievements"
@@ -297,7 +308,17 @@ function App() {
         />
       )}
       <header className="bg-white border-b border-border px-8 py-6 flex justify-between items-center shadow-sm flex-wrap gap-3">
-        <h1 className="text-[1.875rem] font-bold">{t("app.title")}</h1>
+        <div className="flex items-baseline gap-2">
+          <h1 className="text-[1.875rem] font-bold">{t("app.title")}</h1>
+          <button
+            type="button"
+            className="version-chip"
+            onClick={() => openChangelog(null)}
+            title={t("changelog.open")}
+          >
+            v{APP_VERSION}
+          </button>
+        </div>
         <SeasonDialog
           activeSeason={activeSeason}
           isAdmin={isAdmin}
@@ -564,6 +585,13 @@ function App() {
         />
       )}
       {authOpen && <AuthScreen onClose={() => setAuthOpen(false)} />}
+      {changelog && (
+        <ChangelogDialog
+          releases={RELEASES}
+          focusVersion={changelog.focus}
+          onClose={() => setChangelog(null)}
+        />
+      )}
     </div>
   );
 
