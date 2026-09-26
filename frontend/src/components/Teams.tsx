@@ -16,6 +16,7 @@ import {
   teamColor,
   computeTeamStats,
   compareTeamRank,
+  playersWithSeasonElo,
 } from "../lib/teamUtils";
 import { colors } from "../lib/colors";
 
@@ -121,18 +122,10 @@ export function Teams({
     }
   };
 
-  const effectivePlayers = useMemo(() => {
-    if (!selectedSeason || !playerSeasonStats?.length) return players;
-    const statsMap = new Map(
-      playerSeasonStats
-        .filter((s) => s.season_id === selectedSeason.id)
-        .map((s) => [s.player_id, s]),
-    );
-    return players.map((p) => {
-      const s = statsMap.get(p.id);
-      return s ? { ...p, current_elo: s.current_season_elo } : p;
-    });
-  }, [players, selectedSeason, playerSeasonStats]);
+  const effectivePlayers = useMemo(
+    () => playersWithSeasonElo(players, selectedSeason, playerSeasonStats),
+    [players, selectedSeason, playerSeasonStats],
+  );
 
   const filteredMatches = useMemo(
     () =>

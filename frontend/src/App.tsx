@@ -44,7 +44,11 @@ import { SeasonDialog } from "./components/SeasonDialog";
 import { ThemeToggle } from "./components/ThemeToggle";
 import { LanguageSwitcher } from "./components/LanguageSwitcher";
 import { Win95Shell } from "./components/Win95Shell";
-import { computeTeamStats, TeamStats } from "./lib/teamUtils";
+import {
+  computeTeamStats,
+  playersWithSeasonElo,
+  TeamStats,
+} from "./lib/teamUtils";
 import { AppSkeleton } from "./components/AppSkeleton";
 import "./App.css";
 
@@ -263,6 +267,13 @@ function App() {
   const teams = useMemo(
     () => computeTeamStats(matches, players, teamNames),
     [matches, players, teamNames],
+  );
+
+  // The team dialog opens from the season-scoped Teams tab, so its player
+  // cards must show the same season's ratings as the team's record.
+  const teamDetailPlayers = useMemo(
+    () => playersWithSeasonElo(players, effectiveSeason, playerSeasonStats),
+    [players, effectiveSeason, playerSeasonStats],
   );
 
   if (authLoading || isLoading) {
@@ -542,7 +553,7 @@ function App() {
       {selectedTeam && (
         <TeamDetail
           team={selectedTeam}
-          players={players}
+          players={teamDetailPlayers}
           allTeams={teams}
           canEdit={canEdit}
           onClose={() => setSelectedTeam(null)}

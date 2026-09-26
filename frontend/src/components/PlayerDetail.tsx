@@ -33,6 +33,8 @@ import {
 } from "../lib/achievements";
 import { computeWeekdayStats } from "../lib/weekdayStats";
 import { AchievementGallery } from "./Achievements";
+import { GoalStatCard } from "./GoalStatCard";
+import { playerGoalTally } from "../lib/goals";
 
 interface HeadToHead {
   playerId: string;
@@ -294,6 +296,7 @@ export function PlayerDetail({
   }, [selectedSeason, player, playerSeasonStats]);
 
   const h2h = computeHeadToHead(player.id, effectiveMatches);
+  const goals = playerGoalTally(player.id, effectiveMatches);
   const topFriends = Array.from(
     computeTeammateCounts(player.id, effectiveMatches).entries(),
   )
@@ -580,6 +583,7 @@ export function PlayerDetail({
               {effectiveStats.wins} - {effectiveStats.losses}
             </div>
           </div>
+          <GoalStatCard goals={goals} />
           {topEnemy && (
             <div className="stat-card">
               <div className="stat-label">

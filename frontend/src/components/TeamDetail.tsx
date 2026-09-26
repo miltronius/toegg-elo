@@ -7,6 +7,7 @@ import {
   teamKeyParts,
   teamColor,
 } from "../lib/teamUtils";
+import { GoalStatCard } from "./GoalStatCard";
 
 interface TeamDetailProps {
   team: TeamStats;
@@ -155,6 +156,7 @@ export function TeamDetail({
               {team.wins} - {team.losses}
             </div>
           </div>
+          <GoalStatCard goals={team.goals} />
         </div>
 
         {canEdit && (

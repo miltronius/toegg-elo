@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   teamKey,
+  playersWithSeasonElo,
   teamKeyParts,
   computeTeamStats,
   teamColor,
@@ -9,7 +10,7 @@ import {
   compareTeamRank,
 } from "./teamUtils";
 import type { TeamStats } from "./teamUtils";
-import type { Match, Player } from "./supabase";
+import type { Match, Player, PlayerSeasonStats, Season } from "./supabase";
 import type { TeamNameRow } from "./supabase";
 
 // ── helpers ───────────────────────────────────────────────────────────────────
@@ -224,6 +225,7 @@ describe("compareTeamRank", () => {
     currentLoseStreak: 0,
     nameRow: null,
     rivals: [],
+    goals: { scored: 0, received: 0, exact: true },
   });
 
   const rank = (teams: TeamStats[]) => [...teams].sort(compareTeamRank).map((t) => t.key);
@@ -269,6 +271,7 @@ describe("teamColor", () => {
     currentStreak: 0,
     currentLoseStreak: 0,
     rivals: [],
+    goals: { scored: 0, received: 0, exact: true },
   };
 
   it("returns nameRow.color when set", () => {
@@ -311,6 +314,7 @@ describe("getTeamDisplayName", () => {
     currentStreak: 0,
     currentLoseStreak: 0,
     rivals: [],
+    goals: { scored: 0, received: 0, exact: true },
     nameRow: null,
   };
 
@@ -367,5 +371,33 @@ describe("getHeadToHead", () => {
     ];
     const result = getHeadToHead(["aaa", "bbb"], ["ccc", "ddd"], matches);
     expect(result.totalMatches).toBe(0);
+  });
+});
+
+// ── playersWithSeasonElo ──────────────────────────────────────────────────────
+
+describe("playersWithSeasonElo", () => {
+  const players = [
+    { id: "a", name: "A", current_elo: 1700 },
+    { id: "b", name: "B", current_elo: 1300 },
+  ] as Player[];
+  const season = { id: "s2" } as Season;
+  const stats = [
+    { player_id: "a", season_id: "s2", current_season_elo: 1520 },
+    { player_id: "a", season_id: "s1", current_season_elo: 1610 },
+  ] as PlayerSeasonStats[];
+
+  it("swaps in the selected season's rating", () => {
+    const out = playersWithSeasonElo(players, season, stats);
+    expect(out.find((p) => p.id === "a")?.current_elo).toBe(1520);
+  });
+
+  it("keeps the all-time rating for players without a row that season", () => {
+    const out = playersWithSeasonElo(players, season, stats);
+    expect(out.find((p) => p.id === "b")?.current_elo).toBe(1300);
+  });
+
+  it("leaves everyone all-time when no season is selected", () => {
+    expect(playersWithSeasonElo(players, null, stats)).toBe(players);
   });
 });
