@@ -4,10 +4,7 @@
 
 ### Minor Changes
 
-- [#127](https://github.com/miltronius/toegg-elo/pull/127) - What's new: click the version number next to the title to see every release, and release announcements in the banner link here
-
-  Versioning with changesets: each PR adds a changeset, a "Release: version packages" PR collects them, and merging it tags the release with a GitHub Release.
-
+- [#127](https://github.com/miltronius/toegg-elo/pull/127) - Add Changelog
 - [#125](https://github.com/miltronius/toegg-elo/pull/125) - Goal achievements: Flawless Victory, Fatality, and tiers for goals scored - alone and with a partner
 
   Empty goal fields count 10 for the game's winner and 0 for its loser; the shutouts need both scores typed in.
