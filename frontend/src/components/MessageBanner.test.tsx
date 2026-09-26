@@ -297,6 +297,35 @@ describe("MessageBanner scratching", () => {
     expect(onOpen).not.toHaveBeenCalled();
   });
 
+  // Browsers focus a button on press, and focus inside the bar pauses the
+  // strip (:focus-within) - a pointer grab must not leave it stuck paused.
+  it("doesn't keep focus on the link after a tap", () => {
+    const { container } = setup({
+      banners: [releaseBanner()],
+      onOpenChangelog: vi.fn(),
+    });
+    const link = links(container)[0];
+    link.focus(); // what the browser does on pointerdown
+    fireEvent.pointerDown(link, { pointerId: 1, button: 0, clientX: 500 });
+    fireEvent.pointerUp(link, { pointerId: 1, clientX: 500 });
+    expect(document.activeElement).not.toBe(link);
+  });
+
+  it("doesn't keep focus on the link after a scratch that started on it", () => {
+    const { container } = setup({
+      banners: [releaseBanner()],
+      onOpenChangelog: vi.fn(),
+    });
+    const link = links(container)[0];
+    link.focus();
+    fireEvent.pointerDown(link, { pointerId: 1, button: 0, clientX: 500 });
+    clock = 16;
+    fireEvent.pointerMove(link, { pointerId: 1, clientX: 400 });
+    clock = 500;
+    fireEvent.pointerUp(link, { pointerId: 1, clientX: 400 });
+    expect(document.activeElement).not.toBe(link);
+  });
+
   it("opens nothing on a tap elsewhere on the bar", () => {
     const onOpen = vi.fn();
     setup({ banners: [releaseBanner()], onOpenChangelog: onOpen });

@@ -82,6 +82,10 @@ export function ChangelogDialog({
 }: ChangelogDialogProps) {
   const { t } = useTranslation();
   const focusRef = useRef<HTMLElement>(null);
+  // Only a press that started on the backdrop closes the dialog. On touch, the
+  // click of the tap that opened it (e.g. on a release banner) can be
+  // hit-tested after the dialog has rendered and land on the backdrop.
+  const pressedBackdrop = useRef(false);
 
   useEffect(() => {
     // jsdom has no scrollIntoView.
@@ -100,14 +104,20 @@ export function ChangelogDialog({
     <div
       data-testid="changelog-backdrop"
       className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-      onClick={onClose}
+      onPointerDown={(e) => {
+        pressedBackdrop.current = e.target === e.currentTarget;
+      }}
+      onClick={(e) => {
+        const pressed = pressedBackdrop.current;
+        pressedBackdrop.current = false;
+        if (pressed && e.target === e.currentTarget) onClose();
+      }}
     >
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby="changelog-title"
         className="modal-panel bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6"
-        onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-4 gap-3">
           <h2 id="changelog-title" className="text-xl font-bold">

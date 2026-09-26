@@ -128,6 +128,13 @@ export function useTurntable(
   const release = (e: PointerEvent<HTMLElement>, mayCoast: boolean) => {
     const current = grip.current;
     if (current.kind !== "held" || e.pointerId !== current.pointerId) return;
+    // Most browsers focus a button (the release link) on press, and focus
+    // inside the bar pauses the strip (:focus-within in App.css). A grab is not
+    // a keyboard visit, so don't leave the strip paused after it.
+    const focused = document.activeElement;
+    if (focused instanceof HTMLElement && bar.current?.contains(focused)) {
+      focused.blur();
+    }
     const now = performance.now();
     const offset = current.grabOffset + current.travel;
     // Barely moved: a click, not a scratch. Only on a real release - a

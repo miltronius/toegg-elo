@@ -109,7 +109,17 @@ describe("ChangelogDialog", () => {
     expect(onClose).not.toHaveBeenCalled();
     fireEvent.keyDown(window, { key: "Escape" });
     expect(onClose).toHaveBeenCalledTimes(1);
-    fireEvent.click(screen.getByTestId("changelog-backdrop"));
+    const backdrop = screen.getByTestId("changelog-backdrop");
+    fireEvent.pointerDown(backdrop);
+    fireEvent.click(backdrop);
     expect(onClose).toHaveBeenCalledTimes(2);
+  });
+
+  it("ignores a click on the backdrop whose press started elsewhere", () => {
+    // On touch, the click of the tap that opened the dialog can land on the
+    // freshly rendered backdrop - that must not close it again.
+    const { onClose } = setup();
+    fireEvent.click(screen.getByTestId("changelog-backdrop"));
+    expect(onClose).not.toHaveBeenCalled();
   });
 });
