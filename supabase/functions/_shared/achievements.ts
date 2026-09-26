@@ -49,6 +49,14 @@ export type AchievementId =
   | "carrying_hard"
   | "deadweight"
   | "party_pooper"
+  | "flawless_victory"
+  | "fatality"
+  | "goals_200"
+  | "goals_1000"
+  | "goals_10000"
+  | "pair_goals_100"
+  | "pair_goals_500"
+  | "pair_goals_2000"
   | "completionist"
   | "completionist_30";
 
@@ -62,14 +70,25 @@ interface Player {
   created_at: string;
 }
 
-interface Match {
+export interface Match {
   id: string;
   team_a_player_1_id: string;
   team_a_player_2_id: string;
   team_b_player_1_id: string;
   team_b_player_2_id: string;
   winning_team: "A" | "B";
+  team_a_games: number;
+  team_b_games: number;
+  /** null on matches recorded before series existed (rated as a 1-0). */
+  games: MatchGame[] | null;
   created_at: string;
+}
+
+/** One game of a series: its winner, and goals if anyone entered them. */
+export interface MatchGame {
+  w: "A" | "B";
+  a: number | null;
+  b: number | null;
 }
 
 interface EloHistory {
@@ -134,6 +153,107 @@ function computeOpponentCounts(
     }
   }
   return counts;
+}
+
+// ---------------------------------------------------------------------------
+// Goals
+// ---------------------------------------------------------------------------
+
+/**
+ * Goals `side` scored in a match. Goals are optional per game, so an empty
+ * field falls back to what a game to 10 implies: 10 for the side that won it,
+ * 0 for the side that lost. A pre-series match (`games` null) was a single
+ * game, so it counts as 10:0 to the winner.
+ */
+export function teamGoals(match: Match, side: "A" | "B"): number {
+  if (!match.games) return match.winning_team === side ? 10 : 0;
+  let total = 0;
+  for (const g of match.games) {
+    const entered = side === "A" ? g.a : g.b;
+    total += entered ?? (g.w === side ? 10 : 0);
+  }
+  return total;
+}
+
+const CAREER_GOAL_TIERS: [AchievementId, number][] = [
+  ["goals_200", 200],
+  ["goals_1000", 1000],
+  ["goals_10000", 10000],
+];
+
+const PAIR_GOAL_TIERS: [AchievementId, number][] = [
+  ["pair_goals_100", 100],
+  ["pair_goals_500", 500],
+  ["pair_goals_2000", 2000],
+];
+
+/**
+ * Flawless Victory / Fatality, and the career and pair goal tiers.
+ * `sorted` is the player's matches, oldest first.
+ *
+ * The shutouts need both goal fields typed in: the 10:0 fallback is good
+ * enough for totals, but a winner-only or half-filled game says nothing about
+ * whether the losers actually scored. Each pair tier goes to whichever
+ * partnership crosses it first.
+ */
+export function computeGoalAchievements(
+  playerId: string,
+  sorted: Match[],
+): UnlockedAchievement[] {
+  const unlocked: UnlockedAchievement[] = [];
+  let career = 0;
+  const pairGoals = new Map<string, number>();
+  const careerHit = new Set<AchievementId>();
+  const pairHit = new Set<AchievementId>();
+  let flawlessDone = false;
+  let fatalityDone = false;
+
+  for (const m of sorted) {
+    const inA =
+      m.team_a_player_1_id === playerId || m.team_a_player_2_id === playerId;
+    const side = inA ? "A" : "B";
+    const partnerId = inA
+      ? m.team_a_player_1_id === playerId
+        ? m.team_a_player_2_id
+        : m.team_a_player_1_id
+      : m.team_b_player_1_id === playerId
+        ? m.team_b_player_2_id
+        : m.team_b_player_1_id;
+    const unlockedAt = new Date(m.created_at);
+
+    for (const g of m.games ?? []) {
+      const own = inA ? g.a : g.b;
+      const opp = inA ? g.b : g.a;
+      if (!flawlessDone && g.w === side && own === 10 && opp === 0) {
+        unlocked.push({ achievementId: "flawless_victory", unlockedAt });
+        flawlessDone = true;
+      }
+      if (!fatalityDone && g.w !== side && own === 0 && opp === 10) {
+        unlocked.push({ achievementId: "fatality", unlockedAt });
+        fatalityDone = true;
+      }
+    }
+
+    const goals = teamGoals(m, side);
+    career += goals;
+    for (const [id, n] of CAREER_GOAL_TIERS) {
+      if (career >= n && !careerHit.has(id)) {
+        careerHit.add(id);
+        unlocked.push({ achievementId: id, unlockedAt });
+      }
+    }
+
+    const withPartner = (pairGoals.get(partnerId) ?? 0) + goals;
+    pairGoals.set(partnerId, withPartner);
+    for (const [id, n] of PAIR_GOAL_TIERS) {
+      if (withPartner >= n && !pairHit.has(id)) {
+        pairHit.add(id);
+        unlocked.push({ achievementId: id, unlockedAt, meta: { partnerId } });
+      }
+    }
+  }
+
+  return unlocked;
 }
 
 function computeAchievementsForPlayer(
@@ -741,6 +861,9 @@ function computeAchievementsForPlayer(
       }
     }
   }
+
+  // goals - shutouts and career / pair goal tiers
+  unlocked.push(...computeGoalAchievements(playerId, sorted));
 
   // achievement_hunter - unlockedAt = date the 10th achievement was earned
   if (unlocked.length >= 10) {
