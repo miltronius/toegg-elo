@@ -538,6 +538,7 @@ function App() {
               banners={banners}
               seasons={seasons}
               onChanged={refresh}
+              appVersion={APP_VERSION}
             />
           </>
         )}

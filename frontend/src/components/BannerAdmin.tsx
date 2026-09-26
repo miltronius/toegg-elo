@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
 import {
+  announceRelease,
   createBanner,
   deleteBanner,
   reorderBanners,
@@ -13,12 +14,14 @@ import {
 import {
   BANNER_AUDIENCES,
   BANNER_DURATIONS,
+  RELEASE_BANNER_DAYS,
   SEASON_BANNER_DAYS,
   addDuration,
   bannerStatus,
   maskSwissDateTime,
   parseSwissDateTime,
   isGeneratedSeasonBanner,
+  isReleaseAnnounced,
   moveItem,
   orderBanners,
   toSwissDateTime,
@@ -34,6 +37,8 @@ interface BannerAdminProps {
   banners: Banner[];
   seasons: Season[];
   onChanged: () => void;
+  /** The version this build is; what "Announce" announces. */
+  appVersion: string;
 }
 
 /** Chip colour per status - live is the only "good news" state. */
@@ -98,11 +103,17 @@ const formFor = (
  * Banners arrive as a prop from App's single query rather than being fetched
  * here, so the admin list and the live banner can never disagree.
  */
-export function BannerAdmin({ banners, seasons, onChanged }: BannerAdminProps) {
+export function BannerAdmin({
+  banners,
+  seasons,
+  onChanged,
+  appVersion,
+}: BannerAdminProps) {
   const { t } = useTranslation();
   const [form, setForm] = useState<FormState>(emptyForm);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [announcing, setAnnouncing] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -240,6 +251,21 @@ export function BannerAdmin({ banners, seasons, onChanged }: BannerAdminProps) {
     }
   };
 
+  const announced = isReleaseAnnounced(banners, appVersion);
+
+  const handleAnnounce = async () => {
+    setAnnouncing(true);
+    setError(null);
+    try {
+      await announceRelease(appVersion);
+      onChanged();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("bannerAdmin.announceError"));
+    } finally {
+      setAnnouncing(false);
+    }
+  };
+
   const handleDelete = async (banner: Banner) => {
     if (!confirm(t("bannerAdmin.confirmDelete"))) return;
     setBusyId(banner.id);
@@ -284,6 +310,23 @@ export function BannerAdmin({ banners, seasons, onChanged }: BannerAdminProps) {
       <p className="text-text-light text-[0.85rem] mt-1 mb-4">
         {t("bannerAdmin.hint", { days: SEASON_BANNER_DAYS })}
       </p>
+
+      <div className="flex flex-wrap items-center gap-3 mb-4 text-[0.85rem]">
+        <span>{t("bannerAdmin.currentVersion", { version: appVersion })}</span>
+        <button
+          type="button"
+          className="btn-small"
+          onClick={handleAnnounce}
+          disabled={announced || announcing}
+          title={t("bannerAdmin.announceHint", { days: RELEASE_BANNER_DAYS })}
+        >
+          {announced
+            ? t("bannerAdmin.announced")
+            : announcing
+              ? t("bannerAdmin.announcing")
+              : t("bannerAdmin.announce")}
+        </button>
+      </div>
 
       <div className="form-group">
         <label htmlFor="banner-message">{t("bannerAdmin.message")}</label>
@@ -517,6 +560,16 @@ export function BannerAdmin({ banners, seasons, onChanged }: BannerAdminProps) {
                       title={t("bannerAdmin.seasonBannerTitle")}
                     >
                       {t("bannerAdmin.seasonBadge")}
+                    </span>
+                  )}
+                  {banner.release_version != null && (
+                    <span
+                      className="text-[0.7rem] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full border bg-bg-light text-text-light border-border"
+                      title={t("bannerAdmin.releaseBannerTitle", {
+                        version: banner.release_version,
+                      })}
+                    >
+                      {t("bannerAdmin.releaseBadge")}
                     </span>
                   )}
                   {/* Shows the translated default for a season banner the admin

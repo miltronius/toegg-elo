@@ -29,6 +29,12 @@
 export const SEASON_BANNER_DAYS = 14;
 
 /**
+ * How long "Announce" runs a release banner. Unlike SEASON_BANNER_DAYS this
+ * one is authoritative: the admin UI writes the window itself.
+ */
+export const RELEASE_BANNER_DAYS = 14;
+
+/**
  * Who an announcement is addressed to. `members` covers every signed-in role,
  * viewer included - the split is logged-in vs the public landing view, not a
  * permission tier. RLS already withholds `members` rows from anonymous callers;
@@ -47,6 +53,12 @@ export type Banner = {
   message: string | null;
   /** Set only on the banner a season start created. */
   season_id: string | null;
+  /**
+   * Set only on a release announcement ("Announce" in the banner admin); makes
+   * it open the changelog. Optional because the frontend can ship before the
+   * migration adds the column.
+   */
+  release_version?: string | null;
   starts_at: string | null;
   ends_at: string | null;
   is_active: boolean;
@@ -74,6 +86,28 @@ export function isGeneratedSeasonBanner(banner: Banner): boolean {
  * `expired` - active, but its window has closed.
  * `hidden` - switched off, whatever the window says.
  */
+/**
+ * A release banner's text. English only by design and stored literally, so an
+ * admin can reword it; the link comes from `release_version`, not the text.
+ */
+export function releaseBannerMessage(version: string): string {
+  return `🎉 TöggElo v${version} is out - see what's new`;
+}
+
+export function releaseBannerWindow(nowMs: number): {
+  starts_at: string;
+  ends_at: string;
+} {
+  return {
+    starts_at: new Date(nowMs).toISOString(),
+    ends_at: new Date(nowMs + RELEASE_BANNER_DAYS * 86_400_000).toISOString(),
+  };
+}
+
+export function isReleaseAnnounced(banners: Banner[], version: string): boolean {
+  return banners.some((b) => b.release_version === version);
+}
+
 export type BannerStatus = "live" | "scheduled" | "expired" | "hidden";
 
 /** Unparseable or absent timestamps count as "no bound" rather than throwing. */

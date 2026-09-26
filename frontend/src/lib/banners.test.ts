@@ -1,5 +1,9 @@
 import { describe, it, expect } from "vitest";
 import {
+  RELEASE_BANNER_DAYS,
+  isReleaseAnnounced,
+  releaseBannerMessage,
+  releaseBannerWindow,
   MARQUEE_MIN_SECONDS,
   MARQUEE_PX_PER_SECOND,
   MARQUEE_SEPARATOR_PX,
@@ -370,6 +374,47 @@ describe("marqueeSeconds", () => {
   it("gives a wider viewport a longer cycle, since the gap scales with it", () => {
     expect(marqueeSeconds("x".repeat(200), 2400)).toBeGreaterThan(
       marqueeSeconds("x".repeat(200), 1200),
+    );
+  });
+});
+
+describe("release banners", () => {
+  const row = (release_version: string | null | undefined): Banner => ({
+    id: "r",
+    message: "x",
+    season_id: null,
+    starts_at: null,
+    ends_at: null,
+    is_active: true,
+    audience: "everyone",
+    sort_order: 0,
+    created_by: null,
+    created_at: "2026-09-26T00:00:00Z",
+    updated_at: "2026-09-26T00:00:00Z",
+    release_version,
+  });
+
+  it("writes the English announcement for a version", () => {
+    expect(releaseBannerMessage("1.4.0")).toBe(
+      "🎉 TöggElo v1.4.0 is out - see what's new",
+    );
+  });
+
+  it("runs from now for RELEASE_BANNER_DAYS", () => {
+    const now = Date.parse("2026-09-26T10:00:00Z");
+    expect(releaseBannerWindow(now)).toEqual({
+      starts_at: "2026-09-26T10:00:00.000Z",
+      ends_at: "2026-10-10T10:00:00.000Z",
+    });
+    expect(RELEASE_BANNER_DAYS).toBe(14);
+  });
+
+  it("knows whether a version already has its banner", () => {
+    expect(isReleaseAnnounced([row("1.4.0")], "1.4.0")).toBe(true);
+    expect(isReleaseAnnounced([row("1.3.0")], "1.4.0")).toBe(false);
+    // Rows fetched before the migration have no column at all.
+    expect(isReleaseAnnounced([row(undefined), row(null)], "1.4.0")).toBe(
+      false,
     );
   });
 });
