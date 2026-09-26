@@ -366,6 +366,7 @@ function App() {
         banners={banners}
         seasons={seasons}
         signedIn={Boolean(user)}
+        onOpenChangelog={openChangelog}
       />
       <nav className="flex gap-1 bg-white border-b border-border px-6 overflow-x-auto">
         {user && (

@@ -3,6 +3,7 @@ import {
   coast,
   hasSettled,
   isFlick,
+  isTap,
   offsetFromTransform,
   releaseVelocity,
   resumeDelaySeconds,
@@ -175,5 +176,18 @@ describe("slipNeedle", () => {
 
   it("carries on from where the needle is", () => {
     expect(slipNeedle(1, 10, 0.1) - 1).toBeCloseTo(slipNeedle(0, 10, 0.1), 9);
+  });
+});
+
+describe("isTap", () => {
+  it("counts a press that barely moved as a tap", () => {
+    expect(isTap(0)).toBe(true);
+    expect(isTap(4)).toBe(true);
+    expect(isTap(-4)).toBe(true);
+  });
+
+  it("counts anything further as a scratch", () => {
+    expect(isTap(5)).toBe(false);
+    expect(isTap(-12)).toBe(false);
   });
 });

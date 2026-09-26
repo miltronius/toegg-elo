@@ -1,10 +1,11 @@
 import { useEffect, useRef } from "react";
-import type { PointerEvent, RefObject } from "react";
+import type { MouseEvent, PointerEvent, RefObject } from "react";
 import { scratchVoice } from "../lib/scratchAudio";
 import {
   coast,
   hasSettled,
   isFlick,
+  isTap,
   offsetFromTransform,
   releaseVelocity,
   resumeDelaySeconds,
@@ -24,6 +25,8 @@ type Grip =
   | {
       kind: "held";
       pointerId: number;
+      /** What was pressed - a tap is handed back to the caller with it. */
+      target: EventTarget | null;
       startX: number;
       grabOffset: number;
       /** Unwrapped px moved since the grab; positive is leftwards. */
@@ -49,11 +52,24 @@ export function useTurntable(
   trackRef: RefObject<HTMLElement | null>,
   copies: number,
   durationSeconds: number,
+  /**
+   * Called with the pressed element when a grab turns out to be a tap. The
+   * browser's own click is swallowed while the turntable is live (see
+   * onClickCapture), so this is the one way a pointer click reaches the strip.
+   */
+  onTap?: (target: EventTarget | null) => void,
 ) {
   const grip = useRef<Grip>({ kind: "idle" });
   const bar = useRef<HTMLElement | null>(null);
   const frame = useRef(0);
   const duration = useRef(durationSeconds);
+  const tap = useRef(onTap);
+  /** A grab happened, so the click the browser sends after it is ours. */
+  const swallowClick = useRef(false);
+
+  useEffect(() => {
+    tap.current = onTap;
+  }, [onTap]);
 
   useEffect(() => {
     duration.current = durationSeconds;
@@ -114,6 +130,13 @@ export function useTurntable(
     if (current.kind !== "held" || e.pointerId !== current.pointerId) return;
     const now = performance.now();
     const offset = current.grabOffset + current.travel;
+    // Barely moved: a click, not a scratch. Only on a real release - a
+    // cancelled pointer was taken by the browser, not pressed.
+    if (mayCoast && isTap(current.travel)) {
+      handBack(offset);
+      tap.current?.(current.target);
+      return;
+    }
     // A cancelled pointer was taken by the browser (e.g. a vertical scroll on
     // touch), not flung.
     const velocity = mayCoast ? releaseVelocity(current.samples, now) : 0;
@@ -146,6 +169,7 @@ export function useTurntable(
           ? grip.current.offset
           : offsetFromTransform(getComputedStyle(track).transform, copyWidth());
 
+      swallowClick.current = true;
       bar.current = e.currentTarget;
       e.currentTarget.setPointerCapture?.(e.pointerId);
       e.currentTarget.setAttribute(SCRATCHING_ATTR, "");
@@ -155,6 +179,7 @@ export function useTurntable(
       grip.current = {
         kind: "held",
         pointerId: e.pointerId,
+        target: e.target,
         startX: e.clientX,
         grabOffset,
         travel: 0,
@@ -190,6 +215,20 @@ export function useTurntable(
 
     onPointerCancel(e: PointerEvent<HTMLElement>) {
       release(e, false);
+    },
+
+    /**
+     * Swallow the pointer click that follows a grab: a tap was already handed
+     * to onTap, and a scratch is not a click. Keyboard activation (detail 0)
+     * always goes through, and under reduced motion no grab starts, so the
+     * browser's click reaches the element as normal.
+     */
+    onClickCapture(e: MouseEvent<HTMLElement>) {
+      if (!swallowClick.current) return;
+      swallowClick.current = false;
+      if (e.detail === 0) return;
+      e.preventDefault();
+      e.stopPropagation();
     },
   };
 }

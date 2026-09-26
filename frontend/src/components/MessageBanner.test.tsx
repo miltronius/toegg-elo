@@ -34,6 +34,14 @@ const seasonBanner = (o: Partial<Banner> = {}): Banner =>
     ...o,
   });
 
+const releaseBanner = (o: Partial<Banner> = {}): Banner =>
+  banner({
+    id: "release-banner",
+    message: "🎉 TöggElo v1.4.0 is out - see what's new",
+    release_version: "1.4.0",
+    ...o,
+  });
+
 const SEASONS: Season[] = [
   {
     id: "s2",
@@ -247,6 +255,94 @@ describe("MessageBanner scratching", () => {
     fireEvent.pointerMove(bar(), { pointerId: 1, clientX: 300 });
     fireEvent.pointerUp(bar(), { pointerId: 1, clientX: 300 });
     expect(bar()).toHaveAttribute("data-scratching");
+  });
+
+  const links = (container: HTMLElement) =>
+    Array.from(
+      container.querySelectorAll<HTMLElement>("[data-release-version]"),
+    );
+
+  it("opens the changelog on a tap on any copy of the release link", () => {
+    const onOpen = vi.fn();
+    const { container } = setup({
+      banners: [releaseBanner()],
+      onOpenChangelog: onOpen,
+    });
+    expect(links(container)).toHaveLength(3);
+    // Mostly a hidden copy is the one on screen.
+    const link = links(container)[1];
+    fireEvent.pointerDown(link, { pointerId: 1, button: 0, clientX: 500 });
+    clock = 120;
+    fireEvent.pointerUp(link, { pointerId: 1, clientX: 502 });
+    // The browser's own click that follows the tap must not open it twice.
+    fireEvent.click(link, { detail: 1 });
+    expect(onOpen).toHaveBeenCalledTimes(1);
+    expect(onOpen).toHaveBeenCalledWith("1.4.0");
+    expect(bar()).not.toHaveAttribute("data-scratching");
+  });
+
+  it("scratches instead when a drag starts on the link", () => {
+    const onOpen = vi.fn();
+    const { container } = setup({
+      banners: [releaseBanner()],
+      onOpenChangelog: onOpen,
+    });
+    const link = links(container)[0];
+    fireEvent.pointerDown(link, { pointerId: 1, button: 0, clientX: 500 });
+    clock = 16;
+    fireEvent.pointerMove(link, { pointerId: 1, clientX: 400 });
+    clock = 500;
+    fireEvent.pointerUp(link, { pointerId: 1, clientX: 400 });
+    fireEvent.click(link, { detail: 1 });
+    expect(onOpen).not.toHaveBeenCalled();
+  });
+
+  it("opens nothing on a tap elsewhere on the bar", () => {
+    const onOpen = vi.fn();
+    setup({ banners: [releaseBanner()], onOpenChangelog: onOpen });
+    fireEvent.pointerDown(bar(), { pointerId: 1, button: 0, clientX: 500 });
+    fireEvent.pointerUp(bar(), { pointerId: 1, clientX: 500 });
+    expect(onOpen).not.toHaveBeenCalled();
+  });
+
+  it("is reachable by keyboard in the first copy only", () => {
+    const onOpen = vi.fn();
+    const { container } = setup({
+      banners: [releaseBanner()],
+      onOpenChangelog: onOpen,
+    });
+    // Hidden copies are aria-hidden, so only the first is a button to AT.
+    const button = screen.getByRole("button", { name: /v1\.4\.0/ });
+    fireEvent.click(button); // keyboard activation: detail 0
+    expect(onOpen).toHaveBeenCalledTimes(1);
+    expect(links(container).slice(1).every((l) => l.tabIndex === -1)).toBe(
+      true,
+    );
+  });
+
+  it("is a plain button under reduced motion", () => {
+    window.matchMedia = vi.fn().mockReturnValue({ matches: true });
+    try {
+      const onOpen = vi.fn();
+      const { container } = setup({
+        banners: [releaseBanner()],
+        onOpenChangelog: onOpen,
+      });
+      const link = links(container)[0];
+      fireEvent.pointerDown(link, { pointerId: 1, button: 0, clientX: 500 });
+      fireEvent.pointerUp(link, { pointerId: 1, clientX: 500 });
+      fireEvent.click(link, { detail: 1 });
+      expect(onOpen).toHaveBeenCalledTimes(1);
+    } finally {
+      // @ts-expect-error jsdom has no matchMedia of its own to restore.
+      delete window.matchMedia;
+    }
+  });
+
+  it("renders ordinary banners, and release banners without a handler, as text", () => {
+    const { container } = setup({ banners: [banner(), releaseBanner()] });
+    expect(links(container)).toHaveLength(0);
+    expect(marqueeText()).toContain("v1.4.0");
   });
 
   it("stays put for anyone who asked for less motion", () => {

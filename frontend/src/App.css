@@ -850,6 +850,11 @@ td.winrate {
   flex: 1;
   min-width: 0;
   overflow: hidden;
+  /* Fill the bar's height (its padding is 0.5rem): overflow hides - and stops
+     hit-testing - anything outside this box, which would clip .banner-link's
+     enlarged target to the line of text. */
+  margin: -0.5rem 0;
+  padding: 0.5rem 0;
 }
 /* inline-flex so the track is sized by its content: the animation translates by
    -100%/3, which is then exactly one of the three identical copies - the seam
@@ -892,6 +897,32 @@ td.winrate {
 .banner-marquee-sep {
   opacity: 0.6;
 }
+/* The one clickable thing in the strip: a release banner opens the changelog.
+   Underlined so it reads as a link. The padding is a bigger target for moving
+   text; the equal negative margin cancels it, so the strip - and the copy width
+   the seamless loop is paced on - doesn't change. */
+.banner-link {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  padding: 0.5rem;
+  margin: -0.5rem;
+  cursor: pointer;
+  white-space: nowrap;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.2em;
+}
+.banner-link:hover,
+.banner-link:focus-visible {
+  text-decoration-thickness: 2px;
+}
+.banner-link:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: -4px;
+  border-radius: 4px;
+}
 @keyframes banner-marquee {
   from {
     transform: translateX(0);
@@ -927,6 +958,9 @@ td.winrate {
     touch-action: pan-y;
   }
   .message-banner[data-scratching] {
+    cursor: grabbing;
+  }
+  .message-banner[data-scratching] .banner-link {
     cursor: grabbing;
   }
 }
@@ -2639,6 +2673,12 @@ td.winrate {
 [data-theme="win95"] .message-banner {
   background: var(--color-primary);
   border-bottom: 2px solid #808080;
+}
+[data-theme="win95"] .banner-link {
+  text-decoration-style: dotted;
+}
+[data-theme="win95"] .banner-link:focus-visible {
+  border-radius: 0;
 }
 
 [data-theme="win95"] .toast {
