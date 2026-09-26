@@ -1,6 +1,6 @@
 # toegg-elo-frontend
 
-## 1.0.0 (2026-09-26)
+## 1.10.0 (2026-09-26)
 
 ### Minor Changes
 
@@ -10,7 +10,7 @@
 
 - [#124](https://github.com/miltronius/toegg-elo/pull/124) - 🏅 Ranked badge: players with 3+ games in a season are marked on the leaderboard, which can now show all, played or ranked players
 
-## 0.16.0 (2026-09-16)
+## 1.9.0 (2026-09-16)
 
 ### Minor Changes
 
@@ -27,7 +27,7 @@
 
   The calculate-elo function now checks the caller's role itself; also closed database policies that let anonymous callers delete data.
 
-## 0.15.0 (2026-08-03)
+## 1.8.0 (2026-08-03)
 
 ### Minor Changes
 
@@ -42,26 +42,26 @@
 
 - [#108](https://github.com/miltronius/toegg-elo/pull/108) - Fixed the achievements layout in the Win95 theme
 
-## 0.14.0 (2026-07-16)
+## 1.7.0 (2026-07-16)
 
 ### Minor Changes
 
 - [#102](https://github.com/miltronius/toegg-elo/pull/102) - Relationships: a network of who plays with and against whom, in 2D or 3D
 
-## 0.13.0 (2026-06-28)
+## 1.6.0 (2026-06-28)
 
 ### Minor Changes
 
 - [#97](https://github.com/miltronius/toegg-elo/pull/97) - See each team's chance of winning while entering a match
 - [#99](https://github.com/miltronius/toegg-elo/pull/99) - Season stats: game days
 
-## 0.12.0 (2026-06-08)
+## 1.5.0 (2026-06-08)
 
 ### Minor Changes
 
 - [#94](https://github.com/miltronius/toegg-elo/pull/94) - The app is now available in German 🇨🇭
 
-## 0.11.0 (2026-06-04)
+## 1.4.0 (2026-06-04)
 
 ### Minor Changes
 
@@ -74,7 +74,7 @@
 
 - [#82](https://github.com/miltronius/toegg-elo/pull/82) - Fixed achievements that were unlocked wrongly
 
-## 0.10.0 (2026-05-30)
+## 1.3.0 (2026-05-30)
 
 ### Minor Changes
 
@@ -88,7 +88,7 @@
 - [#71](https://github.com/miltronius/toegg-elo/pull/71) - Fixed the leaderboard sorting, and the timeline ranking to match
 - [#75](https://github.com/miltronius/toegg-elo/pull/75) - Players added later no longer show up in older seasons
 
-## 0.9.0 (2026-04-27)
+## 1.2.0 (2026-04-27)
 
 ### Minor Changes
 
@@ -99,7 +99,7 @@
 
 - [#59](https://github.com/miltronius/toegg-elo/pull/59) - Several Elo bugfixes
 
-## 0.8.0 (2026-04-07)
+## 1.1.0 (2026-04-07)
 
 ### Minor Changes
 
@@ -110,7 +110,7 @@
 - [#53](https://github.com/miltronius/toegg-elo/pull/53) - Fixed the Elo chart for seasons
 - [#48](https://github.com/miltronius/toegg-elo/pull/48) - Admins can delete again, and achievement dates are correct
 
-## 0.7.0 (2026-04-04)
+## 1.0.0 (2026-04-04)
 
 ### Minor Changes
 
