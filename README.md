@@ -141,12 +141,16 @@ Frontend is on Vercel (one project, auto-deployed). Edge function must be deploy
 
 ### Releases
 
-1. Every PR with a user-visible change includes a changeset: `pnpm changeset` (see `.changeset/README.md`).
-2. After merging, the Release workflow opens/updates the **"Release: version packages"** PR.
-3. Merge it: the version and `frontend/CHANGELOG.md` update, Vercel deploys, and the release is tagged `vX.Y.Z` with a GitHub Release.
-4. Optionally announce it: Admin → Message Banner → **Announce**.
+The app's version is shown next to the title - click it for the changelog ("What's new"). Versions come from `frontend/CHANGELOG.md` and `frontend/package.json`; **1.0.0 is the release that introduced seasons** (2026-04-04), earlier work is 0.x.
 
-One-time setup: install [changeset-bot](https://github.com/apps/changeset-bot) on the repo, and enable *Settings → Actions → General → Allow GitHub Actions to create and approve pull requests* (the Release workflow needs it to open the Version PR).
+1. Every PR with a user-visible change includes a changeset: `pnpm changeset`, pick patch / minor / major and write a one-line note for players (details on further lines). See `.changeset/README.md`. Internal PRs skip it; changeset-bot comments on every PR.
+2. After merging, the Release workflow opens/updates the **"Release: version packages"** PR with the version bump and the new, dated changelog section. CI doesn't run on that PR - it was already run on `main`.
+3. Merge it: Vercel deploys, and the workflow tags `vX.Y.Z` and creates the GitHub Release.
+4. Optionally announce it: Admin → Message Banner → **Announce** (a 14-day banner that opens the changelog when clicked).
+
+The changelog is plain markdown and can be edited by hand - to reword entries, or to put a change into the current release instead of a new one: add the entry under the newest `## x.y.z (date)` heading and merge without a changeset. The newest heading must match the version in `frontend/package.json`, or the release won't be tagged.
+
+One-time setup (done): changeset-bot installed on the repo; *Settings → Actions → General → Allow GitHub Actions to create and approve pull requests* enabled; `supabase/migrations/20260926_release_banners.sql` applied.
 
 ## Scripts
 
