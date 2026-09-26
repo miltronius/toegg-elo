@@ -10,15 +10,16 @@ release through the existing message banner.
 
 **Audience:** one changelog, read by players *and* developers. Each entry's first line
 is written so a player understands it; optional technical detail sits beneath it.
-**Language:** changelog entries are English only. UI chrome around them (dialog title,
-buttons, the default release-banner text) is translated like everything else.
+**Language:** changelog entries and the release banner's text are English only. UI
+chrome around them (dialog title, buttons, the admin's announce control) is translated
+like everything else.
 
 ## Current state
 
 - No tags, no GitHub Releases; `frontend/package.json` has been `1.0.0` forever.
 - Vercel deploys every merge to `main` to production.
-- Banners already support a generated, translated default (`message = NULL` on the
-  season banner) that an admin can override - the release banner reuses that pattern.
+- Banners are admin-editable rows; the release banner is one more row, marked by the
+  version it announces so it can link to the changelog.
 
 ## 1. Release pipeline (changesets)
 
@@ -115,8 +116,9 @@ when the Version PR was generated/updated, which is close enough to release day.
 - `ALTER TABLE banners ADD COLUMN IF NOT EXISTS release_version TEXT;`
 - Unique partial index on `release_version WHERE release_version IS NOT NULL` - a
   release can't be announced twice.
-- Replace `banner_message_present`:
-  `(message IS NULL AND (season_id IS NOT NULL OR release_version IS NOT NULL)) OR (message IS NOT NULL AND char_length(btrim(message)) BETWEEN 1 AND 500)`.
+- `banner_message_present` is **unchanged**: the release banner is English only, so it
+  stores its text literally rather than NULL-means-translated-default. No new branch in
+  `bannerText.ts`.
 - No RLS change: admins already insert/update banners; readers already read them.
 
 **Admin (`BannerAdmin.tsx`)**
@@ -124,36 +126,44 @@ when the Version PR was generated/updated, which is close enough to release day.
   "already announced" when a banner with that `release_version` exists (from the
   banners App already has).
 - Announce inserts via a new `supabase.ts` helper: `release_version = __APP_VERSION__`,
-  `message = NULL`, `audience = 'everyone'`, `starts_at = now`, `ends_at = now + 14 days`,
-  `is_active = true`. Then `refresh()`.
-- Afterwards it's a normal banner (edit, reschedule, retarget, delete, reorder). Its
-  message field behaves like the season banner's: prefilled with the generated default,
-  blank or unchanged text stores NULL, different text overrides.
+  `message = "🎉 TöggELO v1.4.0 is out - see what's new"`, `audience = 'everyone'`,
+  `starts_at = now`, `ends_at = now + 14 days`, `is_active = true`. Then `refresh()`.
+- Afterwards it's a normal banner (edit text, reschedule, retarget, delete, reorder).
+  Edited text still links to the changelog, because the link comes from
+  `release_version`, not from the message.
 
 **Display**
-- `banners.ts`: `isGeneratedReleaseBanner(banner)` alongside `isGeneratedSeasonBanner`.
-- `bannerText.ts`: `bannerDisplayText` / `storedMessage` get a release branch; default
-  text is `t("banner.release", { version })`, e.g. "🎉 TöggELO v1.4.0 is out - see
-  what's new". Overridden text still links to the changelog.
-- `MessageBanner.tsx`: a release banner's segment renders as a button that calls
+- `MessageBanner.tsx`: a release banner's text segment - **only that text**, not the
+  separators or the rest of the strip - renders as a `<button>` that calls
   `onOpenChangelog(version)`. In the first (accessible) copy it is focusable; in the
   `aria-hidden` copies it is `tabIndex={-1}` but still clickable.
-- **Click vs scratch:** `useTurntable` currently treats every press as a grab. It gains a
-  small movement threshold: a press released with less than a few px of travel (and no
-  flick) is a click - it is passed through to the segment and the strip resumes as if
-  never grabbed. Same rule the relationship graph uses for nodes. Pure threshold logic
-  goes in `turntable.ts` with tests. Under reduced motion there is no turntable, so the
-  button is just a button.
+- **Looks clickable:** underlined (`text-underline-offset` so it clears descenders),
+  `cursor: pointer`, and a hover/focus state (stronger underline + visible focus ring).
+  Per theme via the existing CSS vars; Win95 gets its dotted-underline link look.
+- **Bigger hit area:** the button carries padding (roughly the full bar height
+  vertically, ~0.5em horizontally) so it is easy to hit while the strip moves. The
+  padding is offset with an equal negative margin, so the strip's layout and the
+  marquee's copy width (which the seamless loop depends on) don't change.
+
+**Click vs scratch (localized to the text)**
+- Everywhere else on the bar, a press is a grab exactly as today.
+- On a release link, a press still starts a grab (so you can scratch from anywhere),
+  but `useTurntable` gains a small movement threshold: released with less than a few px
+  of travel and no flick → it's a click. The strip resumes as if never grabbed and the
+  button's click goes through. Moved past the threshold → it's a scratch and the click is
+  suppressed. Same rule the relationship graph uses for nodes.
+- Pure threshold logic goes in `turntable.ts` with tests. Under reduced motion there is
+  no turntable, so the button is just a button.
 
 ## Testing
 
 - `changelog.test.ts` - parser, per above.
-- `banners.test.ts` / `bannerText.test.ts` - release branch of visibility, display text,
-  and `storedMessage` round-trip.
-- `turntable.test.ts` - click-vs-drag threshold.
+- `turntable.test.ts` covers the threshold; `banners.test.ts` unaffected beyond the new
+  column in fixtures.
 - Component: `ChangelogDialog` renders releases from a fixture and focuses a version;
   `BannerAdmin` announce button enabled/disabled state; `MessageBanner` release segment
-  click opens the changelog.
+  click opens the changelog, a drag starting on it does not, and clicking the strip
+  outside the link does nothing new.
 - `stamp-changelog-date.mjs` - tested with a fixture (stamps newest undated heading only;
   idempotent).
 - Manual: open a throwaway PR with a changeset → bot comments; merge → Version PR
@@ -172,4 +182,4 @@ tagging). README's Deployment section gets the release steps.
   already accepts bare `- summary` lines and dated headings so hand-written history fits.
 - Per-user "what's new since your last visit".
 - Links on arbitrary (non-release) banners.
-- Translating changelog entries.
+- Translating changelog entries and the release banner text.
