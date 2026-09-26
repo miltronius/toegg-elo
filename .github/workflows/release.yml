@@ -18,6 +18,10 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-latest
+    env:
+      # changesets/action commits the Version PR itself; without this, that
+      # commit runs the husky pre-commit hook, which needs deno.
+      HUSKY: "0"
     steps:
       - uses: actions/checkout@v4
         with:

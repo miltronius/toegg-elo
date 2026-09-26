@@ -19,3 +19,7 @@ Releasing: merging to `main` updates the "Release: version packages" PR.
 Merging *that* PR bumps the version, writes `frontend/CHANGELOG.md` and tags
 the release (`v1.2.3`, with a GitHub Release). Announce it from
 Admin → Message Banner → Announce.
+
+To put a change into the current release instead of a new version, skip the
+changeset and add its entry under the newest heading of
+`frontend/CHANGELOG.md` by hand.
