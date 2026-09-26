@@ -1,6 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { recomputeAllAchievements } from "./achievements";
 import { didLose, didWin } from "./eloHistory";
+import { releaseBannerMessage, releaseBannerWindow } from "./banners";
 
 // The anon key is also known as the publishable key in Supabase
 // Both refer to the same public key found in your project settings
@@ -494,6 +495,25 @@ export async function updateBanner(
 export async function deleteBanner(id: string): Promise<void> {
   markLocalMutation();
   const { error } = await supabase.from("banners").delete().eq("id", id);
+  if (error) throw error;
+}
+
+/**
+ * Announce a release: an ordinary banner plus the version that makes it open
+ * the changelog. The unique index on release_version rejects a second one.
+ */
+export async function announceRelease(
+  version: string,
+  nowMs = Date.now(),
+): Promise<void> {
+  markLocalMutation();
+  const { error } = await supabase.from("banners").insert({
+    message: releaseBannerMessage(version),
+    release_version: version,
+    ...releaseBannerWindow(nowMs),
+    is_active: true,
+    audience: "everyone",
+  });
   if (error) throw error;
 }
 

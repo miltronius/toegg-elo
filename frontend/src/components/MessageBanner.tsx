@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { Banner, Season } from "../lib/supabase";
 import { marqueeSeconds, visibleBanners } from "../lib/banners";
@@ -9,6 +9,8 @@ interface MessageBannerProps {
   banners: Banner[];
   seasons: Season[];
   signedIn: boolean;
+  /** Makes a release banner a link to the changelog at its version. */
+  onOpenChangelog?: (version: string) => void;
 }
 
 /**
@@ -49,12 +51,14 @@ const MARQUEE_COPIES = 3;
  * the first copy is exposed to assistive tech, so an announcement is read once.
  *
  * The strip can also be grabbed and scratched like a record - see
- * `useTurntable`.
+ * `useTurntable`. A release banner's text is a link to the changelog; a tap on
+ * it (as opposed to a scratch) opens it.
  */
 export function MessageBanner({
   banners,
   seasons,
   signedIn,
+  onOpenChangelog,
 }: MessageBannerProps) {
   const { t } = useTranslation();
 
@@ -64,13 +68,17 @@ export function MessageBanner({
     return () => clearInterval(id);
   }, []);
 
-  const messages = useMemo(
+  const items = useMemo(
     () =>
       visibleBanners(banners, now, signedIn)
-        .map((banner) => bannerDisplayText(banner, seasons, t))
+        .map((banner) => ({
+          id: banner.id,
+          text: bannerDisplayText(banner, seasons, t),
+          releaseVersion: banner.release_version ?? null,
+        }))
         // A season banner pointing at a season we don't have resolves to "";
         // drop it rather than render an empty slot between separators.
-        .filter(Boolean),
+        .filter((item) => item.text),
     [banners, seasons, signedIn, now, t],
   );
 
@@ -81,16 +89,34 @@ export function MessageBanner({
   const durationSeconds =
     Math.round(
       marqueeSeconds(
-        messages.join(""),
+        items.map((item) => item.text).join(""),
         viewportPx,
-        Math.max(0, messages.length - 1),
+        Math.max(0, items.length - 1),
       ) * 10,
     ) / 10;
 
-  const trackRef = useRef<HTMLDivElement>(null);
-  const turntable = useTurntable(trackRef, MARQUEE_COPIES, durationSeconds);
+  // A tap anywhere on a release link - in any copy - opens the changelog.
+  const handleTap = useCallback(
+    (target: EventTarget | null) => {
+      const link =
+        target instanceof Element
+          ? target.closest<HTMLElement>("[data-release-version]")
+          : null;
+      const version = link?.dataset.releaseVersion;
+      if (version) onOpenChangelog?.(version);
+    },
+    [onOpenChangelog],
+  );
 
-  if (messages.length === 0) return null;
+  const trackRef = useRef<HTMLDivElement>(null);
+  const turntable = useTurntable(
+    trackRef,
+    MARQUEE_COPIES,
+    durationSeconds,
+    handleTap,
+  );
+
+  if (items.length === 0) return null;
 
   return (
     <div
@@ -114,14 +140,28 @@ export function MessageBanner({
               className="banner-marquee-copy"
               aria-hidden={i > 0 || undefined}
             >
-              {messages.map((message, m) => (
-                <span key={m} className="banner-marquee-item">
+              {items.map((item, m) => (
+                <span key={item.id} className="banner-marquee-item">
                   {m > 0 && (
                     <span className="banner-marquee-sep" aria-hidden="true">
                       {SEPARATOR_BULLET}
                     </span>
                   )}
-                  {message}
+                  {item.releaseVersion && onOpenChangelog ? (
+                    <button
+                      type="button"
+                      className="banner-link"
+                      data-release-version={item.releaseVersion}
+                      // Only the first copy is exposed to AT; the others stay
+                      // clickable but out of the tab order.
+                      tabIndex={i > 0 ? -1 : undefined}
+                      onClick={() => onOpenChangelog(item.releaseVersion!)}
+                    >
+                      {item.text}
+                    </button>
+                  ) : (
+                    item.text
+                  )}
                 </span>
               ))}
             </span>

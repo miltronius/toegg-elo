@@ -101,6 +101,18 @@
     "label": "Ankündigungen",
     "seasonStarted": "🏆 Eine neue Saison hat begonnen - Saison {{number}}: {{name}}. Alle starten wieder bei 1500 Elo. Viel Erfolg!"
   },
+  "changelog": {
+    "title": "Was ist neu",
+    "open": "Neuigkeiten anzeigen",
+    "close": "Schliessen",
+    "empty": "Noch keine Releases.",
+    "details": "Details",
+    "kinds": {
+      "major": "Grosse Änderungen",
+      "minor": "Neu",
+      "patch": "Fehlerbehebungen"
+    }
+  },
   "bannerAdmin": {
     "title": "Laufschrift-Banner",
     "hint": "Ankündigungen laufen oben durch die App. Eine neue Saison erstellt automatisch ihr eigenes Banner mit einer Laufzeit von {{days}} Tagen - unten wie jedes andere bearbeitbar.",
@@ -109,6 +121,14 @@
     "seasonMessageHint": "Das ist der automatische Text, den jeder in seiner eigenen Sprache sieht. Unverändert lassen (oder leeren), um ihn zu behalten; ändern, um deinen eigenen Wortlaut für alle festzulegen.",
     "seasonBadge": "Saison",
     "seasonBannerTitle": "Automatisch erstellt, als diese Saison begonnen hat",
+    "currentVersion": "Aktuelle Version: v{{version}}",
+    "announce": "Ankündigen",
+    "announcing": "Wird angekündigt…",
+    "announced": "Bereits angekündigt",
+    "announceHint": "Erstellt ein Banner für alle, {{days}} Tage lang, das beim Anklicken die Neuigkeiten öffnet. Unten wie jedes andere bearbeitbar.",
+    "announceError": "Das Release konnte nicht angekündigt werden.",
+    "releaseBadge": "Release",
+    "releaseBannerTitle": "Kündigt v{{version}} an - ein Klick öffnet die Neuigkeiten",
     "audience": "Wer sieht es",
     "audiences": {
       "everyone": "Alle",

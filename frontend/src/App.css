@@ -850,6 +850,11 @@ td.winrate {
   flex: 1;
   min-width: 0;
   overflow: hidden;
+  /* Fill the bar's height (its padding is 0.5rem): overflow hides - and stops
+     hit-testing - anything outside this box, which would clip .banner-link's
+     enlarged target to the line of text. */
+  margin: -0.5rem 0;
+  padding: 0.5rem 0;
 }
 /* inline-flex so the track is sized by its content: the animation translates by
    -100%/3, which is then exactly one of the three identical copies - the seam
@@ -892,6 +897,32 @@ td.winrate {
 .banner-marquee-sep {
   opacity: 0.6;
 }
+/* The one clickable thing in the strip: a release banner opens the changelog.
+   Underlined so it reads as a link. The padding is a bigger target for moving
+   text; the equal negative margin cancels it, so the strip - and the copy width
+   the seamless loop is paced on - doesn't change. */
+.banner-link {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  padding: 0.5rem;
+  margin: -0.5rem;
+  cursor: pointer;
+  white-space: nowrap;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.2em;
+}
+.banner-link:hover,
+.banner-link:focus-visible {
+  text-decoration-thickness: 2px;
+}
+.banner-link:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: -4px;
+  border-radius: 4px;
+}
 @keyframes banner-marquee {
   from {
     transform: translateX(0);
@@ -927,6 +958,9 @@ td.winrate {
     touch-action: pan-y;
   }
   .message-banner[data-scratching] {
+    cursor: grabbing;
+  }
+  .message-banner[data-scratching] .banner-link {
     cursor: grabbing;
   }
 }
@@ -2640,6 +2674,12 @@ td.winrate {
   background: var(--color-primary);
   border-bottom: 2px solid #808080;
 }
+[data-theme="win95"] .banner-link {
+  text-decoration-style: dotted;
+}
+[data-theme="win95"] .banner-link:focus-visible {
+  border-radius: 0;
+}
 
 [data-theme="win95"] .toast {
   background: #d4d0c8;
@@ -2760,4 +2800,81 @@ td.winrate {
   display: block;
   height: 16px;
   width: 16px;
+}
+
+/* The app version next to the title; opens the changelog. Deliberately quiet -
+   it is there for whoever wonders, not to compete with the title. */
+.version-chip {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-text-light);
+  background: none;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  padding: 0.1rem 0.5rem;
+  cursor: pointer;
+}
+.version-chip:hover,
+.version-chip:focus-visible {
+  color: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+/* ChangelogDialog */
+.changelog-release {
+  padding: 0.75rem 0.5rem;
+  border-top: 1px solid var(--color-border);
+}
+.changelog-release:first-of-type {
+  border-top: none;
+}
+.changelog-release--focus {
+  background: var(--color-bg-light);
+  border-radius: 0.5rem;
+}
+.changelog-version {
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+.changelog-date {
+  margin-left: 0.5rem;
+  font-size: 0.8rem;
+  font-weight: 400;
+  color: var(--color-text-light);
+}
+.changelog-kind {
+  margin-top: 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-light);
+}
+.changelog-entries {
+  list-style: disc;
+  padding-left: 1.25rem;
+  margin-top: 0.25rem;
+}
+.changelog-entry {
+  margin: 0.25rem 0;
+}
+.changelog-entry code {
+  font-size: 0.85em;
+  padding: 0 0.25em;
+  border-radius: 0.25rem;
+  background: var(--color-bg-light);
+}
+.changelog-pr {
+  font-size: 0.8rem;
+  color: var(--color-primary);
+}
+.changelog-details summary {
+  cursor: pointer;
+  font-size: 0.8rem;
+  color: var(--color-text-light);
+}
+
+[data-theme="win95"] .version-chip,
+[data-theme="win95"] .changelog-release--focus {
+  border-radius: 0;
 }

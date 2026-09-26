@@ -81,6 +81,13 @@ export function isFlick(velocity: number, cruise: number): boolean {
   return Math.abs(velocity - cruise) > FLICK_MIN_PX_PER_SECOND;
 }
 
+/** Travel below this is a tap, not a scratch: no hand presses perfectly still. */
+const TAP_SLOP_PX = 5;
+
+export function isTap(travel: number): boolean {
+  return Math.abs(travel) < TAP_SLOP_PX;
+}
+
 /**
  * One frame of a coast: the speed eases exponentially towards `cruise`.
  * Exponential in real time, so it runs the same at any refresh rate.
