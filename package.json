@@ -1,8 +1,13 @@
 {
+  "private": true,
   "devDependencies": {
+    "@changesets/changelog-github": "^1.0.1",
+    "@changesets/cli": "^3.0.3",
     "husky": "^9.1.7"
   },
   "scripts": {
-    "prepare": "husky"
+    "prepare": "husky",
+    "changeset": "changeset",
+    "version-packages": "changeset version && node frontend/scripts/stamp-changelog-date.mjs frontend/CHANGELOG.md"
   }
 }

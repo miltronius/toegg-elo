@@ -1,0 +1,70 @@
+name: Release
+
+# While there are pending changesets, keeps a "Release: version packages" PR
+# open. Merging that PR bumps frontend/package.json and writes
+# frontend/CHANGELOG.md; on that push there are no changesets left, so the
+# second step tags the version as vX.Y.Z and creates a GitHub Release from its
+# changelog section. Nothing is published to npm.
+on:
+  push:
+    branches: ["main"]
+
+concurrency: ${{ github.workflow }}-${{ github.ref }}
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+          run_install: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - uses: changesets/action@v1
+        id: changesets
+        with:
+          version: pnpm run version-packages
+          title: "Release: version packages"
+          commit: "Release: version packages"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Done here rather than with `changeset git-tag`: changesets v3 no longer
+      # prints the "New tag:" lines changesets/action reads to create releases,
+      # and this gives plain vX.Y.Z tags. Idempotent - every push to main without
+      # pending changesets reaches this step, and only the first one tags.
+      - name: Tag and create the GitHub Release
+        if: steps.changesets.outputs.hasChangesets == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          version=$(node -p "require('./frontend/package.json').version")
+          tag="v$version"
+          newest=$(grep -m1 '^## ' frontend/CHANGELOG.md | awk '{print $2}')
+          if [ "$newest" != "$version" ]; then
+            echo "CHANGELOG's newest release ($newest) is not $version; nothing to tag."
+            exit 0
+          fi
+          if gh release view "$tag" >/dev/null 2>&1; then
+            echo "$tag is already released."
+            exit 0
+          fi
+          # The newest release's section, without its heading.
+          awk '/^## /{n++; next} n==1' frontend/CHANGELOG.md > "$RUNNER_TEMP/notes.md"
+          gh release create "$tag" --target "$GITHUB_SHA" --title "$tag" --notes-file "$RUNNER_TEMP/notes.md"
