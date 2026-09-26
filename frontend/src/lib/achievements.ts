@@ -54,7 +54,7 @@ export type AchievementId =
   | "goals_10000"
   | "pair_goals_100"
   | "pair_goals_500"
-  | "pair_goals_2000"
+  | "pair_goals_1000"
   | "completionist"
   | "completionist_30";
 
@@ -384,10 +384,10 @@ export const ACHIEVEMENT_DEFINITIONS: AchievementDefinition[] = [
     description: "Score 500 goals with one partner",
   },
   {
-    id: "pair_goals_2000",
+    id: "pair_goals_1000",
     icon: "🐉",
     name: "Two-Headed Monster",
-    description: "Score 2,000 goals with one partner",
+    description: "Score 1,000 goals with one partner",
   },
   {
     id: "completionist",
@@ -494,7 +494,7 @@ const CAREER_GOAL_TIERS: [AchievementId, number][] = [
 const PAIR_GOAL_TIERS: [AchievementId, number][] = [
   ["pair_goals_100", 100],
   ["pair_goals_500", 500],
-  ["pair_goals_2000", 2000],
+  ["pair_goals_1000", 1000],
 ];
 
 /**

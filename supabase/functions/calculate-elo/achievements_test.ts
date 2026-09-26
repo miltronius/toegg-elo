@@ -208,3 +208,16 @@ Deno.test("pair goals: player position on the team doesn't matter", () => {
   assertEquals(got.length, 1);
   assertEquals(got[0].meta, { partnerId: "p3" });
 });
+
+Deno.test("pair tiers sit at 100, 500 and 1,000 goals", () => {
+  const games = (n: number) => series(...Array.from({ length: n }, () => win()));
+  assertEquals(ids([makeMatch(1, games(99))]).filter((id) => id.startsWith("pair_")), [
+    "pair_goals_100",
+    "pair_goals_500",
+  ]);
+  assertEquals(ids([makeMatch(1, games(100))]).filter((id) => id.startsWith("pair_")), [
+    "pair_goals_100",
+    "pair_goals_500",
+    "pair_goals_1000",
+  ]);
+});

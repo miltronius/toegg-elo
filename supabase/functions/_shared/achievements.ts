@@ -56,7 +56,7 @@ export type AchievementId =
   | "goals_10000"
   | "pair_goals_100"
   | "pair_goals_500"
-  | "pair_goals_2000"
+  | "pair_goals_1000"
   | "completionist"
   | "completionist_30";
 
@@ -184,7 +184,7 @@ const CAREER_GOAL_TIERS: [AchievementId, number][] = [
 const PAIR_GOAL_TIERS: [AchievementId, number][] = [
   ["pair_goals_100", 100],
   ["pair_goals_500", 500],
-  ["pair_goals_2000", 2000],
+  ["pair_goals_1000", 1000],
 ];
 
 /**

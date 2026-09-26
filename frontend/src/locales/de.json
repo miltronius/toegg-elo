@@ -253,7 +253,7 @@
     "goals_10000": { "name": "Zehntausender-Club", "description": "Erziele 10'000 Tore in deiner Karriere" },
     "pair_goals_100": { "name": "Dynamisches Duo", "description": "Erziele 100 Tore mit demselben Partner" },
     "pair_goals_500": { "name": "Eingespieltes Team", "description": "Erziele 500 Tore mit demselben Partner" },
-    "pair_goals_2000": { "name": "Zweiköpfiges Monster", "description": "Erziele 2'000 Tore mit demselben Partner" },
+    "pair_goals_1000": { "name": "Zweiköpfiges Monster", "description": "Erziele 1'000 Tore mit demselben Partner" },
     "completionist": { "name": "Vervollständiger", "description": "Schalte 20 Erfolge frei" },
     "completionist_30": { "name": "Wahrer Vervollständiger", "description": "Schalte 30 Erfolge frei" }
   },
@@ -329,6 +329,11 @@
     "gamesByWeekday": "Spiele nach Wochentag",
     "gamesTooltip": "Spiele",
     "dailyActivity": "Tägliche Aktivitäts-Heatmap"
+  },
+  "goals": {
+    "label": "Tore erzielt : erhalten",
+    "atLeast": "mindestens",
+    "estimateHint": "Spiele ohne eingetragenes Resultat zählen für die Verlierer 0 Tore, die echten Werte können also höher sein"
   },
   "teamDetail": {
     "winstreak": "Siegesserie",

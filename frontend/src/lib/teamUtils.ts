@@ -1,6 +1,7 @@
-import { Match, Player } from "./supabase";
+import { Match, Player, PlayerSeasonStats, Season } from "./supabase";
 import { TeamNameRow } from "./supabase";
 import { hashHue, hslHex } from "./colors";
+import { GoalTally, addMatchGoals, emptyGoalTally } from "./goals";
 
 export type HeadToHead = {
   teamAWins: number;
@@ -51,6 +52,7 @@ export type TeamStats = {
   currentLoseStreak: number;
   nameRow: TeamNameRow | null;
   rivals: { key: string; matchesPlayed: number; wins: number; losses: number }[];
+  goals: GoalTally;
 };
 
 export function teamKey(idA: string, idB: string): string {
@@ -62,6 +64,27 @@ export function teamKey(idA: string, idB: string): string {
 // and so left them in whatever order they arrived in.
 export function compareTeamRank(a: TeamStats, b: TeamStats): number {
   return b.wins - a.wins || a.losses - b.losses || b.combinedElo - a.combinedElo;
+}
+
+// Players with `current_elo` swapped for their season rating while a season
+// is in scope, so everything reading it (combined Elo, the team dialog's
+// player cards) shows the same season the team's record comes from. Players
+// without a row for that season keep their all-time rating.
+export function playersWithSeasonElo(
+  players: Player[],
+  season: Season | null,
+  playerSeasonStats: PlayerSeasonStats[] | undefined,
+): Player[] {
+  if (!season || !playerSeasonStats?.length) return players;
+  const statsMap = new Map(
+    playerSeasonStats
+      .filter((s) => s.season_id === season.id)
+      .map((s) => [s.player_id, s]),
+  );
+  return players.map((p) => {
+    const s = statsMap.get(p.id);
+    return s ? { ...p, current_elo: s.current_season_elo } : p;
+  });
 }
 
 export function teamKeyParts(key: string): [string, string] {
@@ -90,6 +113,7 @@ export function computeTeamStats(
     wins: number;
     losses: number;
     winHistory: boolean[];
+    goals: GoalTally;
     opponents: Map<string, { played: number; wins: number; losses: number }>;
   };
 
@@ -98,7 +122,7 @@ export function computeTeamStats(
   const getOrCreate = (lo: string, hi: string): Acc => {
     const k = `${lo}:${hi}`;
     if (!acc.has(k)) {
-      acc.set(k, { lo, hi, wins: 0, losses: 0, winHistory: [], opponents: new Map() });
+      acc.set(k, { lo, hi, wins: 0, losses: 0, winHistory: [], goals: emptyGoalTally(), opponents: new Map() });
     }
     return acc.get(k)!;
   };
@@ -122,6 +146,8 @@ export function computeTeamStats(
     const aWon = m.winning_team === "A";
     if (aWon) { teamA.wins++; teamB.losses++; } else { teamB.wins++; teamA.losses++; }
     teamA.winHistory.push(aWon);
+    addMatchGoals(teamA.goals, m, "A");
+    addMatchGoals(teamB.goals, m, "B");
     teamB.winHistory.push(!aWon);
 
     const aVsB = teamA.opponents.get(kB) ?? { played: 0, wins: 0, losses: 0 };
@@ -165,6 +191,7 @@ export function computeTeamStats(
         currentLoseStreak: trailingStreak(data.winHistory, false),
         nameRow: nameMap.get(key) ?? null,
         rivals,
+        goals: data.goals,
       };
     })
     .sort((a, b) => b.combinedElo - a.combinedElo);

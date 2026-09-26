@@ -502,11 +502,42 @@ td.winrate {
 }
 
 /* ── Stat cards (PlayerDetail + TeamDetail) ──────────────────────── */
+/* Every row spans the full width, whatever the card count (dialogs show 4-6,
+   depending on which optional cards apply). A 12-column grid sized by count:
+   up to 4 cards share one row, 5 split 3 + 2, 6 split 3 + 3. auto-fit left
+   the odd card out alone on a short last row. */
 .player-stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  grid-template-columns: repeat(12, minmax(0, 1fr));
   gap: 0.75rem;
   margin-bottom: 1.25rem;
+}
+/* Phones: two per row, an odd last card takes the whole row. */
+.player-stats-grid > * {
+  grid-column: span 6;
+}
+.player-stats-grid > :last-child:nth-child(odd) {
+  grid-column: span 12;
+}
+@media (min-width: 480px) {
+  .player-stats-grid > *,
+  .player-stats-grid > :last-child:nth-child(odd) {
+    grid-column: span 4;
+  }
+  .player-stats-grid > :first-child:nth-last-child(1) {
+    grid-column: span 12;
+  }
+  .player-stats-grid > :first-child:nth-last-child(2),
+  .player-stats-grid > :first-child:nth-last-child(2) ~ * {
+    grid-column: span 6;
+  }
+  .player-stats-grid > :first-child:nth-last-child(4),
+  .player-stats-grid > :first-child:nth-last-child(4) ~ * {
+    grid-column: span 3;
+  }
+  .player-stats-grid > :first-child:nth-last-child(5) ~ :nth-last-child(-n + 2) {
+    grid-column: span 6;
+  }
 }
 .stat-card {
   background: var(--color-bg);

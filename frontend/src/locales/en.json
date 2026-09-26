@@ -253,7 +253,7 @@
     "goals_10000": { "name": "Ten Thousand Club", "description": "Score 10,000 goals over your career" },
     "pair_goals_100": { "name": "Dynamic Duo", "description": "Score 100 goals with one partner" },
     "pair_goals_500": { "name": "Well-Oiled Machine", "description": "Score 500 goals with one partner" },
-    "pair_goals_2000": { "name": "Two-Headed Monster", "description": "Score 2,000 goals with one partner" },
+    "pair_goals_1000": { "name": "Two-Headed Monster", "description": "Score 1,000 goals with one partner" },
     "completionist": { "name": "Completionist", "description": "Unlock 20 achievements" },
     "completionist_30": { "name": "True Completionist", "description": "Unlock 30 achievements" }
   },
@@ -329,6 +329,11 @@
     "gamesByWeekday": "Games by weekday",
     "gamesTooltip": "Games",
     "dailyActivity": "Daily Activity Heatmap"
+  },
+  "goals": {
+    "label": "Goals scored : received",
+    "atLeast": "at least",
+    "estimateHint": "Games recorded without a score count the losing side as 0 goals, so the real totals may be higher"
   },
   "teamDetail": {
     "winstreak": "Winstreak",
