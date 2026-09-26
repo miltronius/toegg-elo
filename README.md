@@ -139,6 +139,15 @@ Frontend is on Vercel (one project, auto-deployed). Edge function must be deploy
    supabase functions deploy calculate-elo --project-ref <prod-project-ref>
    ```
 
+### Releases
+
+1. Every PR with a user-visible change includes a changeset: `pnpm changeset` (see `.changeset/README.md`).
+2. After merging, the Release workflow opens/updates the **"Release: version packages"** PR.
+3. Merge it: the version and `frontend/CHANGELOG.md` update, Vercel deploys, and the release is tagged `vX.Y.Z` with a GitHub Release.
+4. Optionally announce it: Admin → Message Banner → **Announce**.
+
+One-time setup: install [changeset-bot](https://github.com/apps/changeset-bot) on the repo, and enable *Settings → Actions → General → Allow GitHub Actions to create and approve pull requests* (the Release workflow needs it to open the Version PR).
+
 ## Scripts
 
 ```bash
