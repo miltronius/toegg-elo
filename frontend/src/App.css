@@ -494,14 +494,12 @@ body {
   outline: 2px solid var(--color-primary);
   outline-offset: 2px;
 }
-/* The 🪪 emoji is itself blue, so on the blue button it sits on a small
-   light chip of its own. */
+/* The 🪪 emoji is itself blue, so on the blue button it gets a thin black
+   outline traced around the glyph (one hard drop-shadow per side). */
 .claim-btn-icon {
   display: inline-block;
-  padding: 0 0.2rem;
-  line-height: 1.35;
-  background: rgba(255, 255, 255, 0.92);
-  border-radius: 0.25rem;
+  filter: drop-shadow(1px 0 0 #000) drop-shadow(-1px 0 0 #000)
+    drop-shadow(0 1px 0 #000) drop-shadow(0 -1px 0 #000);
   transition: transform 0.12s ease;
 }
 /* The card gives a little wave on hover. */
@@ -527,7 +525,7 @@ body {
   filter: none;
 }
 [data-theme="win95"] .claim-btn-icon {
-  background: none;
+  filter: none;
 }
 [data-theme="win95"] .claim-btn:active {
   box-shadow:
