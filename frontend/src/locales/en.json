@@ -274,6 +274,7 @@
     "pair_goals_100": { "name": "Dynamic Duo", "description": "Score 100 goals with one partner" },
     "pair_goals_500": { "name": "Well-Oiled Machine", "description": "Score 500 goals with one partner" },
     "pair_goals_1000": { "name": "Two-Headed Monster", "description": "Score 1,000 goals with one partner" },
+    "linked_account": { "name": "That's Me!", "description": "Link your account to your player" },
     "completionist": { "name": "Completionist", "description": "Unlock 20 achievements" },
     "completionist_30": { "name": "True Completionist", "description": "Unlock 30 achievements" }
   },

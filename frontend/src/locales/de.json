@@ -274,6 +274,7 @@
     "pair_goals_100": { "name": "Dynamisches Duo", "description": "Erziele 100 Tore mit demselben Partner" },
     "pair_goals_500": { "name": "Eingespieltes Team", "description": "Erziele 500 Tore mit demselben Partner" },
     "pair_goals_1000": { "name": "Zweiköpfiges Monster", "description": "Erziele 1'000 Tore mit demselben Partner" },
+    "linked_account": { "name": "Das bin ich!", "description": "Verknüpfe dein Konto mit deinem Spieler" },
     "completionist": { "name": "Vervollständiger", "description": "Schalte 20 Erfolge frei" },
     "completionist_30": { "name": "Wahrer Vervollständiger", "description": "Schalte 30 Erfolge frei" }
   },
