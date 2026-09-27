@@ -39,6 +39,7 @@ import { playerGoalTally } from "../lib/goals";
 import { useMe } from "../contexts/AuthContext";
 import { canClaimPlayer, canRenamePlayer } from "../lib/playerLinking";
 import { ClaimPlayerDialog } from "./ClaimPlayerDialog";
+import { ClaimedMarker } from "./ClaimedMarker";
 
 interface HeadToHead {
   playerId: string;
@@ -449,14 +450,10 @@ export function PlayerDetail({
               >
                 {player.name}
               </h2>
-              {player.is_linked && (
-                <span
-                  title={t("linking.claimed")}
-                  aria-label={t("linking.claimed")}
-                >
-                  🪪
-                </span>
-              )}
+              <ClaimedMarker
+                isLinked={player.is_linked}
+                isMe={player.id === me.myPlayerId}
+              />
               {currentStreak > 0 && (
                 <span
                   className="streak-badge"

@@ -456,6 +456,15 @@ body {
 .streak-badge.ranked {
   background: rgba(124, 58, 237, 0.12);
 }
+/* Your own claimed player (PlayerDetail). */
+.streak-badge.you {
+  background: rgba(59, 130, 246, 0.12);
+  color: var(--color-primary-dark);
+}
+/* Someone else's claimed player: not clickable, but it has a tooltip. */
+.claimed-marker {
+  cursor: help;
+}
 /* Shrink-to-fit so a badge column costs no more than its widest badge. Left-
    aligned so the emoji line up even when the streak counts differ in width. */
 .leaderboard-table .badge-col {
@@ -2428,6 +2437,9 @@ td.winrate {
 
 [data-theme="dark"] .streak-badge.lose {
   color: #7cc4ff;
+}
+[data-theme="dark"] .streak-badge.you {
+  color: #93c5fd;
 }
 [data-theme="dark"] header,
 [data-theme="dark"] nav {
