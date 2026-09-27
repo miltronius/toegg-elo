@@ -15,6 +15,7 @@ import {
   LabelList,
 } from "recharts";
 import {
+  claimPlayer,
   updatePlayerName,
   updatePlayerAnonymousName,
   EloHistory,
@@ -35,6 +36,9 @@ import { computeWeekdayStats } from "../lib/weekdayStats";
 import { AchievementGallery } from "./Achievements";
 import { GoalStatCard } from "./GoalStatCard";
 import { playerGoalTally } from "../lib/goals";
+import { useMe } from "../contexts/AuthContext";
+import { canClaimPlayer, canRenamePlayer } from "../lib/playerLinking";
+import { ClaimPlayerDialog } from "./ClaimPlayerDialog";
 
 interface HeadToHead {
   playerId: string;
@@ -111,6 +115,12 @@ export function PlayerDetail({
   initialTab = "stats",
 }: PlayerDetailProps) {
   const { t } = useTranslation();
+  const me = useMe();
+  // Name protection is UI-only until #118: a claimed player is renamed only
+  // by its owner or an admin.
+  const canRename = canRenamePlayer(player, me);
+  const canClaim = canClaimPlayer(player, me);
+  const [claimOpen, setClaimOpen] = useState(false);
   const winrateLabel = t("playerDetail.winratePct");
   const playerMap = new Map(players.map((p) => [p.id, p]));
   const sortedPlayers = [...players].sort(
@@ -173,6 +183,7 @@ export function PlayerDetail({
 
   // Reset inline editors when navigating to a different player
   useEffect(() => {
+    setClaimOpen(false);
     setIsEditingName(false);
     setNewName(player.name);
     setIsEditingAnon(false);
@@ -395,7 +406,7 @@ export function PlayerDetail({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-4 gap-3">
-          {isEditingName ? (
+          {isEditingName && canRename ? (
             <div className="flex items-center gap-2 flex-1">
               <input
                 type="text"
@@ -429,11 +440,23 @@ export function PlayerDetail({
           ) : (
             <div className="flex items-center gap-2 min-w-0">
               <h2
-                onClick={() => setIsEditingName(true)}
-                className="text-2xl font-bold cursor-pointer hover:text-primary transition-colors m-0"
+                onClick={canRename ? () => setIsEditingName(true) : undefined}
+                className={`text-2xl font-bold m-0${
+                  canRename
+                    ? " cursor-pointer hover:text-primary transition-colors"
+                    : ""
+                }`}
               >
                 {player.name}
               </h2>
+              {player.is_linked && (
+                <span
+                  title={t("linking.claimed")}
+                  aria-label={t("linking.claimed")}
+                >
+                  🪪
+                </span>
+              )}
               {currentStreak > 0 && (
                 <span
                   className="streak-badge"
@@ -480,7 +503,7 @@ export function PlayerDetail({
         </div>
 
         <div className="flex items-center gap-2 mb-4 text-sm text-text-light">
-          {isEditingAnon ? (
+          {isEditingAnon && canRename ? (
             <>
               <span title={t("playerDetail.anonTitle")}>🎭</span>
               <input
@@ -524,7 +547,7 @@ export function PlayerDetail({
                 ✕
               </button>
             </>
-          ) : (
+          ) : canRename ? (
             <span
               onClick={() => {
                 setNewAnon(anonName);
@@ -535,6 +558,19 @@ export function PlayerDetail({
             >
               🎭 {anonName || t("playerDetail.setAnonName")}
             </span>
+          ) : (
+            // Read-only: no "set a name" prompt the viewer couldn't act on.
+            anonName && (
+              <span title={t("playerDetail.anonTitle")}>🎭 {anonName}</span>
+            )
+          )}
+          {canClaim && (
+            <button
+              className="btn-small ml-auto"
+              onClick={() => setClaimOpen(true)}
+            >
+              {t("linking.claim")}
+            </button>
           )}
         </div>
 
@@ -841,6 +877,20 @@ export function PlayerDetail({
             playerId={player.id}
             matches={matches}
             eloHistory={eloHistory}
+          />
+        )}
+        {/* Inside the panel, whose stopPropagation keeps the dialog's clicks
+            from reaching this modal's backdrop and closing both. */}
+        {claimOpen && (
+          <ClaimPlayerDialog
+            playerName={player.name}
+            onClose={() => setClaimOpen(false)}
+            onConfirm={async () => {
+              await claimPlayer(player.id);
+              await me.refreshMyPlayer();
+              setClaimOpen(false);
+              onPlayerRefresh?.();
+            }}
           />
         )}
       </div>

@@ -76,6 +76,26 @@
     "levelGame": "Eine Partie kann nicht unentschieden enden",
     "levelSeries": "Ein Spiel kann nicht unentschieden enden - spielt einen Entscheider"
   },
+  "linking": {
+    "claim": "🪪 Das bin ich",
+    "claimTitle": "Spieler beanspruchen",
+    "claimBody": "Du beanspruchst <b>{{name}}</b>. Nur ein Admin kann das rückgängig machen.",
+    "claimConfirm": "Beanspruchen",
+    "claiming": "Wird beansprucht...",
+    "cancel": "Abbrechen",
+    "claimed": "Mit einem Konto verknüpft",
+    "you": "(du)",
+    "myProfile": "🪪 Mein Profil",
+    "unknownError": "Etwas ist schiefgelaufen. Bitte versuche es nochmals.",
+    "errors": {
+      "not_allowed": "Das darfst du nicht.",
+      "account_not_eligible": "Nur Konten mit der Rolle User oder Admin können verknüpft werden.",
+      "account_already_linked": "Dieses Konto ist bereits mit einem Spieler verknüpft.",
+      "player_already_linked": "Dieser Spieler wurde bereits beansprucht.",
+      "player_not_found": "Diesen Spieler gibt es nicht mehr.",
+      "not_linked": "Dieser Spieler ist mit keinem Konto verknüpft."
+    }
+  },
   "userManagement": {
     "loading": "Benutzer werden geladen...",
     "title": "Benutzerverwaltung",
