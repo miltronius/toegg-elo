@@ -1,8 +1,19 @@
-import { describe, it, expect, vi } from "vitest";
+import { afterEach, describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { RelationshipGraph } from "./RelationshipGraph";
 import type { Match, Player, Season } from "../lib/supabase";
+
+// Who "you" are: tests that care set me.myPlayerId; everyone else is nobody.
+const me = vi.hoisted(() => ({
+  role: null,
+  myPlayerId: null as string | null,
+  refreshMyPlayer: async () => {},
+}));
+vi.mock("../contexts/AuthContext", () => ({ useMe: () => me }));
+afterEach(() => {
+  me.myPlayerId = null;
+});
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -15,6 +26,7 @@ const player = (id: string, name: string, elo = 1500): Player => ({
   losses: 0,
   created_at: "2024-01-01T00:00:00Z",
   anonymous_name: null,
+  is_linked: false,
 });
 
 let mc = 0;
@@ -264,5 +276,26 @@ describe("RelationshipGraph - interaction", () => {
     expect(drawnGroups()).toBeLessThan(before);
     // The budget only ever removes lines, never players.
     expect(circles()).toHaveLength(4);
+  });
+});
+
+// ── you ──────────────────────────────────────────────────────────────────────
+
+describe("RelationshipGraph - you", () => {
+  it("rings your own node and labels it as you", () => {
+    me.myPlayerId = "p2";
+    setup();
+
+    expect(document.querySelectorAll(".relgraph-me-ring")).toHaveLength(1);
+    expect(screen.getByText("Bob (you)")).toBeInTheDocument();
+    // Everyone else is labelled as before.
+    expect(screen.getByText("Ann")).toBeInTheDocument();
+  });
+
+  it("marks nobody when you have no player", () => {
+    setup();
+
+    expect(document.querySelectorAll(".relgraph-me-ring")).toHaveLength(0);
+    expect(screen.queryByText(/\(you\)/)).not.toBeInTheDocument();
   });
 });

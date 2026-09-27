@@ -1,5 +1,6 @@
 import { assertEquals } from "@std/assert";
 import {
+  computeAchievementsForPlayer,
   computeGoalAchievements,
   type Match,
   type MatchGame,
@@ -220,4 +221,58 @@ Deno.test("pair tiers sit at 100, 500 and 1,000 goals", () => {
     "pair_goals_500",
     "pair_goals_1000",
   ]);
+});
+
+// ---------------------------------------------------------------------------
+// That's Me! (linked_account)
+// ---------------------------------------------------------------------------
+
+// Nine daily wins for p1, the last one an explicit 10:0: exactly nine
+// achievements, so a link is the one that makes ten.
+function nineAchievementSeason(): Match[] {
+  return Array.from({ length: 9 }, (_, i) =>
+    makeMatch(i + 1, {
+      created_at: new Date(Date.UTC(2026, 0, 1 + i)).toISOString(),
+      ...(i === 8 ? series(win(10, 0)) : {}),
+    })
+  );
+}
+
+const achievementsOf = (matches: Match[], linkedAt: Date | null = null) =>
+  computeAchievementsForPlayer(
+    "p1",
+    { id: "p1" } as Parameters<typeof computeAchievementsForPlayer>[1],
+    matches,
+    [],
+    [],
+    linkedAt,
+  );
+
+Deno.test("linked_account: unlocked at the link time", () => {
+  const linkedAt = new Date("2026-09-20T10:00:00Z");
+  const got = achievementsOf([], linkedAt);
+  assertEquals(got, [{ achievementId: "linked_account", unlockedAt: linkedAt }]);
+});
+
+Deno.test("linked_account: absent without a link", () => {
+  assertEquals(
+    achievementsOf(nineAchievementSeason()).some(
+      (a) => a.achievementId === "linked_account",
+    ),
+    false,
+  );
+});
+
+Deno.test("linked_account: counts toward achievement_hunter", () => {
+  const matches = nineAchievementSeason();
+  const unlinked = achievementsOf(matches);
+  assertEquals(unlinked.length, 9);
+  assertEquals(unlinked.some((a) => a.achievementId === "achievement_hunter"), false);
+
+  // Linked after the ninth, so the link is the tenth - and dates the meta.
+  const linkedAt = new Date("2026-02-01T12:00:00Z");
+  const hunter = achievementsOf(matches, linkedAt).find(
+    (a) => a.achievementId === "achievement_hunter",
+  );
+  assertEquals(hunter?.unlockedAt, linkedAt);
 });

@@ -23,6 +23,7 @@ import {
   type RelationNode,
 } from "../lib/relationshipGraph";
 import { RELGRAPH_SLOTS } from "../lib/colors";
+import { useMe } from "../contexts/AuthContext";
 
 interface RelationshipGraphProps {
   matches: Match[];
@@ -176,6 +177,7 @@ export function RelationshipGraph({
   playerSeasonStats,
 }: RelationshipGraphProps) {
   const { t } = useTranslation();
+  const { myPlayerId } = useMe();
   // Scoped locally rather than through App's shared selectedSeason, and defaulted
   // to all-time: relationships accrue over years, and one season is usually too
   // few matches to show any structure. Same approach as SeasonStats.
@@ -859,6 +861,7 @@ export function RelationshipGraph({
                     const p = projected.get(n.id);
                     if (!p) return null;
                     const r = n.r * (is3d ? p.scale : 1);
+                    const isMe = n.id === myPlayerId;
                     // One transform per node instead of four moving coordinates:
                     // the circle and its label ride along as a unit.
                     return (
@@ -890,15 +893,27 @@ export function RelationshipGraph({
                           }
                           onMouseLeave={() => setHover(null)}
                         />
+                        {/* You: a ring rather than a fill, since the fill is
+                            the colouring that keeps linked players apart. */}
+                        {isMe && (
+                          <circle
+                            className="relgraph-me-ring"
+                            r={r + 4}
+                            fill="none"
+                            stroke="var(--color-primary)"
+                            strokeWidth={3}
+                            pointerEvents="none"
+                          />
+                        )}
                         <text
                           className="relgraph-label"
-                          y={r + labelSize * 0.9}
+                          y={r + labelSize * 0.9 + (isMe ? 4 : 0)}
                           textAnchor="middle"
-                          fill="var(--color-text)"
+                          fill={isMe ? "var(--color-primary)" : "var(--color-text)"}
                           fontSize={labelSize}
                           opacity={is3d ? clamp(p.scale, 0.45, 1) : 1}
                         >
-                          {n.name}
+                          {isMe ? `${n.name} ${t("linking.you")}` : n.name}
                         </text>
                       </g>
                     );

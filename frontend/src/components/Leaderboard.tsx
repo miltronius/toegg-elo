@@ -14,6 +14,7 @@ import {
 import { Player, EloHistory, Season, PlayerSeasonStats } from "../lib/supabase";
 import { didLose, didWin } from "../lib/eloHistory";
 import { DATE_LOCALE } from "../lib/i18n";
+import { useMe } from "../contexts/AuthContext";
 import {
   RANKED_MIN_GAMES,
   ROSTER_FILTERS,
@@ -338,6 +339,7 @@ export function Leaderboard({
   onPlayerClick,
 }: LeaderboardProps) {
   const { t } = useTranslation();
+  const { myPlayerId } = useMe();
   const [view, setView] = useState<"table" | "bump" | "elo">("table");
 
   // null selectedSeason = All-Time view
@@ -785,7 +787,9 @@ export function Leaderboard({
                   <tr
                     key={player.id}
                     onClick={() => handlePlayerClick?.(player)}
-                    className={`clickable-row${rowClass ? ` ${rowClass}` : ""}`}
+                    className={`clickable-row${rowClass ? ` ${rowClass}` : ""}${
+                      player.id === myPlayerId ? " row-me" : ""
+                    }`}
                   >
                     <td className="rank">#{rank}</td>
                     {showRankedBadge && (

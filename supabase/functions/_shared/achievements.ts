@@ -57,6 +57,7 @@ export type AchievementId =
   | "pair_goals_100"
   | "pair_goals_500"
   | "pair_goals_1000"
+  | "linked_account"
   | "completionist"
   | "completionist_30";
 
@@ -256,12 +257,14 @@ export function computeGoalAchievements(
   return unlocked;
 }
 
-function computeAchievementsForPlayer(
+export function computeAchievementsForPlayer(
   playerId: string,
   _player: Player,
   matches: Match[],
   allPlayers: Player[] = [],
   eloHistory: EloHistory[] = [],
+  // When the player's account was linked (player_accounts.linked_at), or null.
+  linkedAt: Date | null = null,
 ): UnlockedAchievement[] {
   const unlocked: UnlockedAchievement[] = [];
 
@@ -865,6 +868,14 @@ function computeAchievementsForPlayer(
   // goals - shutouts and career / pair goal tiers
   unlocked.push(...computeGoalAchievements(playerId, sorted));
 
+  // That's Me! - the one achievement not derived from play. Pushed before the
+  // meta tally on purpose: it counts toward Achievement Hunter/Completionist.
+  // unlockedAt = linked_at, the same value the link RPCs write, so the upsert
+  // and the RPC never disagree.
+  if (linkedAt) {
+    unlocked.push({ achievementId: "linked_account", unlockedAt: linkedAt });
+  }
+
   // achievement_hunter - unlockedAt = date the 10th achievement was earned
   if (unlocked.length >= 10) {
     const tenth = [...unlocked].sort(
@@ -906,10 +917,18 @@ function computeAchievementsForPlayer(
 // Exported: recompute + upsert all achievements for all players
 // ---------------------------------------------------------------------------
 
+export interface PlayerAccountLink {
+  player_id: string;
+  linked_at: string;
+}
+
 export async function recomputeAllAchievements(
   supabase: SupabaseClient,
   players: Player[],
   matches: Match[],
+  // Pre-read links. The admin recompute passes them because it deletes every
+  // row first, and must not discover a failing read only after that.
+  links?: PlayerAccountLink[],
 ): Promise<void> {
   const rows: {
     player_id: string;
@@ -922,6 +941,19 @@ export async function recomputeAllAchievements(
   const { data: eloHistory } = await supabase.from("elo_history").select("*");
   const history = (eloHistory ?? []) as EloHistory[];
 
+  // Links feed That's Me!. Throw rather than skip on a failed read, so no
+  // meta-achievement is written with a date that ignores the link.
+  if (!links) {
+    const { data, error } = await supabase
+      .from("player_accounts")
+      .select("player_id, linked_at");
+    if (error) throw error;
+    links = (data ?? []) as PlayerAccountLink[];
+  }
+  const linkedAt = new Map<string, Date>(
+    links.map((l) => [l.player_id, new Date(l.linked_at)]),
+  );
+
   for (const player of players) {
     const unlocked = computeAchievementsForPlayer(
       player.id,
@@ -929,6 +961,7 @@ export async function recomputeAllAchievements(
       matches,
       players,
       history,
+      linkedAt.get(player.id) ?? null,
     );
     for (const u of unlocked) {
       rows.push({

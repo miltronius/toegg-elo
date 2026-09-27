@@ -76,6 +76,28 @@
     "levelGame": "A game can't end level",
     "levelSeries": "A match can't end level - play a decider"
   },
+  "linking": {
+    "claim": "This is me",
+    "claimTitle": "Claim player",
+    "claimBody": "You're claiming <b>{{name}}</b>. Only an admin can undo this.",
+    "claimConfirm": "Claim",
+    "claiming": "Claiming...",
+    "cancel": "Cancel",
+    "claimed": "Claimed by an account",
+    "thisIsYou": "This is you",
+    "yourPlayer": "Your account is linked to this player",
+    "you": "(you)",
+    "myProfile": "🪪 My profile",
+    "unknownError": "Something went wrong. Please try again.",
+    "errors": {
+      "not_allowed": "You're not allowed to do that.",
+      "account_not_eligible": "Only user and admin accounts can be linked.",
+      "account_already_linked": "This account is already linked to a player.",
+      "player_already_linked": "Someone has already claimed this player.",
+      "player_not_found": "That player no longer exists.",
+      "not_linked": "That player isn't linked to an account."
+    }
+  },
   "userManagement": {
     "loading": "Loading users...",
     "title": "User Management",
@@ -91,6 +113,14 @@
     "recompute": "Recompute achievements",
     "recomputeError": "Failed to recompute achievements",
     "recomputeDone": "Recomputed achievements for {{players}} player(s) across {{matches}} match(es).",
+    "player": "Player",
+    "link": "Link",
+    "change": "Change",
+    "unlink": "Unlink",
+    "pickPlayer": "Pick a player...",
+    "linkViewerHint": "Make them a user first",
+    "confirmUnlink": "Unlink {{player}} from {{email}}? This also removes their That's Me! achievement.",
+    "linkError": "Failed to update the link",
     "roles": {
       "viewer": "viewer",
       "user": "user",
@@ -274,6 +304,7 @@
     "pair_goals_100": { "name": "Dynamic Duo", "description": "Score 100 goals with one partner" },
     "pair_goals_500": { "name": "Well-Oiled Machine", "description": "Score 500 goals with one partner" },
     "pair_goals_1000": { "name": "Two-Headed Monster", "description": "Score 1,000 goals with one partner" },
+    "linked_account": { "name": "That's Me!", "description": "Link your account to your player" },
     "completionist": { "name": "Completionist", "description": "Unlock 20 achievements" },
     "completionist_30": { "name": "True Completionist", "description": "Unlock 30 achievements" }
   },
@@ -383,6 +414,7 @@
     "months": ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
   },
   "teams": {
+    "yourTeam": "Your team",
     "title": "Teams",
     "allTime": "All-Time",
     "allPlayers": "All players",

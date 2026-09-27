@@ -1,8 +1,19 @@
-import { describe, it, expect, vi } from "vitest";
+import { afterEach, describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { PlayerAutocomplete } from "./PlayerAutocomplete";
 import type { Player } from "../lib/supabase";
+
+// Who "you" are: tests that care set me.myPlayerId; everyone else is nobody.
+const me = vi.hoisted(() => ({
+  role: null,
+  myPlayerId: null as string | null,
+  refreshMyPlayer: async () => {},
+}));
+vi.mock("../contexts/AuthContext", () => ({ useMe: () => me }));
+afterEach(() => {
+  me.myPlayerId = null;
+});
 
 const player = (id: string, name: string, elo = 1500): Player => ({
   id,
@@ -13,6 +24,7 @@ const player = (id: string, name: string, elo = 1500): Player => ({
   losses: 0,
   created_at: "2026-01-01T00:00:00Z",
   anonymous_name: null,
+  is_linked: false,
 });
 
 const PLAYERS = [
@@ -189,5 +201,28 @@ describe("PlayerAutocomplete", () => {
     await user.keyboard("{Escape}");
 
     expect(input).toHaveValue("Anna");
+  });
+});
+
+describe("PlayerAutocomplete - you", () => {
+  it("marks your own player, and only yours", async () => {
+    me.myPlayerId = "p2";
+    const user = userEvent.setup();
+    const { input } = setup();
+    await user.click(input);
+
+    const marked = screen
+      .getAllByRole("option")
+      .filter((o) => o.textContent?.includes("(you)"));
+    expect(marked).toHaveLength(1);
+    expect(marked[0].querySelector(".player-ac-name")?.textContent).toBe("Anna");
+  });
+
+  it("marks nobody when you have no player", async () => {
+    const user = userEvent.setup();
+    const { input } = setup();
+    await user.click(input);
+
+    expect(screen.queryByText("(you)")).not.toBeInTheDocument();
   });
 });

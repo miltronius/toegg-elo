@@ -129,7 +129,7 @@ const EMPTY_BANNERS: Banner[] = [];
 const EMPTY_ELO_HISTORY = new Map<string, EloHistory[]>();
 
 function App() {
-  const { user, role, loading: authLoading, signOut } = useAuth();
+  const { user, role, myPlayerId, loading: authLoading, signOut } = useAuth();
   const { theme } = useTheme();
   const { showToast } = useToast();
   const { t } = useTranslation();
@@ -340,6 +340,17 @@ function App() {
           <div className="flex items-center gap-2">
             {user ? (
               <>
+                {myPlayerId && canEdit && (
+                  <button
+                    className="btn-secondary"
+                    onClick={() => {
+                      setPlayerDetailInitialTab("stats");
+                      setSelectedPlayerId(myPlayerId);
+                    }}
+                  >
+                    {t("linking.myProfile")}
+                  </button>
+                )}
                 <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-bg-light border border-border text-text-light uppercase tracking-wide">
                   {role}
                 </span>
@@ -534,7 +545,11 @@ function App() {
         )}
         {activeTab === "users" && isAdmin && (
           <>
-            <UserManagement onRecomputed={refresh} />
+            <UserManagement
+              players={players}
+              onRecomputed={refresh}
+              onLinksChanged={refresh}
+            />
             <BannerAdmin
               banners={banners}
               seasons={seasons}

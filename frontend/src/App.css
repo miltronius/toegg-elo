@@ -411,6 +411,14 @@ body {
 .leaderboard-table tbody tr.row-bottom:hover {
   background-color: rgba(220, 80, 80, 0.2);
 }
+/* Your own row. An inset bar rather than a background, so it stacks with
+   the top/bottom band tints instead of replacing them. */
+.leaderboard-table tbody tr.row-me td:first-child {
+  box-shadow: inset 4px 0 0 var(--color-primary);
+}
+.leaderboard-table tbody tr.row-me td.name {
+  font-weight: 700;
+}
 .leaderboard-table tbody tr.elo-1500-sep td {
   padding: 0;
   height: 3px;
@@ -447,6 +455,94 @@ body {
 }
 .streak-badge.ranked {
   background: rgba(124, 58, 237, 0.12);
+}
+/* Your own claimed player (PlayerDetail). */
+.streak-badge.you {
+  background: rgba(59, 130, 246, 0.12);
+  color: var(--color-primary-dark);
+}
+/* "This is me" in PlayerDetail: the one call to action on the page, so a
+   bold button that stands apart from the plain .btn-small edit controls. */
+.claim-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.95rem 0.4rem 0.75rem;
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: white;
+  background: linear-gradient(
+    135deg,
+    var(--color-primary),
+    var(--color-primary-dark)
+  );
+  border: none;
+  border-radius: 0.375rem;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+  cursor: pointer;
+  transition: filter 0.1s ease;
+}
+.claim-btn:hover {
+  filter: brightness(1.08);
+}
+.claim-btn:active {
+  filter: brightness(0.95);
+}
+.claim-btn:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+/* The 🪪 emoji is itself blue, so on the blue button it gets a thin black
+   outline traced around the glyph (one hard drop-shadow per side). */
+.claim-btn-icon {
+  display: inline-block;
+  filter: drop-shadow(1px 0 0 #000) drop-shadow(-1px 0 0 #000)
+    drop-shadow(0 1px 0 #000) drop-shadow(0 -1px 0 #000);
+  transition: transform 0.12s ease;
+}
+/* The card gives a little wave on hover. */
+.claim-btn:hover .claim-btn-icon {
+  transform: rotate(-12deg) scale(1.15);
+}
+@media (prefers-reduced-motion: reduce) {
+  .claim-btn-icon {
+    transition: none;
+  }
+  .claim-btn:hover .claim-btn-icon {
+    transform: none;
+  }
+}
+[data-theme="win95"] .claim-btn {
+  color: #000;
+  background: #c3c7cb;
+  border-radius: 0;
+  box-shadow:
+    inset 1px 1px 0 #ffffff,
+    inset -1px -1px 0 #868a8e,
+    1px 1px 0 #000000;
+  filter: none;
+}
+[data-theme="win95"] .claim-btn-icon {
+  filter: none;
+}
+[data-theme="win95"] .claim-btn:active {
+  box-shadow:
+    inset 1px 1px 0 #000000,
+    inset -1px -1px 0 #ffffff;
+}
+
+/* A team you play in (Teams, card view): an outline in the primary colour,
+   leaving the left stripe to the team's own colour. */
+.team-card-me {
+  /* outline, not box-shadow: the card's hover:shadow-lg would replace it. */
+  outline: 2px solid var(--color-primary);
+}
+/* The claimed marker and the "This is you" badge: not clickable, but they
+   have a tooltip - so the help cursor rather than the text I-beam. */
+.claimed-marker {
+  cursor: help;
 }
 /* Shrink-to-fit so a badge column costs no more than its widest badge. Left-
    aligned so the emoji line up even when the streak counts differ in width. */
@@ -1076,6 +1172,13 @@ td.winrate {
 .player-ac-option.selected {
   font-weight: 700;
   color: var(--color-primary);
+}
+/* "(you)" sits right after the name; the auto margin keeps the Elo pushed
+   to the far edge as before. */
+.player-ac-you {
+  margin: 0 auto 0 0.35em;
+  font-size: 0.8rem;
+  color: var(--color-text-light);
 }
 .player-ac-elo {
   flex-shrink: 0;
@@ -2413,6 +2516,9 @@ td.winrate {
 
 [data-theme="dark"] .streak-badge.lose {
   color: #7cc4ff;
+}
+[data-theme="dark"] .streak-badge.you {
+  color: #93c5fd;
 }
 [data-theme="dark"] header,
 [data-theme="dark"] nav {
