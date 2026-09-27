@@ -534,7 +534,11 @@ function App() {
         )}
         {activeTab === "users" && isAdmin && (
           <>
-            <UserManagement onRecomputed={refresh} />
+            <UserManagement
+              players={players}
+              onRecomputed={refresh}
+              onLinksChanged={refresh}
+            />
             <BannerAdmin
               banners={banners}
               seasons={seasons}
