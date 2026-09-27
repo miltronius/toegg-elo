@@ -21,6 +21,7 @@ describe("ClaimedMarker", () => {
     render(<ClaimedMarker isLinked isMe />);
     const badge = screen.getByText(/This is you/);
     expect(badge).toHaveTextContent("🪪");
-    expect(badge).toHaveClass("streak-badge", "you");
+    expect(badge).toHaveClass("streak-badge", "you", "claimed-marker");
+    expect(badge).toHaveAttribute("title", "Your account is linked to this player");
   });
 });

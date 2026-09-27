@@ -85,6 +85,7 @@
     "cancel": "Abbrechen",
     "claimed": "Mit einem Konto verknüpft",
     "thisIsYou": "Das bist du",
+    "yourPlayer": "Dein Konto ist mit diesem Spieler verknüpft",
     "you": "(du)",
     "myProfile": "🪪 Mein Profil",
     "unknownError": "Etwas ist schiefgelaufen. Bitte versuche es nochmals.",
@@ -413,6 +414,7 @@
     "months": ["Jan", "Feb", "Mär", "Apr", "Mai", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dez"]
   },
   "teams": {
+    "yourTeam": "Dein Team",
     "title": "Teams",
     "allTime": "Gesamt",
     "allPlayers": "Alle Spieler",

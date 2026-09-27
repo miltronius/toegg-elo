@@ -19,6 +19,7 @@ import {
   playersWithSeasonElo,
 } from "../lib/teamUtils";
 import { colors } from "../lib/colors";
+import { useMe } from "../contexts/AuthContext";
 
 function TeamTooltip({
   children,
@@ -101,6 +102,15 @@ export function Teams({
   playerSeasonStats,
 }: TeamsProps) {
   const { t } = useTranslation();
+  const { myPlayerId } = useMe();
+  const isMyTeam = (team: TeamStats) =>
+    myPlayerId !== null &&
+    (team.player_id_lo === myPlayerId || team.player_id_hi === myPlayerId);
+  const yourTeamBadge = (
+    <span className="streak-badge you claimed-marker" title={t("teams.yourTeam")}>
+      🪪
+    </span>
+  );
   const [view, setView] = useState<"table" | "card">(
     () => (localStorage.getItem(STORAGE_KEY) as "table" | "card") ?? "table",
   );
@@ -311,7 +321,9 @@ export function Teams({
               return (
                 <tr
                   key={team.key}
-                  className={`clickable-row${rowClass ? ` ${rowClass}` : ""}`}
+                  className={`clickable-row${rowClass ? ` ${rowClass}` : ""}${
+                    isMyTeam(team) ? " row-me" : ""
+                  }`}
                   onClick={() => onTeamClick(team)}
                   style={{ borderLeft: `4px solid ${teamColor(team)}` }}
                 >
@@ -327,6 +339,7 @@ export function Teams({
                       <div style={{ padding: "1rem" }}>
                         <div>
                           {getTeamDisplayName(team, players)}
+                          {isMyTeam(team) && yourTeamBadge}
                           {team.currentStreak > 0 && (
                             <span
                               className="streak-badge"
@@ -416,7 +429,9 @@ export function Teams({
           {sorted.map((team) => (
             <div
               key={team.key}
-              className="bg-bg border border-border rounded-lg p-5 cursor-pointer transition-[box-shadow,border-color] hover:shadow-lg hover:border-primary"
+              className={`bg-bg border border-border rounded-lg p-5 cursor-pointer transition-[box-shadow,border-color] hover:shadow-lg hover:border-primary${
+                isMyTeam(team) ? " team-card-me" : ""
+              }`}
               onClick={() => onTeamClick(team)}
               style={{ borderLeft: `4px solid ${teamColor(team)}` }}
             >
@@ -431,6 +446,7 @@ export function Teams({
                     </span>
                   )}
                   {getTeamDisplayName(team, players)}
+                  {isMyTeam(team) && yourTeamBadge}
                   {team.currentStreak > 0 && (
                     <span className="streak-badge" title={t("teams.winstreak")}>
                       🔥{team.currentStreak}

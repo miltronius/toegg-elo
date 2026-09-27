@@ -85,6 +85,7 @@
     "cancel": "Cancel",
     "claimed": "Claimed by an account",
     "thisIsYou": "This is you",
+    "yourPlayer": "Your account is linked to this player",
     "you": "(you)",
     "myProfile": "🪪 My profile",
     "unknownError": "Something went wrong. Please try again.",
@@ -413,6 +414,7 @@
     "months": ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
   },
   "teams": {
+    "yourTeam": "Your team",
     "title": "Teams",
     "allTime": "All-Time",
     "allPlayers": "All players",

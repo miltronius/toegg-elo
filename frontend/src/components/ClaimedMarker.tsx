@@ -16,7 +16,14 @@ export function ClaimedMarker({ isLinked, isMe }: ClaimedMarkerProps) {
   const { t } = useTranslation();
   if (!isLinked) return null;
   if (isMe) {
-    return <span className="streak-badge you">🪪 {t("linking.thisIsYou")}</span>;
+    return (
+      <span
+        className="streak-badge you claimed-marker"
+        title={t("linking.yourPlayer")}
+      >
+        🪪 {t("linking.thisIsYou")}
+      </span>
+    );
   }
   return (
     <span

@@ -461,7 +461,14 @@ body {
   background: rgba(59, 130, 246, 0.12);
   color: var(--color-primary-dark);
 }
-/* Someone else's claimed player: not clickable, but it has a tooltip. */
+/* A team you play in (Teams, card view): an outline in the primary colour,
+   leaving the left stripe to the team's own colour. */
+.team-card-me {
+  /* outline, not box-shadow: the card's hover:shadow-lg would replace it. */
+  outline: 2px solid var(--color-primary);
+}
+/* The claimed marker and the "This is you" badge: not clickable, but they
+   have a tooltip - so the help cursor rather than the text I-beam. */
 .claimed-marker {
   cursor: help;
 }
