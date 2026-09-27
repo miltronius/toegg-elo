@@ -4,8 +4,8 @@
 
 ### Minor Changes
 
-- [#129](https://github.com/miltronius/toegg-elo/pull/129) [`ed9ad48`](https://github.com/miltronius/toegg-elo/commit/ed9ad4813d54fa27ad424ce3b4ac0111b1e3e677) Thanks [@miltronius](https://github.com/miltronius)! - Claim your player: open your player and press "This is me" to link your account - you get the That's Me! 🪪 achievement, your row is highlighted, and only you (or an admin) can rename your player.
-  Adds `player_accounts` with the `claim_player` / `admin_link_player` / `unlink_player` RPCs (migration `20260927_player_accounts.sql`, rule checks in `supabase/scripts/player-accounts-checks.sql`) and a Player column in Admin → User Management. That's Me! counts toward the meta-achievements, and link changes recompute achievements. Name protection is UI-only until [#118](https://github.com/miltronius/toegg-elo/issues/118). Release order: apply the migration first, then deploy the frontend and redeploy `calculate-elo` (shared achievements changed) - both read `player_accounts`.
+- [#129](https://github.com/miltronius/toegg-elo/pull/129) - Claim your player: Users can now link a player to their account, which highlights that player for their user. 
+- Adds the "That's Me!" achievement.
 
 ## 1.10.0 (2026-09-27)
 
