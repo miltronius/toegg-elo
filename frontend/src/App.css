@@ -411,6 +411,14 @@ body {
 .leaderboard-table tbody tr.row-bottom:hover {
   background-color: rgba(220, 80, 80, 0.2);
 }
+/* Your own row. An inset bar rather than a background, so it stacks with
+   the top/bottom band tints instead of replacing them. */
+.leaderboard-table tbody tr.row-me td:first-child {
+  box-shadow: inset 4px 0 0 var(--color-primary);
+}
+.leaderboard-table tbody tr.row-me td.name {
+  font-weight: 700;
+}
 .leaderboard-table tbody tr.elo-1500-sep td {
   padding: 0;
   height: 3px;
@@ -1076,6 +1084,13 @@ td.winrate {
 .player-ac-option.selected {
   font-weight: 700;
   color: var(--color-primary);
+}
+/* "(you)" sits right after the name; the auto margin keeps the Elo pushed
+   to the far edge as before. */
+.player-ac-you {
+  margin: 0 auto 0 0.35em;
+  font-size: 0.8rem;
+  color: var(--color-text-light);
 }
 .player-ac-elo {
   flex-shrink: 0;

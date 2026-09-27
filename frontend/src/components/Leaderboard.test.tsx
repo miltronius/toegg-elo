@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { afterEach, describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Leaderboard } from "./Leaderboard";
@@ -8,6 +8,17 @@ import type {
   Season,
   PlayerSeasonStats,
 } from "../lib/supabase";
+
+// Who "you" are: tests that care set me.myPlayerId; everyone else is nobody.
+const me = vi.hoisted(() => ({
+  role: null,
+  myPlayerId: null as string | null,
+  refreshMyPlayer: async () => {},
+}));
+vi.mock("../contexts/AuthContext", () => ({ useMe: () => me }));
+afterEach(() => {
+  me.myPlayerId = null;
+});
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -590,5 +601,23 @@ describe("Leaderboard - season view participation", () => {
     expect(clicked.current_elo).toBe(1700);
     expect(clicked.wins).toBe(8);
     expect(clicked.losses).toBe(2);
+  });
+});
+
+describe("Leaderboard - you", () => {
+  it("highlights your own row, and only yours", () => {
+    me.myPlayerId = "bbb";
+    render(<Leaderboard players={PLAYERS} history={NO_HISTORY} />);
+    const rows = screen.getAllByRole("row").slice(1);
+    const mine = rows.filter((r) => r.classList.contains("row-me"));
+    expect(mine).toHaveLength(1);
+    expect(mine[0]).toHaveTextContent("Bob");
+  });
+
+  it("highlights nothing when you have no player", () => {
+    render(<Leaderboard players={PLAYERS} history={NO_HISTORY} />);
+    expect(
+      screen.getAllByRole("row").some((r) => r.classList.contains("row-me")),
+    ).toBe(false);
   });
 });

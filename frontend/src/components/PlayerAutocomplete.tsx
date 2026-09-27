@@ -2,6 +2,7 @@ import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { Player } from "../lib/supabase";
 import { filterPlayers, nextHighlight } from "../lib/playerSearch";
+import { useMe } from "../contexts/AuthContext";
 
 interface PlayerAutocompleteProps {
   players: Player[];
@@ -66,6 +67,7 @@ export function PlayerAutocomplete({
   compact = false,
 }: PlayerAutocompleteProps) {
   const { t } = useTranslation();
+  const { myPlayerId } = useMe();
   const listId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -229,6 +231,9 @@ export function PlayerAutocomplete({
                 onClick={() => commit(player.id)}
               >
                 <span className="player-ac-name">{player.name}</span>
+                {player.id === myPlayerId && (
+                  <span className="player-ac-you">{t("linking.you")}</span>
+                )}
                 <span className="player-ac-elo">{eloOf(player)}</span>
               </button>
             </li>
