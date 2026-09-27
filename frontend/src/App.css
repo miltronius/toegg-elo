@@ -482,35 +482,36 @@ body {
   border-radius: 0.375rem;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
   cursor: pointer;
-  transition:
-    transform 0.15s ease,
-    box-shadow 0.15s ease;
+  transition: filter 0.1s ease;
 }
 .claim-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.18);
+  filter: brightness(1.08);
 }
 .claim-btn:active {
-  transform: translateY(0);
+  filter: brightness(0.95);
 }
 .claim-btn:focus-visible {
   outline: 2px solid var(--color-primary);
   outline-offset: 2px;
 }
+/* The 🪪 emoji is itself blue, so on the blue button it sits on a small
+   light chip of its own. */
 .claim-btn-icon {
   display: inline-block;
-  transition: transform 0.2s ease;
+  padding: 0 0.2rem;
+  line-height: 1.35;
+  background: rgba(255, 255, 255, 0.92);
+  border-radius: 0.25rem;
+  transition: transform 0.12s ease;
 }
 /* The card gives a little wave on hover. */
 .claim-btn:hover .claim-btn-icon {
   transform: rotate(-12deg) scale(1.15);
 }
 @media (prefers-reduced-motion: reduce) {
-  .claim-btn,
   .claim-btn-icon {
     transition: none;
   }
-  .claim-btn:hover,
   .claim-btn:hover .claim-btn-icon {
     transform: none;
   }
@@ -523,7 +524,10 @@ body {
     inset 1px 1px 0 #ffffff,
     inset -1px -1px 0 #868a8e,
     1px 1px 0 #000000;
-  transform: none;
+  filter: none;
+}
+[data-theme="win95"] .claim-btn-icon {
+  background: none;
 }
 [data-theme="win95"] .claim-btn:active {
   box-shadow:
