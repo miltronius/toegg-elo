@@ -49,10 +49,10 @@ const match = (id: string, winning_team: "A" | "B"): Match => ({
   created_at: "2024-01-15T10:00:00Z",
 });
 
-const renderTeams = () =>
+const renderTeams = (matches = [match("m1", "A"), match("m2", "B")]) =>
   render(
     <Teams
-      matches={[match("m1", "A"), match("m2", "B")]}
+      matches={matches}
       players={PLAYERS}
       teamNames={[]}
       seasons={[]}
@@ -96,5 +96,30 @@ describe("Teams - your teams", () => {
       screen.getAllByRole("row").some((r) => r.classList.contains("row-me")),
     ).toBe(false);
     expect(screen.queryByTitle(YOUR_TEAM)).not.toBeInTheDocument();
+  });
+});
+
+describe("Teams - badge columns", () => {
+  it("puts your-team and streak badges in their own columns before the name", () => {
+    me.myPlayerId = "p1";
+    const { container } = renderTeams([match("m1", "A"), match("m2", "A")]);
+
+    const you = container.querySelectorAll("td.badge-col.you-col");
+    expect(you).toHaveLength(2); // a cell per row; only yours is filled
+    expect(screen.getByTitle(YOUR_TEAM).closest("td")).toHaveClass("you-col");
+    expect(
+      container.querySelector("td.badge-col.streak-col .streak-badge"),
+    ).toHaveTextContent("🔥2");
+    // Neither badge rides in the name cell any more.
+    for (const name of container.querySelectorAll("td.name")) {
+      expect(name.querySelector(".streak-badge")).toBeNull();
+    }
+  });
+
+  it("drops a badge column no visible row fills", () => {
+    const { container } = renderTeams();
+
+    expect(container.querySelector(".you-col")).toBeNull();
+    expect(container.querySelector(".streak-col")).toBeNull();
   });
 });

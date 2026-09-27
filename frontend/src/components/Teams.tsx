@@ -179,6 +179,11 @@ export function Teams({
     return sortAsc ? -diff : diff;
   });
 
+  const showYouColumn = sorted.some(isMyTeam);
+  const showStreakColumn = sorted.some(
+    (team) => team.currentStreak > 0 || team.currentLoseStreak > 0,
+  );
+
   const playerMap = useMemo(
     () => new Map(effectivePlayers.map((p) => [p.id, p])),
     [effectivePlayers],
@@ -263,6 +268,9 @@ export function Teams({
         </div>
       )}
       {sorted.length > 0 && view === "table" ? (
+        // Badges sit in narrow columns between rank and name, as on the
+        // Leaderboard, so they line up whatever the team names' lengths. Each
+        // column only appears when a visible row fills it.
         <table className="leaderboard-table">
           <thead>
             <tr>
@@ -273,6 +281,18 @@ export function Teams({
               >
                 # {sortBy === "rank" && (sortAsc ? "▴" : "▾")}
               </th>
+              {showYouColumn && (
+                <th
+                  className="badge-col you-col"
+                  aria-label={t("teams.yourTeam")}
+                />
+              )}
+              {showStreakColumn && (
+                <th
+                  className="badge-col streak-col"
+                  aria-label={t("leaderboard.streakColumn")}
+                />
+              )}
               <th
                 style={{ cursor: "pointer" }}
                 onClick={() => handleSort("name")}
@@ -331,6 +351,31 @@ export function Teams({
                     {MEDALS[globalRankMap.get(team.key)!] ??
                       `#${globalRankMap.get(team.key)! + 1}`}
                   </td>
+                  {showYouColumn && (
+                    <td className="badge-col you-col">
+                      {isMyTeam(team) && yourTeamBadge}
+                    </td>
+                  )}
+                  {showStreakColumn && (
+                    <td className="badge-col streak-col">
+                      {team.currentStreak > 0 && (
+                        <span
+                          className="streak-badge"
+                          title={t("teams.winstreak")}
+                        >
+                          🔥{team.currentStreak}
+                        </span>
+                      )}
+                      {team.currentLoseStreak > 0 && (
+                        <span
+                          className="streak-badge lose"
+                          title={t("teams.losestreak")}
+                        >
+                          🥶{team.currentLoseStreak}
+                        </span>
+                      )}
+                    </td>
+                  )}
                   <td className="name" style={{ padding: 0 }}>
                     <TeamTooltip
                       tooltipPlayers={teamPlayers(team)}
@@ -339,23 +384,6 @@ export function Teams({
                       <div style={{ padding: "1rem" }}>
                         <div>
                           {getTeamDisplayName(team, players)}
-                          {isMyTeam(team) && yourTeamBadge}
-                          {team.currentStreak > 0 && (
-                            <span
-                              className="streak-badge"
-                              title={t("teams.winstreak")}
-                            >
-                              🔥{team.currentStreak}
-                            </span>
-                          )}
-                          {team.currentLoseStreak > 0 && (
-                            <span
-                              className="streak-badge lose"
-                              title={t("teams.losestreak")}
-                            >
-                              🥶{team.currentLoseStreak}
-                            </span>
-                          )}
                         </div>
                         {(team.nameRow?.alias_1 || team.nameRow?.alias_2) && (
                           <div className="text-[0.75rem] text-text-light mt-0.5">
