@@ -1,5 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { computeAchievementsForPlayer } from "./achievements";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import {
+  computeAchievementsForPlayer,
+  recomputeAllAchievements,
+} from "./achievements";
 import type { Match, Player, EloHistory } from "./supabase";
 
 // ---------------------------------------------------------------------------
@@ -672,5 +676,46 @@ describe("party_pooper achievement", () => {
       p1Loss(4),
     ]);
     expect(r.find((a) => a.achievementId === "party_pooper")).toBeUndefined();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// recomputeAllAchievements - links handed in up front
+// ---------------------------------------------------------------------------
+
+describe("recomputeAllAchievements with pre-read links", () => {
+  it("uses the links it is given instead of reading player_accounts", async () => {
+    // The admin recompute deletes every row before rebuilding, so it reads the
+    // links first and hands them in: a failing read then aborts before
+    // anything is deleted, rather than after.
+    const upserted: { player_id: string; achievement_id: string }[] = [];
+    const client = {
+      from: (table: string) => {
+        if (table === "player_accounts") {
+          throw new Error("player_accounts must not be read");
+        }
+        if (table === "elo_history") {
+          return { select: async () => ({ data: [], error: null }) };
+        }
+        return {
+          upsert: async (rows: typeof upserted) => {
+            upserted.push(...rows);
+            return { error: null };
+          },
+        };
+      },
+    } as unknown as SupabaseClient;
+
+    await recomputeAllAchievements(client, [makePlayer("p1")], [], [
+      { player_id: "p1", linked_at: "2026-09-20T10:00:00Z" },
+    ]);
+
+    expect(upserted).toContainEqual(
+      expect.objectContaining({
+        player_id: "p1",
+        achievement_id: "linked_account",
+        unlocked_at: "2026-09-20T10:00:00.000Z",
+      }),
+    );
   });
 });

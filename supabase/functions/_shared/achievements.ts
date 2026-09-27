@@ -917,10 +917,18 @@ export function computeAchievementsForPlayer(
 // Exported: recompute + upsert all achievements for all players
 // ---------------------------------------------------------------------------
 
+export interface PlayerAccountLink {
+  player_id: string;
+  linked_at: string;
+}
+
 export async function recomputeAllAchievements(
   supabase: SupabaseClient,
   players: Player[],
   matches: Match[],
+  // Pre-read links. The admin recompute passes them because it deletes every
+  // row first, and must not discover a failing read only after that.
+  links?: PlayerAccountLink[],
 ): Promise<void> {
   const rows: {
     player_id: string;
@@ -933,18 +941,17 @@ export async function recomputeAllAchievements(
   const { data: eloHistory } = await supabase.from("elo_history").select("*");
   const history = (eloHistory ?? []) as EloHistory[];
 
-  // Links feed That's Me!. Throw rather than skip on a failed read: the admin
-  // recompute has already deleted every row, so a silent skip would revoke
-  // everyone's link achievement (and any meta it tipped over).
-  const { data: links, error: linksError } = await supabase
-    .from("player_accounts")
-    .select("player_id, linked_at");
-  if (linksError) throw linksError;
+  // Links feed That's Me!. Throw rather than skip on a failed read, so no
+  // meta-achievement is written with a date that ignores the link.
+  if (!links) {
+    const { data, error } = await supabase
+      .from("player_accounts")
+      .select("player_id, linked_at");
+    if (error) throw error;
+    links = (data ?? []) as PlayerAccountLink[];
+  }
   const linkedAt = new Map<string, Date>(
-    ((links ?? []) as { player_id: string; linked_at: string }[]).map((l) => [
-      l.player_id,
-      new Date(l.linked_at),
-    ]),
+    links.map((l) => [l.player_id, new Date(l.linked_at)]),
   );
 
   for (const player of players) {

@@ -49,4 +49,19 @@ describe("ClaimPlayerDialog", () => {
     expect(onClose).toHaveBeenCalledOnce();
     expect(onConfirm).not.toHaveBeenCalled();
   });
+
+  it("renders at the document root, not inside the panel that opened it", () => {
+    // PlayerDetail's .modal-panel styles its children (Win95 gives them side
+    // margins), which would shrink the overlay and leave undimmed strips.
+    const host = document.createElement("div");
+    host.className = "modal-panel";
+    document.body.appendChild(host);
+    render(
+      <ClaimPlayerDialog playerName="Anna" onConfirm={vi.fn()} onClose={vi.fn()} />,
+      { container: host },
+    );
+    const overlay = screen.getByRole("dialog").parentElement!;
+    expect(overlay.parentElement).toBe(document.body);
+    host.remove();
+  });
 });

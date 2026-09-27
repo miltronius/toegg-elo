@@ -879,8 +879,8 @@ export function PlayerDetail({
             eloHistory={eloHistory}
           />
         )}
-        {/* Inside the panel, whose stopPropagation keeps the dialog's clicks
-            from reaching this modal's backdrop and closing both. */}
+        {/* Portalled to <body>, but React still bubbles its clicks here, where
+            the panel's stopPropagation keeps them from closing this modal. */}
         {claimOpen && (
           <ClaimPlayerDialog
             playerName={player.name}

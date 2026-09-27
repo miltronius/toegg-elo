@@ -711,6 +711,14 @@ export async function recomputeAllAchievementsAdmin(): Promise<{
   players: number;
   matches: number;
 }> {
+  // Read everything the rebuild needs *before* the delete: a failing read
+  // afterwards would leave the table empty.
+  const [players, matches, links] = await Promise.all([
+    getPlayers(),
+    getMatches(),
+    getAllPlayerAccounts(),
+  ]);
+
   // Clear every row first: recomputeAllAchievements upserts with
   // ignoreDuplicates and never deletes, so stale rows must be removed here.
   const { error: deleteError } = await supabase
@@ -719,7 +727,6 @@ export async function recomputeAllAchievementsAdmin(): Promise<{
     .not("id", "is", null);
   if (deleteError) throw deleteError;
 
-  const [players, matches] = await Promise.all([getPlayers(), getMatches()]);
-  await recomputeAllAchievements(supabase, players, matches);
+  await recomputeAllAchievements(supabase, players, matches, links);
   return { players: players.length, matches: matches.length };
 }

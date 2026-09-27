@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { Trans, useTranslation } from "react-i18next";
 import { linkErrorKey } from "../lib/playerLinking";
 
@@ -13,6 +14,11 @@ interface ClaimPlayerDialogProps {
  * Confirms a self-claim. Deliberately a second step: a claim can't be undone
  * by the claimer, so a misclick on "This is me" must not be enough. Carries
  * `modal-panel`, so the Win95 theme styles it with no markup of its own.
+ *
+ * Portalled to <body>: it opens from inside PlayerDetail's `.modal-panel`,
+ * whose children Win95 gives side margins, which would shrink this overlay.
+ * React events still bubble through the component tree, so PlayerDetail's
+ * stopPropagation still keeps clicks here from closing it.
  */
 export function ClaimPlayerDialog({
   playerName,
@@ -34,7 +40,7 @@ export function ClaimPlayerDialog({
     }
   };
 
-  return (
+  return createPortal(
     <div
       className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4"
       onClick={onClose}
@@ -73,6 +79,7 @@ export function ClaimPlayerDialog({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
