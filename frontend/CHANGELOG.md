@@ -1,5 +1,12 @@
 # toegg-elo-frontend
 
+## 1.11.0 (2026-09-27)
+
+### Minor Changes
+
+- [#129](https://github.com/miltronius/toegg-elo/pull/129) - Claim your player: Users can now link a player to their account, which highlights that player for their user. 
+- Adds the "That's Me!" achievement.
+
 ## 1.10.0 (2026-09-27)
 
 ### Minor Changes
