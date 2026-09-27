@@ -15,7 +15,7 @@
 - Only accounts with role `user` or `admin` can be linked - by self-claim **and** by `admin_link_player` (decided 2026-09-27). Demoting a linked account keeps the link and the achievement.
 - One account ↔ one player: `player_id` PK, `user_id` UNIQUE.
 - Achievement id `linked_account`, icon 🪪, en "That's Me!" / "Link your account to your player", de "Das bin ich!" / "Verknüpfe dein Konto mit deinem Spieler". `unlocked_at = linked_at`, `meta = null`.
-- `linked_account` is **not** counted by `achievement_hunter`/`completionist`/`completionist_30` (it is derived outside `computeAchievementsForPlayer`, and counting it would leave a stale meta-achievement behind on unlink).
+- `linked_account` **counts** toward `achievement_hunter`/`completionist`/`completionist_30` (decided 2026-09-27): it is derived inside `computeAchievementsForPlayer` (new optional `linkedAt` argument) before the meta tally. Every link change triggers a recompute: claim/admin-link → non-destructive `recomputeAllAchievements`; unlink → the admin client deletes that player's three meta rows, then recomputes (so a meta the link had tipped over is revoked, the rest come back with their original dates).
 - New achievement ids go into both `frontend/src/lib/achievements.ts` and `supabase/functions/_shared/achievements.ts`, plus `achievementDefs.<id>` in both locale files.
 - Server-side rename enforcement is **out of scope** (#118). Also out of scope: RLS still lets any `user` insert `player_achievements` rows directly (pre-existing; a recompute removes a forged `linked_account`).
 - TS/TSX strings use `"` quotes. German strings use Swiss spelling (`ss`, no `ß`).
