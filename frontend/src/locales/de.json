@@ -77,7 +77,7 @@
     "levelSeries": "Ein Spiel kann nicht unentschieden enden - spielt einen Entscheider"
   },
   "linking": {
-    "claim": "🪪 Das bin ich",
+    "claim": "Das bin ich",
     "claimTitle": "Spieler beanspruchen",
     "claimBody": "Du beanspruchst <b>{{name}}</b>. Nur ein Admin kann das rückgängig machen.",
     "claimConfirm": "Beanspruchen",

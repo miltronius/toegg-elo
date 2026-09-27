@@ -461,6 +461,76 @@ body {
   background: rgba(59, 130, 246, 0.12);
   color: var(--color-primary-dark);
 }
+/* "This is me" in PlayerDetail: the one call to action on the page, so a
+   bold pill that stands apart from the plain .btn-small edit controls. */
+.claim-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.95rem 0.4rem 0.75rem;
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: white;
+  background: linear-gradient(
+    135deg,
+    var(--color-primary),
+    var(--color-primary-dark)
+  );
+  border: none;
+  border-radius: 999px;
+  box-shadow: 0 2px 8px -2px var(--color-primary);
+  cursor: pointer;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
+}
+.claim-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px -3px var(--color-primary);
+}
+.claim-btn:active {
+  transform: translateY(0);
+}
+.claim-btn:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+.claim-btn-icon {
+  display: inline-block;
+  transition: transform 0.2s ease;
+}
+/* The card gives a little wave on hover. */
+.claim-btn:hover .claim-btn-icon {
+  transform: rotate(-12deg) scale(1.15);
+}
+@media (prefers-reduced-motion: reduce) {
+  .claim-btn,
+  .claim-btn-icon {
+    transition: none;
+  }
+  .claim-btn:hover,
+  .claim-btn:hover .claim-btn-icon {
+    transform: none;
+  }
+}
+[data-theme="win95"] .claim-btn {
+  color: #000;
+  background: #c3c7cb;
+  border-radius: 0;
+  box-shadow:
+    inset 1px 1px 0 #ffffff,
+    inset -1px -1px 0 #868a8e,
+    1px 1px 0 #000000;
+  transform: none;
+}
+[data-theme="win95"] .claim-btn:active {
+  box-shadow:
+    inset 1px 1px 0 #000000,
+    inset -1px -1px 0 #ffffff;
+}
+
 /* A team you play in (Teams, card view): an outline in the primary colour,
    leaving the left stripe to the team's own colour. */
 .team-card-me {

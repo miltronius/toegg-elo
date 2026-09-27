@@ -77,7 +77,7 @@
     "levelSeries": "A match can't end level - play a decider"
   },
   "linking": {
-    "claim": "🪪 This is me",
+    "claim": "This is me",
     "claimTitle": "Claim player",
     "claimBody": "You're claiming <b>{{name}}</b>. Only an admin can undo this.",
     "claimConfirm": "Claim",

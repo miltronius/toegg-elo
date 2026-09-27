@@ -563,9 +563,12 @@ export function PlayerDetail({
           )}
           {canClaim && (
             <button
-              className="btn-small ml-auto"
+              className="claim-btn ml-auto"
               onClick={() => setClaimOpen(true)}
             >
+              <span className="claim-btn-icon" aria-hidden="true">
+                🪪
+              </span>
               {t("linking.claim")}
             </button>
           )}
