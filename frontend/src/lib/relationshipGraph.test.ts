@@ -18,6 +18,7 @@ function makePlayer(id: string, name = id, elo = 1500): Player {
     losses: 0,
     created_at: "",
     anonymous_name: null,
+    is_linked: false,
   };
 }
 

@@ -62,6 +62,94 @@ export async function updateUserRole(userId: string, role: Role) {
   if (error) throw error;
 }
 
+export type PlayerAccount = {
+  player_id: string;
+  user_id: string;
+  linked_at: string;
+};
+
+/** The caller's own linked player, or null. RLS only returns your own row. */
+export async function getMyPlayerId(userId: string): Promise<string | null> {
+  const { data, error } = await supabase
+    .from("player_accounts")
+    .select("player_id")
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (error) throw error;
+  return data?.player_id ?? null;
+}
+
+/** Admin-only (RLS): every link, for User Management. */
+export async function getAllPlayerAccounts(): Promise<PlayerAccount[]> {
+  const { data, error } = await supabase.from("player_accounts").select("*");
+  if (error) throw error;
+  return data ?? [];
+}
+
+// The meta-achievements count That's Me!, so a link change can move them.
+const META_ACHIEVEMENT_IDS = [
+  "achievement_hunter",
+  "completionist",
+  "completionist_30",
+];
+
+/**
+ * Brings achievements in line with a link change without waiting for the next
+ * match. A link only ever adds (the RPC wrote That's Me!, a meta may now be
+ * due), so a non-destructive recompute is enough. An unlink can take a meta
+ * away, but the recompute never deletes - so the player's metas are dropped
+ * first and the recompute gives back the ones still earned, with their
+ * original dates (admin-only, like every player_achievements delete).
+ * Non-fatal: the link itself already succeeded, and every recorded match
+ * recomputes anyway.
+ */
+async function recomputeAfterLinkChange(unlinkedPlayerId?: string) {
+  try {
+    if (unlinkedPlayerId) {
+      const { error } = await supabase
+        .from("player_achievements")
+        .delete()
+        .eq("player_id", unlinkedPlayerId)
+        .in("achievement_id", META_ACHIEVEMENT_IDS);
+      if (error) throw error;
+    }
+    const [players, matches] = await Promise.all([getPlayers(), getMatches()]);
+    await recomputeAllAchievements(supabase, players, matches);
+  } catch (err) {
+    console.error("Achievement recompute after link change failed:", err);
+  }
+}
+
+// The link RPCs raise plain codes (player_already_linked, ...) as the error
+// message; playerLinking.ts turns them into translated text.
+export async function claimPlayer(playerId: string) {
+  markLocalMutation();
+  const { error } = await supabase.rpc("claim_player", {
+    p_player_id: playerId,
+  });
+  if (error) throw error;
+  await recomputeAfterLinkChange();
+}
+
+export async function adminLinkPlayer(userId: string, playerId: string) {
+  markLocalMutation();
+  const { error } = await supabase.rpc("admin_link_player", {
+    p_user_id: userId,
+    p_player_id: playerId,
+  });
+  if (error) throw error;
+  await recomputeAfterLinkChange();
+}
+
+export async function unlinkPlayer(playerId: string) {
+  markLocalMutation();
+  const { error } = await supabase.rpc("unlink_player", {
+    p_player_id: playerId,
+  });
+  if (error) throw error;
+  await recomputeAfterLinkChange(playerId);
+}
+
 export type Player = {
   id: string;
   name: string;
@@ -73,6 +161,8 @@ export type Player = {
   // Musician name shown to viewers / logged-out users instead of the real name.
   // Populated only for user/admin callers by the get_players RPC (null for others).
   anonymous_name: string | null;
+  /** Whether an account has claimed this player. Never says which account. */
+  is_linked: boolean;
 };
 
 /**

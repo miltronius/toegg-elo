@@ -16,6 +16,7 @@ function makePlayer(id = "p1"): Player {
     losses: 0,
     created_at: "",
     anonymous_name: null,
+    is_linked: false,
   };
 }
 

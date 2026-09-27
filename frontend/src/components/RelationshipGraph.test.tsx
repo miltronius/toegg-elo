@@ -15,6 +15,7 @@ const player = (id: string, name: string, elo = 1500): Player => ({
   losses: 0,
   created_at: "2024-01-01T00:00:00Z",
   anonymous_name: null,
+  is_linked: false,
 });
 
 let mc = 0;
