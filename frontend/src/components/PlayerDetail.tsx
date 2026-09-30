@@ -877,6 +877,7 @@ export function PlayerDetail({
             playerId={player.id}
             matches={matches}
             eloHistory={eloHistory}
+            seasons={seasons}
           />
         )}
         {/* Portalled to <body>, but React still bubbles its clicks here, where

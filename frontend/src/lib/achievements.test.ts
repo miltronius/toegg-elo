@@ -1,8 +1,11 @@
 import { describe, it, expect } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
+  buildAchievementStatuses,
   computeAchievementsForPlayer,
+  computeRarityMap,
   recomputeAllAchievements,
+  type PlayerAchievementRow,
 } from "./achievements";
 import type { Match, Player, EloHistory } from "./supabase";
 
@@ -746,5 +749,52 @@ describe("recomputeAllAchievements with pre-read inputs", () => {
         unlocked_at: "2026-08-03T00:00:00.000Z",
       }),
     );
+  });
+});
+
+describe("repeated per-season achievements", () => {
+  const row = (
+    player_id: string,
+    achievement_id: PlayerAchievementRow["achievement_id"],
+    season_id: string | null,
+    unlocked_at: string,
+  ): PlayerAchievementRow => ({
+    id: `${player_id}-${achievement_id}-${season_id}`,
+    player_id,
+    achievement_id,
+    season_id,
+    unlocked_at,
+    meta: null,
+  });
+
+  it("rarity counts players holding it, not rows", () => {
+    const rows = [
+      row("p1", "season_top_1", "s1", "2026-04-04T00:00:00Z"),
+      row("p1", "season_top_1", "s2", "2026-05-30T00:00:00Z"),
+      row("p2", "win_1", null, "2026-01-01T00:00:00Z"),
+    ];
+    const rarity = computeRarityMap(rows, 4);
+    expect(rarity.get("season_top_1")).toBe(25);
+    expect(rarity.get("win_1")).toBe(25);
+  });
+
+  it("groups one id into a single status with its count and seasons", () => {
+    const rows = [
+      row("p1", "season_top_1", "s2", "2026-05-30T00:00:00Z"),
+      row("p1", "season_top_1", "s1", "2026-04-04T00:00:00Z"),
+      row("p1", "win_1", null, "2026-01-01T00:00:00Z"),
+    ];
+    const statuses = buildAchievementStatuses("p1", makePlayer("p1"), [makePlayer("p1")], [], rows);
+    const champ = statuses.find((s) => s.definition.id === "season_top_1")!;
+    expect(champ.unlocked).toBe(true);
+    expect(champ.count).toBe(2);
+    expect(champ.seasonIds).toEqual(["s1", "s2"]);
+    // The latest unlock, so "by date" surfaces a fresh placement.
+    expect(champ.unlockedAt).toEqual(new Date("2026-05-30T00:00:00Z"));
+    const win = statuses.find((s) => s.definition.id === "win_1")!;
+    expect(win.count).toBe(1);
+    expect(win.seasonIds).toEqual([]);
+    const locked = statuses.find((s) => s.definition.id === "season_top_2")!;
+    expect(locked.count).toBe(0);
   });
 });

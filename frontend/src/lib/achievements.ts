@@ -88,6 +88,10 @@ export interface AchievementStatus {
   unlocked: boolean;
   unlockedAt?: Date;
   meta?: Record<string, unknown>;
+  /** How many times it was unlocked; above 1 only for per-season ones. */
+  count: number;
+  /** The seasons it was unlocked in, oldest first; empty for one-time ones. */
+  seasonIds: string[];
   rarityPercent?: number;
   rarityTier?: RarityTier;
 }
@@ -1785,16 +1789,17 @@ export function computeRarityMap(
   allRows: PlayerAchievementRow[],
   totalPlayers: number,
 ): Map<AchievementId, number> {
-  const countMap = new Map<AchievementId, number>();
+  // Players holding each id at least once: a per-season achievement won three
+  // times is still one player holding it.
+  const holders = new Map<AchievementId, Set<string>>();
   for (const row of allRows) {
-    countMap.set(
-      row.achievement_id,
-      (countMap.get(row.achievement_id) ?? 0) + 1,
-    );
+    const set = holders.get(row.achievement_id);
+    if (set) set.add(row.player_id);
+    else holders.set(row.achievement_id, new Set([row.player_id]));
   }
   const rarityMap = new Map<AchievementId, number>();
-  for (const [id, count] of countMap) {
-    rarityMap.set(id, totalPlayers > 0 ? (count / totalPlayers) * 100 : 0);
+  for (const [id, set] of holders) {
+    rarityMap.set(id, totalPlayers > 0 ? (set.size / totalPlayers) * 100 : 0);
   }
   return rarityMap;
 }
@@ -1818,13 +1823,17 @@ export function computeClientSideRarityMap(
 ): Map<AchievementId, number> {
   const countMap = new Map<AchievementId, number>();
   for (const player of allPlayers) {
-    for (const { achievementId } of computeAchievementsForPlayer(
-      player.id,
-      player,
-      matches,
-      allPlayers,
-      eloHistory,
-    )) {
+    // Once per player: a per-season achievement can unlock several times.
+    const held = new Set(
+      computeAchievementsForPlayer(
+        player.id,
+        player,
+        matches,
+        allPlayers,
+        eloHistory,
+      ).map((u) => u.achievementId),
+    );
+    for (const achievementId of held) {
       countMap.set(achievementId, (countMap.get(achievementId) ?? 0) + 1);
     }
   }
@@ -1877,8 +1886,12 @@ export function buildAchievementStatuses(
   }
 
   return ACHIEVEMENT_DEFINITIONS.map((def) => {
-    const row = playerRows.find((r) => r.achievement_id === def.id);
-    const liveEntry = liveUnlocked.find((u) => u.achievementId === def.id);
+    const defRows = playerRows
+      .filter((r) => r.achievement_id === def.id)
+      .sort((a, b) => a.unlocked_at.localeCompare(b.unlocked_at));
+    const row = defRows[defRows.length - 1];
+    const liveEntries = liveUnlocked.filter((u) => u.achievementId === def.id);
+    const liveEntry = liveEntries[liveEntries.length - 1];
     const unlocked = unlockedIds.has(def.id);
     const rarityPercent = rarityMap.get(def.id);
     const rarityTier =
@@ -1891,6 +1904,10 @@ export function buildAchievementStatuses(
       unlocked,
       unlockedAt: row ? new Date(row.unlocked_at) : liveEntry?.unlockedAt,
       meta: row?.meta ?? liveEntry?.meta,
+      count: defRows.length || liveEntries.length,
+      seasonIds: defRows.length
+        ? defRows.flatMap((r) => (r.season_id ? [r.season_id] : []))
+        : liveEntries.flatMap((u) => (u.seasonId ? [u.seasonId] : [])),
       rarityPercent,
       rarityTier,
     };

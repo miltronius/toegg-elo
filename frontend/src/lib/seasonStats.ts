@@ -233,11 +233,14 @@ export function computeSeasonStats(
     seasonId == null
       ? achievements.length
       : seasonBounds
-        ? achievements.filter(
-            (a) =>
-              a.unlocked_at >= seasonBounds.startedAt &&
-              (seasonBounds.endedAt == null ||
-                a.unlocked_at < seasonBounds.endedAt),
+        ? achievements.filter((a) =>
+            // A per-season row belongs to its season - placements are dated
+            // the season's end, which is also the next season's start.
+            a.season_id
+              ? a.season_id === seasonId
+              : a.unlocked_at >= seasonBounds.startedAt &&
+                (seasonBounds.endedAt == null ||
+                  a.unlocked_at < seasonBounds.endedAt),
           ).length
         : 0;
 

@@ -339,7 +339,8 @@
     "locked": "Gesperrt ({{count}})",
     "withPartner": "mit {{name}}",
     "vsOpponent": "gegen {{name}}",
-    "ofPlayers": " · {{percent}}% der Spieler"
+    "ofPlayers": " · {{percent}}% der Spieler",
+    "seasonLabel": "Saison {{number}}"
   },
   "timeline": {
     "title": "Timeline",

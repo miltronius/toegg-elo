@@ -14,7 +14,7 @@ import {
   type PlayerAchievementRow,
   type AchievementStatus,
 } from "../lib/achievements";
-import type { Player, Match, EloHistory } from "../lib/supabase";
+import type { Player, Match, EloHistory, Season } from "../lib/supabase";
 import { DATE_LOCALE } from "../lib/i18n";
 
 interface AchievementsProps {
@@ -228,11 +228,13 @@ function AchievementsOverview({
   const achieversById = new Map<string, { name: string; elo: number }[]>();
   const achieverIdsById = new Map<string, Set<string>>();
   const addAchiever = (achievementId: string, player: Player) => {
+    // Once per player, however many seasons they won it in.
+    const ids = achieverIdsById.get(achievementId);
+    if (ids?.has(player.id)) return;
     const entry = { name: player.name, elo: player.current_elo };
     const list = achieversById.get(achievementId);
     if (list) list.push(entry);
     else achieversById.set(achievementId, [entry]);
-    const ids = achieverIdsById.get(achievementId);
     if (ids) ids.add(player.id);
     else achieverIdsById.set(achievementId, new Set([player.id]));
   };
@@ -435,6 +437,8 @@ interface AchievementGalleryProps {
   playerId: string;
   matches: Match[];
   eloHistory: EloHistory[];
+  /** Resolves the seasons a per-season achievement was won in. */
+  seasons?: Season[];
 }
 
 export function AchievementGallery({
@@ -443,6 +447,7 @@ export function AchievementGallery({
   playerId,
   matches,
   eloHistory,
+  seasons,
 }: AchievementGalleryProps) {
   const { t } = useTranslation();
   const [sortMode, setSortMode] = useState<"rarity" | "date">("rarity");
@@ -549,6 +554,7 @@ export function AchievementGallery({
                 key={s.definition.id}
                 status={s}
                 playerMap={playerMap}
+                seasons={seasons}
               />
             ))}
           </div>
@@ -577,9 +583,15 @@ interface AchievementCardProps {
   status: AchievementStatus;
   playerMap: Map<string, Player>;
   locked?: boolean;
+  seasons?: Season[];
 }
 
-function AchievementCard({ status, playerMap, locked }: AchievementCardProps) {
+function AchievementCard({
+  status,
+  playerMap,
+  locked,
+  seasons,
+}: AchievementCardProps) {
   const { t } = useTranslation();
   const { definition, rarityTier, rarityPercent, meta, unlockedAt } = status;
 
@@ -611,9 +623,21 @@ function AchievementCard({ status, playerMap, locked }: AchievementCardProps) {
       })
     : undefined;
 
+  // Per-season achievements list where they were won, e.g. "Season 2, Season 4".
+  const seasonNames =
+    !locked && status.seasonIds.length > 0
+      ? status.seasonIds
+          .map((id) => seasons?.find((s) => s.id === id))
+          .map((s) =>
+            s ? t("achievements.seasonLabel", { number: s.number }) : "?",
+          )
+          .join(", ")
+      : undefined;
+
   return (
     <div
       className={`achievement-card${locked ? " achievement-card--locked" : ""}`}
+      title={seasonNames}
       style={
         color && !locked
           ? ({ "--achievement-rarity-color": color } as CSSProperties)
@@ -624,6 +648,9 @@ function AchievementCard({ status, playerMap, locked }: AchievementCardProps) {
       <div className="achievement-icon">{locked ? "🔒" : definition.icon}</div>
       <div className="achievement-name">
         {t(`achievementDefs.${definition.id}.name`, definition.name)}
+        {!locked && status.count > 1 && (
+          <span className="achievement-count"> ×{status.count}</span>
+        )}
       </div>
       <div className="achievement-desc">
         {t(
