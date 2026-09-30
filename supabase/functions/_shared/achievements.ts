@@ -57,6 +57,13 @@ export type AchievementId =
   | "pair_goals_100"
   | "pair_goals_500"
   | "pair_goals_1000"
+  | "season_participated"
+  | "season_top_1"
+  | "season_top_2"
+  | "season_top_3"
+  | "season_top_5"
+  | "season_top_10"
+  | "season_net_positive"
   | "linked_account"
   | "completionist"
   | "completionist_30";
@@ -82,6 +89,7 @@ export interface Match {
   team_b_games: number;
   /** null on matches recorded before series existed (rated as a 1-0). */
   games: MatchGame[] | null;
+  season_id: string | null;
   created_at: string;
 }
 
@@ -103,10 +111,12 @@ interface EloHistory {
   created_at: string;
 }
 
-interface UnlockedAchievement {
+export interface UnlockedAchievement {
   achievementId: AchievementId;
   unlockedAt: Date;
   meta?: Record<string, unknown>;
+  /** Set on per-season achievements; one-time ones leave it out. */
+  seasonId?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -257,6 +267,145 @@ export function computeGoalAchievements(
   return unlocked;
 }
 
+// ---------------------------------------------------------------------------
+// Season achievements
+// ---------------------------------------------------------------------------
+
+/** Mirrors RANKED_MIN_GAMES in frontend/src/lib/rosterFilter.ts. */
+export const RANKED_MIN_GAMES = 3;
+
+export interface SeasonRow {
+  id: string;
+  number: number;
+  started_at: string;
+  ended_at: string | null;
+}
+
+export interface SeasonStatRow {
+  player_id: string;
+  season_id: string;
+  current_season_elo: number;
+  wins: number;
+  losses: number;
+}
+
+/** A season needs this many ranked players before anyone gets a placement. */
+const PLACEMENT_MIN_RANKED = 5;
+
+// Best first. A tier is reached at rank <= n, and only awarded when the
+// season had more than n ranked players (a Top 10 of 10 says nothing).
+const PLACEMENT_TIERS: [AchievementId, number][] = [
+  ["season_top_1", 1],
+  ["season_top_2", 2],
+  ["season_top_3", 3],
+  ["season_top_5", 5],
+  ["season_top_10", 10],
+];
+
+/**
+ * On the Board: the player's 3rd match in each season, active seasons
+ * included. `sorted` is the player's matches, oldest first.
+ */
+export function computeSeasonParticipation(
+  playerId: string,
+  sorted: Match[],
+): UnlockedAchievement[] {
+  const unlocked: UnlockedAchievement[] = [];
+  const perSeason = new Map<string, number>();
+  for (const m of sorted) {
+    if (!m.season_id) continue;
+    const involved =
+      m.team_a_player_1_id === playerId ||
+      m.team_a_player_2_id === playerId ||
+      m.team_b_player_1_id === playerId ||
+      m.team_b_player_2_id === playerId;
+    if (!involved) continue;
+    const n = (perSeason.get(m.season_id) ?? 0) + 1;
+    perSeason.set(m.season_id, n);
+    if (n === RANKED_MIN_GAMES) {
+      unlocked.push({
+        achievementId: "season_participated",
+        unlockedAt: new Date(m.created_at),
+        seasonId: m.season_id,
+      });
+    }
+  }
+  return unlocked;
+}
+
+/**
+ * Final placements and In the Green, per player, from the stored standings of
+ * every ended season. Ranked = RANKED_MIN_GAMES series in the season; ranks go
+ * by season Elo with ties sharing a rank (1, 2, 2, 4). Placements need
+ * PLACEMENT_MIN_RANKED ranked players, a Top N more than N, and only the best
+ * tier is awarded. All dated at the season's end.
+ */
+export function computeSeasonPlacements(
+  seasons: SeasonRow[],
+  stats: SeasonStatRow[],
+): Map<string, UnlockedAchievement[]> {
+  const byPlayer = new Map<string, UnlockedAchievement[]>();
+  const add = (playerId: string, u: UnlockedAchievement) => {
+    const list = byPlayer.get(playerId);
+    if (list) list.push(u);
+    else byPlayer.set(playerId, [u]);
+  };
+
+  for (const season of seasons) {
+    if (!season.ended_at) continue;
+    const unlockedAt = new Date(season.ended_at);
+    const ranked = stats.filter(
+      (s) =>
+        s.season_id === season.id && s.wins + s.losses >= RANKED_MIN_GAMES,
+    );
+    for (const s of ranked) {
+      if (s.current_season_elo >= 1501) {
+        add(s.player_id, {
+          achievementId: "season_net_positive",
+          unlockedAt,
+          seasonId: season.id,
+        });
+      }
+      if (ranked.length < PLACEMENT_MIN_RANKED) continue;
+      const rank =
+        1 +
+        ranked.filter((o) => o.current_season_elo > s.current_season_elo)
+          .length;
+      const tier = PLACEMENT_TIERS.find(
+        ([, n]) => rank <= n && ranked.length > n,
+      );
+      if (tier) {
+        add(s.player_id, {
+          achievementId: tier[0],
+          unlockedAt,
+          seasonId: season.id,
+        });
+      }
+    }
+  }
+  return byPlayer;
+}
+
+/**
+ * When the player's nth distinct achievement was first earned, or null.
+ * Per-season achievements repeat, and a repeat is not a new achievement.
+ */
+function nthDistinctUnlock(
+  unlocked: UnlockedAchievement[],
+  n: number,
+): Date | null {
+  const seen = new Set<AchievementId>();
+  const sorted = [...unlocked].sort(
+    (a, b) => a.unlockedAt.getTime() - b.unlockedAt.getTime(),
+  );
+  for (const u of sorted) {
+    if (seen.has(u.achievementId)) continue;
+    seen.add(u.achievementId);
+    if (seen.size === n) return u.unlockedAt;
+  }
+  return null;
+}
+
 export function computeAchievementsForPlayer(
   playerId: string,
   _player: Player,
@@ -265,6 +414,9 @@ export function computeAchievementsForPlayer(
   eloHistory: EloHistory[] = [],
   // When the player's account was linked (player_accounts.linked_at), or null.
   linkedAt: Date | null = null,
+  // Unlocks derived outside this player's matches (season placements, and
+  // from #122 the award wins). They count toward the metas below.
+  extra: UnlockedAchievement[] = [],
 ): UnlockedAchievement[] {
   const unlocked: UnlockedAchievement[] = [];
 
@@ -876,38 +1028,20 @@ export function computeAchievementsForPlayer(
     unlocked.push({ achievementId: "linked_account", unlockedAt: linkedAt });
   }
 
-  // achievement_hunter - unlockedAt = date the 10th achievement was earned
-  if (unlocked.length >= 10) {
-    const tenth = [...unlocked].sort(
-      (a, b) => a.unlockedAt.getTime() - b.unlockedAt.getTime(),
-    )[9];
-    unlocked.push({
-      achievementId: "achievement_hunter",
-      unlockedAt: tenth.unlockedAt,
-    });
-  }
+  // On the Board - one per season with 3+ games
+  unlocked.push(...computeSeasonParticipation(playerId, sorted));
+  unlocked.push(...extra);
 
-  // completionist - unlockedAt = date the 20th achievement was earned
-  if (unlocked.length >= 20) {
-    const twentieth = [...unlocked].sort(
-      (a, b) => a.unlockedAt.getTime() - b.unlockedAt.getTime(),
-    )[19];
-    unlocked.push({
-      achievementId: "completionist",
-      unlockedAt: twentieth.unlockedAt,
-    });
-  }
-
-  // completionist_30 - unlockedAt = date the 30th achievement was earned
-  // (counted after the lower meta-achievements so they are included)
-  if (unlocked.length >= 30) {
-    const thirtieth = [...unlocked].sort(
-      (a, b) => a.unlockedAt.getTime() - b.unlockedAt.getTime(),
-    )[29];
-    unlocked.push({
-      achievementId: "completionist_30",
-      unlockedAt: thirtieth.unlockedAt,
-    });
+  // Metas count distinct achievement ids, and each one counts the metas below
+  // it - completionist includes achievement_hunter, and so on.
+  const METAS: [AchievementId, number][] = [
+    ["achievement_hunter", 10],
+    ["completionist", 20],
+    ["completionist_30", 30],
+  ];
+  for (const [id, n] of METAS) {
+    const at = nthDistinctUnlock(unlocked, n);
+    if (at) unlocked.push({ achievementId: id, unlockedAt: at });
   }
 
   return unlocked;
@@ -922,37 +1056,61 @@ export interface PlayerAccountLink {
   linked_at: string;
 }
 
+/**
+ * Everything the recompute reads besides players and matches. The admin
+ * recompute passes it in because it deletes every row first, and must not
+ * discover a failing read only after that.
+ */
+export interface AchievementPreRead {
+  links: PlayerAccountLink[];
+  seasons: SeasonRow[];
+  seasonStats: SeasonStatRow[];
+}
+
+async function readAchievementInputs(
+  supabase: SupabaseClient,
+): Promise<AchievementPreRead> {
+  const [links, seasons, seasonStats] = await Promise.all([
+    supabase.from("player_accounts").select("player_id, linked_at"),
+    supabase.from("seasons").select("id, number, started_at, ended_at"),
+    supabase
+      .from("player_season_stats")
+      .select("player_id, season_id, current_season_elo, wins, losses"),
+  ]);
+  // Throw rather than skip on a failed read, so no meta-achievement is written
+  // with a date that ignores what couldn't be read.
+  for (const r of [links, seasons, seasonStats]) if (r.error) throw r.error;
+  return {
+    links: (links.data ?? []) as PlayerAccountLink[],
+    seasons: (seasons.data ?? []) as SeasonRow[],
+    seasonStats: (seasonStats.data ?? []) as SeasonStatRow[],
+  };
+}
+
 export async function recomputeAllAchievements(
   supabase: SupabaseClient,
   players: Player[],
   matches: Match[],
-  // Pre-read links. The admin recompute passes them because it deletes every
-  // row first, and must not discover a failing read only after that.
-  links?: PlayerAccountLink[],
+  pre?: AchievementPreRead,
 ): Promise<void> {
   const rows: {
     player_id: string;
     achievement_id: AchievementId;
     unlocked_at: string;
     meta: Record<string, unknown> | null;
+    season_id: string | null;
   }[] = [];
 
   // ELO history feeds the day-swing and partner-gap achievements.
   const { data: eloHistory } = await supabase.from("elo_history").select("*");
   const history = (eloHistory ?? []) as EloHistory[];
 
-  // Links feed That's Me!. Throw rather than skip on a failed read, so no
-  // meta-achievement is written with a date that ignores the link.
-  if (!links) {
-    const { data, error } = await supabase
-      .from("player_accounts")
-      .select("player_id, linked_at");
-    if (error) throw error;
-    links = (data ?? []) as PlayerAccountLink[];
-  }
+  const { links, seasons, seasonStats } =
+    pre ?? (await readAchievementInputs(supabase));
   const linkedAt = new Map<string, Date>(
     links.map((l) => [l.player_id, new Date(l.linked_at)]),
   );
+  const placements = computeSeasonPlacements(seasons, seasonStats);
 
   for (const player of players) {
     const unlocked = computeAchievementsForPlayer(
@@ -962,6 +1120,7 @@ export async function recomputeAllAchievements(
       players,
       history,
       linkedAt.get(player.id) ?? null,
+      placements.get(player.id) ?? [],
     );
     for (const u of unlocked) {
       rows.push({
@@ -969,6 +1128,7 @@ export async function recomputeAllAchievements(
         achievement_id: u.achievementId,
         unlocked_at: u.unlockedAt.toISOString(),
         meta: u.meta ?? null,
+        season_id: u.seasonId ?? null,
       });
     }
   }
@@ -976,7 +1136,7 @@ export async function recomputeAllAchievements(
   if (rows.length === 0) return;
 
   const { error } = await supabase.from("player_achievements").upsert(rows, {
-    onConflict: "player_id,achievement_id",
+    onConflict: "player_id,achievement_id,season_id",
     ignoreDuplicates: true,
   });
 
