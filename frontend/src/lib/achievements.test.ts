@@ -1,8 +1,11 @@
 import { describe, it, expect } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
+  buildAchievementStatuses,
   computeAchievementsForPlayer,
+  computeRarityMap,
   recomputeAllAchievements,
+  type PlayerAchievementRow,
 } from "./achievements";
 import type { Match, Player, EloHistory } from "./supabase";
 
@@ -683,39 +686,115 @@ describe("party_pooper achievement", () => {
 // recomputeAllAchievements - links handed in up front
 // ---------------------------------------------------------------------------
 
-describe("recomputeAllAchievements with pre-read links", () => {
-  it("uses the links it is given instead of reading player_accounts", async () => {
-    // The admin recompute deletes every row before rebuilding, so it reads the
-    // links first and hands them in: a failing read then aborts before
-    // anything is deleted, rather than after.
-    const upserted: { player_id: string; achievement_id: string }[] = [];
+describe("recomputeAllAchievements with pre-read inputs", () => {
+  it("uses the inputs it is given instead of reading them", async () => {
+    // The admin recompute deletes every row before rebuilding, so it reads
+    // links, seasons and standings first and hands them in: a failing read
+    // then aborts before anything is deleted, rather than after.
+    const upserted: {
+      player_id: string;
+      achievement_id: string;
+      season_id: string | null;
+    }[] = [];
+    let conflictTarget = "";
     const client = {
       from: (table: string) => {
-        if (table === "player_accounts") {
-          throw new Error("player_accounts must not be read");
+        if (["player_accounts", "seasons", "player_season_stats"].includes(table)) {
+          throw new Error(`${table} must not be read`);
         }
         if (table === "elo_history") {
           return { select: async () => ({ data: [], error: null }) };
         }
         return {
-          upsert: async (rows: typeof upserted) => {
+          upsert: async (
+            rows: typeof upserted,
+            opts: { onConflict: string },
+          ) => {
             upserted.push(...rows);
+            conflictTarget = opts.onConflict;
             return { error: null };
           },
         };
       },
     } as unknown as SupabaseClient;
 
-    await recomputeAllAchievements(client, [makePlayer("p1")], [], [
-      { player_id: "p1", linked_at: "2026-09-20T10:00:00Z" },
-    ]);
+    const players = ["p1", "p2", "p3", "p4", "p5"].map(makePlayer);
+    await recomputeAllAchievements(client, players, [], {
+      links: [{ player_id: "p1", linked_at: "2026-09-20T10:00:00Z" }],
+      seasons: [
+        { id: "s1", number: 1, started_at: "2026-05-30T00:00:00Z", ended_at: "2026-08-03T00:00:00Z" },
+      ],
+      seasonStats: players.map((p, i) => ({
+        player_id: p.id,
+        season_id: "s1",
+        current_season_elo: 1700 - i * 50,
+        wins: 3,
+        losses: 0,
+      })),
+    });
 
+    expect(conflictTarget).toBe("player_id,achievement_id,season_id");
     expect(upserted).toContainEqual(
       expect.objectContaining({
         player_id: "p1",
         achievement_id: "linked_account",
-        unlocked_at: "2026-09-20T10:00:00.000Z",
+        season_id: null,
       }),
     );
+    expect(upserted).toContainEqual(
+      expect.objectContaining({
+        player_id: "p1",
+        achievement_id: "season_top_1",
+        season_id: "s1",
+        unlocked_at: "2026-08-03T00:00:00.000Z",
+      }),
+    );
+  });
+});
+
+describe("repeated per-season achievements", () => {
+  const row = (
+    player_id: string,
+    achievement_id: PlayerAchievementRow["achievement_id"],
+    season_id: string | null,
+    unlocked_at: string,
+  ): PlayerAchievementRow => ({
+    id: `${player_id}-${achievement_id}-${season_id}`,
+    player_id,
+    achievement_id,
+    season_id,
+    unlocked_at,
+    meta: null,
+  });
+
+  it("rarity counts players holding it, not rows", () => {
+    const rows = [
+      row("p1", "season_top_1", "s1", "2026-04-04T00:00:00Z"),
+      row("p1", "season_top_1", "s2", "2026-05-30T00:00:00Z"),
+      row("p2", "win_1", null, "2026-01-01T00:00:00Z"),
+    ];
+    const rarity = computeRarityMap(rows, 4);
+    expect(rarity.get("season_top_1")).toBe(25);
+    expect(rarity.get("win_1")).toBe(25);
+  });
+
+  it("groups one id into a single status with its count and seasons", () => {
+    const rows = [
+      row("p1", "season_top_1", "s2", "2026-05-30T00:00:00Z"),
+      row("p1", "season_top_1", "s1", "2026-04-04T00:00:00Z"),
+      row("p1", "win_1", null, "2026-01-01T00:00:00Z"),
+    ];
+    const statuses = buildAchievementStatuses("p1", makePlayer("p1"), [makePlayer("p1")], [], rows);
+    const champ = statuses.find((s) => s.definition.id === "season_top_1")!;
+    expect(champ.unlocked).toBe(true);
+    expect(champ.count).toBe(2);
+    expect(champ.seasonIds).toEqual(["s1", "s2"]);
+    // The latest unlock, so "by date" surfaces a fresh placement.
+    expect(champ.unlockedAt).toEqual(new Date("2026-05-30T00:00:00Z"));
+    const win = statuses.find((s) => s.definition.id === "win_1")!;
+    expect(win.count).toBe(1);
+    expect(win.seasonIds).toEqual([]);
+    const locked = statuses.find((s) => s.definition.id === "season_top_2")!;
+    expect(locked.count).toBe(0);
   });
 });

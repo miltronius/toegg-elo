@@ -2,8 +2,12 @@ import { assertEquals } from "@std/assert";
 import {
   computeAchievementsForPlayer,
   computeGoalAchievements,
+  computeSeasonParticipation,
+  computeSeasonPlacements,
   type Match,
   type MatchGame,
+  type SeasonRow,
+  type SeasonStatRow,
   teamGoals,
 } from "../_shared/achievements.ts";
 
@@ -19,6 +23,7 @@ function makeMatch(seq: number, overrides: Partial<Match> = {}): Match {
     team_a_games: 1,
     team_b_games: 0,
     games: null,
+    season_id: "s1",
     created_at: new Date(Date.UTC(2026, 0, 1, 0, seq)).toISOString(),
     ...overrides,
   };
@@ -232,6 +237,8 @@ Deno.test("pair tiers sit at 100, 500 and 1,000 goals", () => {
 function nineAchievementSeason(): Match[] {
   return Array.from({ length: 9 }, (_, i) =>
     makeMatch(i + 1, {
+      // No season, so On the Board doesn't add a tenth achievement.
+      season_id: null,
       created_at: new Date(Date.UTC(2026, 0, 1 + i)).toISOString(),
       ...(i === 8 ? series(win(10, 0)) : {}),
     })
@@ -275,4 +282,144 @@ Deno.test("linked_account: counts toward achievement_hunter", () => {
     (a) => a.achievementId === "achievement_hunter",
   );
   assertEquals(hunter?.unlockedAt, linkedAt);
+});
+
+// ---------------------------------------------------------------------------
+// Season achievements
+// ---------------------------------------------------------------------------
+
+const ENDED = "2026-08-03T04:00:00.000Z";
+const endedSeason = (id = "s1", ended_at: string | null = ENDED): SeasonRow => ({
+  id,
+  number: 1,
+  started_at: "2026-05-30T00:00:00.000Z",
+  ended_at,
+});
+
+// elos[i] belongs to player `p${i + 1}`; every player is ranked (3 games)
+// unless `games` says otherwise.
+function standings(
+  elos: number[],
+  games: number[] = elos.map(() => 3),
+  season_id = "s1",
+): SeasonStatRow[] {
+  return elos.map((elo, i) => ({
+    player_id: `p${i + 1}`,
+    season_id,
+    current_season_elo: elo,
+    wins: games[i],
+    losses: 0,
+  }));
+}
+
+const placementIds = (
+  seasons: SeasonRow[],
+  stats: SeasonStatRow[],
+  player: string,
+) =>
+  (computeSeasonPlacements(seasons, stats).get(player) ?? [])
+    .map((u) => u.achievementId)
+    .sort();
+
+Deno.test("placements: 1st/2nd/3rd get their medal only, dated ended_at", () => {
+  const stats = standings([1700, 1650, 1600, 1550, 1520, 1400]);
+  const got = computeSeasonPlacements([endedSeason()], stats);
+  assertEquals(got.get("p1"), [
+    { achievementId: "season_net_positive", unlockedAt: new Date(ENDED), seasonId: "s1" },
+    { achievementId: "season_top_1", unlockedAt: new Date(ENDED), seasonId: "s1" },
+  ]);
+  assertEquals(placementIds([endedSeason()], stats, "p2"), ["season_net_positive", "season_top_2"]);
+  assertEquals(placementIds([endedSeason()], stats, "p3"), ["season_net_positive", "season_top_3"]);
+  assertEquals(placementIds([endedSeason()], stats, "p4"), ["season_net_positive", "season_top_5"]);
+});
+
+Deno.test("placements: ties share a rank (1, 2, 2, 4)", () => {
+  const stats = standings([1700, 1600, 1600, 1550, 1500, 1400]);
+  assertEquals(placementIds([endedSeason()], stats, "p2"), ["season_net_positive", "season_top_2"]);
+  assertEquals(placementIds([endedSeason()], stats, "p3"), ["season_net_positive", "season_top_2"]);
+  assertEquals(placementIds([endedSeason()], stats, "p4"), ["season_net_positive", "season_top_5"]);
+});
+
+Deno.test("placements: a shared first place makes two champions", () => {
+  const stats = standings([1700, 1700, 1600, 1550, 1500]);
+  assertEquals(placementIds([endedSeason()], stats, "p1"), ["season_net_positive", "season_top_1"]);
+  assertEquals(placementIds([endedSeason()], stats, "p2"), ["season_net_positive", "season_top_1"]);
+  assertEquals(placementIds([endedSeason()], stats, "p3"), ["season_net_positive", "season_top_3"]);
+});
+
+Deno.test("placements: none below 5 ranked players, net positive still counts", () => {
+  const stats = standings([1700, 1650, 1600, 1400]);
+  assertEquals(placementIds([endedSeason()], stats, "p1"), ["season_net_positive"]);
+  assertEquals(placementIds([endedSeason()], stats, "p4"), []);
+});
+
+Deno.test("placements: Top N needs more than N ranked players", () => {
+  // Exactly 5 ranked: medals yes, High Five no (5 is not > 5).
+  const five = standings([1700, 1650, 1600, 1450, 1400]);
+  assertEquals(placementIds([endedSeason()], five, "p3"), ["season_net_positive", "season_top_3"]);
+  assertEquals(placementIds([endedSeason()], five, "p4"), []);
+  // 10 ranked: rank 7 gets nothing (Top Ten needs 11).
+  const ten = standings([1900, 1850, 1800, 1750, 1700, 1650, 1450, 1400, 1350, 1300]);
+  assertEquals(placementIds([endedSeason()], ten, "p7"), []);
+  // 11 ranked: rank 7 gets Top Ten.
+  const eleven = standings([1900, 1850, 1800, 1750, 1700, 1650, 1450, 1400, 1350, 1300, 1250]);
+  assertEquals(placementIds([endedSeason()], eleven, "p7"), ["season_top_10"]);
+});
+
+Deno.test("placements: unranked players neither rank nor count toward the floor", () => {
+  // p6 has the top rating but only 2 games: not ranked, and the season has
+  // just 5 ranked players - p1 is champion.
+  const stats = standings([1700, 1650, 1600, 1550, 1520, 1900], [3, 3, 3, 3, 3, 2]);
+  assertEquals(placementIds([endedSeason()], stats, "p6"), []);
+  assertEquals(placementIds([endedSeason()], stats, "p1"), ["season_net_positive", "season_top_1"]);
+});
+
+Deno.test("placements: net positive needs 1501, 1500 is not enough", () => {
+  const stats = standings([1501, 1500, 1400, 1400, 1400]);
+  assertEquals(placementIds([endedSeason()], stats, "p1").includes("season_net_positive"), true);
+  assertEquals(placementIds([endedSeason()], stats, "p2").includes("season_net_positive"), false);
+});
+
+Deno.test("placements: the active season awards nothing", () => {
+  const stats = standings([1700, 1650, 1600, 1550, 1520]);
+  assertEquals(computeSeasonPlacements([endedSeason("s1", null)], stats).size, 0);
+});
+
+Deno.test("participation: unlocks at the 3rd match of a season, active or not", () => {
+  const ms = [
+    makeMatch(1, { season_id: "s1" }),
+    makeMatch(2, { season_id: "s1" }),
+    makeMatch(3, { season_id: "s2" }),
+    makeMatch(4, { season_id: "s1" }),
+    makeMatch(5, { season_id: "s2" }),
+  ];
+  assertEquals(computeSeasonParticipation("p1", ms), [
+    { achievementId: "season_participated", unlockedAt: new Date(ms[3].created_at), seasonId: "s1" },
+  ]);
+});
+
+Deno.test("meta achievements count distinct ids, not rows", () => {
+  // Nine distinct achievements, plus the same seasonal one three times: 12
+  // rows but 10 distinct ids - achievement_hunter unlocks with the first
+  // season_top_1, not with a repeat.
+  const matches = nineAchievementSeason();
+  const first = new Date("2026-02-01T00:00:00Z");
+  const extra = ["s1", "s2", "s3"].map((seasonId, i) => ({
+    achievementId: "season_top_1" as const,
+    unlockedAt: new Date(first.getTime() + i * 86_400_000),
+    seasonId,
+  }));
+  const got = computeAchievementsForPlayer(
+    "p1",
+    { id: "p1" } as Parameters<typeof computeAchievementsForPlayer>[1],
+    matches,
+    [],
+    [],
+    null,
+    extra,
+  );
+  const hunter = got.find((a) => a.achievementId === "achievement_hunter");
+  assertEquals(hunter?.unlockedAt, first);
+  // Two repeats don't reach 20 distinct.
+  assertEquals(got.some((a) => a.achievementId === "completionist"), false);
 });

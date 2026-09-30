@@ -94,30 +94,40 @@ const META_ACHIEVEMENT_IDS = [
 ];
 
 /**
- * Brings achievements in line with a link change without waiting for the next
- * match. A link only ever adds (the RPC wrote That's Me!, a meta may now be
- * due), so a non-destructive recompute is enough. An unlink can take a meta
- * away, but the recompute never deletes - so the player's metas are dropped
- * first and the recompute gives back the ones still earned, with their
- * original dates (admin-only, like every player_achievements delete).
- * Non-fatal: the link itself already succeeded, and every recorded match
- * recomputes anyway.
+ * Brings achievements in line with something that happened outside a match
+ * (a link change, a season ending) without waiting for the next one. Only
+ * adds: the recompute never deletes. Non-fatal: the change itself already
+ * succeeded, and every recorded match recomputes anyway.
  */
-async function recomputeAfterLinkChange(unlinkedPlayerId?: string) {
+export async function recomputeAchievements(): Promise<void> {
   try {
-    if (unlinkedPlayerId) {
-      const { error } = await supabase
-        .from("player_achievements")
-        .delete()
-        .eq("player_id", unlinkedPlayerId)
-        .in("achievement_id", META_ACHIEVEMENT_IDS);
-      if (error) throw error;
-    }
     const [players, matches] = await Promise.all([getPlayers(), getMatches()]);
     await recomputeAllAchievements(supabase, players, matches);
   } catch (err) {
-    console.error("Achievement recompute after link change failed:", err);
+    console.error("Achievement recompute failed:", err);
   }
+}
+
+/**
+ * A link only ever adds (the RPC wrote That's Me!, a meta may now be due). An
+ * unlink can take a meta away, but the recompute never deletes - so the
+ * player's metas are dropped first and the recompute gives back the ones still
+ * earned, with their original dates (admin-only, like every
+ * player_achievements delete).
+ */
+async function recomputeAfterLinkChange(unlinkedPlayerId?: string) {
+  if (unlinkedPlayerId) {
+    const { error } = await supabase
+      .from("player_achievements")
+      .delete()
+      .eq("player_id", unlinkedPlayerId)
+      .in("achievement_id", META_ACHIEVEMENT_IDS);
+    if (error) {
+      console.error("Achievement recompute after link change failed:", error);
+      return;
+    }
+  }
+  await recomputeAchievements();
 }
 
 // The link RPCs raise plain codes (player_already_linked, ...) as the error
@@ -517,6 +527,9 @@ export async function endSeasonAndStartNew(
     new_partner_weight: newPartnerWeight,
   });
   if (error) throw error;
+  // Ending a season doesn't go through calculate-elo, so the placements it
+  // just made final would otherwise wait for the next recorded match.
+  await recomputeAchievements();
 }
 
 // ---------------------------------------------------------------------------
@@ -691,16 +704,6 @@ export async function getPlayerAchievements(playerId: string) {
   return (data ?? []) as import("./achievements").PlayerAchievementRow[];
 }
 
-export async function upsertPlayerAchievements(
-  rows: Omit<import("./achievements").PlayerAchievementRow, "id">[],
-): Promise<void> {
-  const { error } = await supabase.from("player_achievements").upsert(rows, {
-    onConflict: "player_id,achievement_id",
-    ignoreDuplicates: false,
-  });
-  if (error) throw error;
-}
-
 /**
  * Admin-only: wipe the derived achievements cache and rebuild it from scratch
  * so changed unlock logic is fully reflected. unlocked_at is recomputed from
@@ -713,10 +716,12 @@ export async function recomputeAllAchievementsAdmin(): Promise<{
 }> {
   // Read everything the rebuild needs *before* the delete: a failing read
   // afterwards would leave the table empty.
-  const [players, matches, links] = await Promise.all([
+  const [players, matches, links, seasons, seasonStats] = await Promise.all([
     getPlayers(),
     getMatches(),
     getAllPlayerAccounts(),
+    getSeasons(),
+    getAllPlayerSeasonStats(),
   ]);
 
   // Clear every row first: recomputeAllAchievements upserts with
@@ -727,6 +732,10 @@ export async function recomputeAllAchievementsAdmin(): Promise<{
     .not("id", "is", null);
   if (deleteError) throw deleteError;
 
-  await recomputeAllAchievements(supabase, players, matches, links);
+  await recomputeAllAchievements(supabase, players, matches, {
+    links,
+    seasons,
+    seasonStats,
+  });
   return { players: players.length, matches: matches.length };
 }

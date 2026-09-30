@@ -304,6 +304,13 @@
     "pair_goals_100": { "name": "Dynamic Duo", "description": "Score 100 goals with one partner" },
     "pair_goals_500": { "name": "Well-Oiled Machine", "description": "Score 500 goals with one partner" },
     "pair_goals_1000": { "name": "Two-Headed Monster", "description": "Score 1,000 goals with one partner" },
+    "season_participated": { "name": "On the Board", "description": "Play 3 games in a season" },
+    "season_top_1": { "name": "Season Champion", "description": "Finish a season in 1st place" },
+    "season_top_2": { "name": "Runner-Up", "description": "Finish a season in 2nd place" },
+    "season_top_3": { "name": "Podium", "description": "Finish a season in 3rd place" },
+    "season_top_5": { "name": "High Five", "description": "Finish a season in the top 5" },
+    "season_top_10": { "name": "Top Ten", "description": "Finish a season in the top 10" },
+    "season_net_positive": { "name": "In the Green", "description": "Finish a season ranked, above 1500" },
     "linked_account": { "name": "That's Me!", "description": "Link your account to your player" },
     "completionist": { "name": "Completionist", "description": "Unlock 20 achievements" },
     "completionist_30": { "name": "True Completionist", "description": "Unlock 30 achievements" }
@@ -332,7 +339,8 @@
     "locked": "Locked ({{count}})",
     "withPartner": "with {{name}}",
     "vsOpponent": "vs {{name}}",
-    "ofPlayers": " · {{percent}}% of players"
+    "ofPlayers": " · {{percent}}% of players",
+    "seasonLabel": "Season {{number}}"
   },
   "timeline": {
     "title": "Timeline",

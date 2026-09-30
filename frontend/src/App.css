@@ -1685,6 +1685,10 @@ td.winrate {
   color: var(--color-text);
   line-height: 1.2;
 }
+.achievement-count {
+  font-weight: 500;
+  opacity: 0.75;
+}
 .achievement-desc {
   font-size: 0.7rem;
   color: var(--color-text-light);

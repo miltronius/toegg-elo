@@ -223,6 +223,7 @@ describe("computeSeasonStats", () => {
       achievement_id: "win_1",
       unlocked_at,
       meta: null,
+      season_id: null,
     });
     const achievements = [
       ach("a1", "2024-01-10T10:00:00Z"), // before window
@@ -239,5 +240,31 @@ describe("computeSeasonStats", () => {
 
     const allR = computeSeasonStats(null, [], [], players, achievements);
     expect(allR.achievementsUnlocked).toBe(4);
+  });
+
+  it("credits a per-season achievement to its season, not by its date", () => {
+    // Placements are dated the season's end, which is also the next season's
+    // start - by date alone they would land in the wrong season.
+    const s1End = "2024-03-01T00:00:00Z";
+    const achievements: PlayerAchievementRow[] = [
+      {
+        id: "a1",
+        player_id: "p1",
+        achievement_id: "season_top_1",
+        unlocked_at: s1End,
+        meta: null,
+        season_id: "s1",
+      },
+    ];
+    const s1 = computeSeasonStats("s1", [], [], players, achievements, {
+      startedAt: "2024-01-20T00:00:00Z",
+      endedAt: s1End,
+    });
+    const s2 = computeSeasonStats("s2", [], [], players, achievements, {
+      startedAt: s1End,
+      endedAt: null,
+    });
+    expect(s1.achievementsUnlocked).toBe(1);
+    expect(s2.achievementsUnlocked).toBe(0);
   });
 });
