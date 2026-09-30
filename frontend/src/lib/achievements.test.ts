@@ -683,38 +683,67 @@ describe("party_pooper achievement", () => {
 // recomputeAllAchievements - links handed in up front
 // ---------------------------------------------------------------------------
 
-describe("recomputeAllAchievements with pre-read links", () => {
-  it("uses the links it is given instead of reading player_accounts", async () => {
-    // The admin recompute deletes every row before rebuilding, so it reads the
-    // links first and hands them in: a failing read then aborts before
-    // anything is deleted, rather than after.
-    const upserted: { player_id: string; achievement_id: string }[] = [];
+describe("recomputeAllAchievements with pre-read inputs", () => {
+  it("uses the inputs it is given instead of reading them", async () => {
+    // The admin recompute deletes every row before rebuilding, so it reads
+    // links, seasons and standings first and hands them in: a failing read
+    // then aborts before anything is deleted, rather than after.
+    const upserted: {
+      player_id: string;
+      achievement_id: string;
+      season_id: string | null;
+    }[] = [];
+    let conflictTarget = "";
     const client = {
       from: (table: string) => {
-        if (table === "player_accounts") {
-          throw new Error("player_accounts must not be read");
+        if (["player_accounts", "seasons", "player_season_stats"].includes(table)) {
+          throw new Error(`${table} must not be read`);
         }
         if (table === "elo_history") {
           return { select: async () => ({ data: [], error: null }) };
         }
         return {
-          upsert: async (rows: typeof upserted) => {
+          upsert: async (
+            rows: typeof upserted,
+            opts: { onConflict: string },
+          ) => {
             upserted.push(...rows);
+            conflictTarget = opts.onConflict;
             return { error: null };
           },
         };
       },
     } as unknown as SupabaseClient;
 
-    await recomputeAllAchievements(client, [makePlayer("p1")], [], [
-      { player_id: "p1", linked_at: "2026-09-20T10:00:00Z" },
-    ]);
+    const players = ["p1", "p2", "p3", "p4", "p5"].map(makePlayer);
+    await recomputeAllAchievements(client, players, [], {
+      links: [{ player_id: "p1", linked_at: "2026-09-20T10:00:00Z" }],
+      seasons: [
+        { id: "s1", number: 1, started_at: "2026-05-30T00:00:00Z", ended_at: "2026-08-03T00:00:00Z" },
+      ],
+      seasonStats: players.map((p, i) => ({
+        player_id: p.id,
+        season_id: "s1",
+        current_season_elo: 1700 - i * 50,
+        wins: 3,
+        losses: 0,
+      })),
+    });
 
+    expect(conflictTarget).toBe("player_id,achievement_id,season_id");
     expect(upserted).toContainEqual(
       expect.objectContaining({
         player_id: "p1",
         achievement_id: "linked_account",
-        unlocked_at: "2026-09-20T10:00:00.000Z",
+        season_id: null,
+      }),
+    );
+    expect(upserted).toContainEqual(
+      expect.objectContaining({
+        player_id: "p1",
+        achievement_id: "season_top_1",
+        season_id: "s1",
+        unlocked_at: "2026-08-03T00:00:00.000Z",
       }),
     );
   });

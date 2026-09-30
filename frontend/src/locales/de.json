@@ -304,6 +304,13 @@
     "pair_goals_100": { "name": "Dynamisches Duo", "description": "Erziele 100 Tore mit demselben Partner" },
     "pair_goals_500": { "name": "Eingespieltes Team", "description": "Erziele 500 Tore mit demselben Partner" },
     "pair_goals_1000": { "name": "Zweiköpfiges Monster", "description": "Erziele 1'000 Tore mit demselben Partner" },
+    "season_participated": { "name": "Mit von der Partie", "description": "Spiele 3 Partien in einer Saison" },
+    "season_top_1": { "name": "Saisonsieger", "description": "Beende eine Saison auf Platz 1" },
+    "season_top_2": { "name": "Vizemeister", "description": "Beende eine Saison auf Platz 2" },
+    "season_top_3": { "name": "Podest", "description": "Beende eine Saison auf Platz 3" },
+    "season_top_5": { "name": "High Five", "description": "Beende eine Saison unter den Top 5" },
+    "season_top_10": { "name": "Top Ten", "description": "Beende eine Saison unter den Top 10" },
+    "season_net_positive": { "name": "Im grünen Bereich", "description": "Beende eine Saison gewertet und über 1500" },
     "linked_account": { "name": "Das bin ich!", "description": "Verknüpfe dein Konto mit deinem Spieler" },
     "completionist": { "name": "Vervollständiger", "description": "Schalte 20 Erfolge frei" },
     "completionist_30": { "name": "Wahrer Vervollständiger", "description": "Schalte 30 Erfolge frei" }

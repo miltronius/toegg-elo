@@ -223,6 +223,7 @@ describe("computeSeasonStats", () => {
       achievement_id: "win_1",
       unlocked_at,
       meta: null,
+      season_id: null,
     });
     const achievements = [
       ach("a1", "2024-01-10T10:00:00Z"), // before window
