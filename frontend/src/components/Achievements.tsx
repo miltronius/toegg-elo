@@ -623,7 +623,9 @@ function AchievementCard({
       })
     : undefined;
 
-  // Per-season achievements list where they were won, e.g. "Season 2, Season 4".
+  // Per-season achievements add where they were won ("Season 2, Season 4") to
+  // the hover label rather than a native title, which would stack a second
+  // tooltip on top of it.
   const seasonNames =
     !locked && status.seasonIds.length > 0
       ? status.seasonIds
@@ -637,13 +639,16 @@ function AchievementCard({
   return (
     <div
       className={`achievement-card${locked ? " achievement-card--locked" : ""}`}
-      title={seasonNames}
       style={
         color && !locked
           ? ({ "--achievement-rarity-color": color } as CSSProperties)
           : undefined
       }
-      data-unlocked={!locked && unlockedLabel ? unlockedLabel : undefined}
+      data-unlocked={
+        !locked && unlockedLabel
+          ? [unlockedLabel, seasonNames].filter(Boolean).join(" · ")
+          : undefined
+      }
     >
       <div className="achievement-icon">{locked ? "🔒" : definition.icon}</div>
       <div className="achievement-name">
