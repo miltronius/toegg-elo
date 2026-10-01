@@ -4,9 +4,8 @@
 
 ### Minor Changes
 
-- [#131](https://github.com/miltronius/toegg-elo/pull/131) [`954e318`](https://github.com/miltronius/toegg-elo/commit/954e3181b1acd3d547d32e9f09ae6a7fd906e309) Thanks [@miltronius](https://github.com/miltronius)! - Season achievements: earn On the Board, a podium or top-ten finish and In the Green again every season - repeated ones show as ×N.
-  
-  Adds `player_achievements.season_id` with a `NULLS NOT DISTINCT` unique key; apply `20260930_season_achievements.sql` before deploying calculate-elo and the frontend.
+- [#131](https://github.com/miltronius/toegg-elo/pull/131) - Season achievements: earn On the Board, a podium or top-ten finish and In the Green again every season
+- repeated ones show as ×N.
 
 ## 1.11.0 (2026-09-27)
 
