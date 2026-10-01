@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
 import { Player, Match, EloHistory, Season } from "../lib/supabase";
@@ -13,6 +13,8 @@ interface DashboardProps {
   eloHistory: Map<string, EloHistory[]>;
   allAchievementRows: PlayerAchievementRow[];
   seasons: Season[];
+  /** Season Awards vote nudge (App builds it), shown under the title. */
+  awardNudge?: ReactNode;
 }
 
 type MatchEvent = {
@@ -429,6 +431,7 @@ export function Timeline({
   eloHistory,
   allAchievementRows,
   seasons,
+  awardNudge,
 }: DashboardProps) {
   const { t } = useTranslation();
   const GROUP_LABELS: Record<EventGroup["kind"], string> = {
@@ -480,6 +483,7 @@ export function Timeline({
     return (
       <div className="card">
         <h2>{t("timeline.title")}</h2>
+        {awardNudge}
         <p className="text-center text-text-light py-8">
           {t("timeline.empty")}
         </p>
@@ -490,6 +494,7 @@ export function Timeline({
   return (
     <div className="card">
       <h2>{t("timeline.title")}</h2>
+      {awardNudge}
       <div className="dashboard-timeline">
         {visibleDays.map((day) => (
           <div key={day.date} className="dashboard-day">
