@@ -459,6 +459,14 @@ export type Season = {
   inactivity_penalty_percent: number;
   started_at: string;
   ended_at: string | null;
+  /**
+   * When the admin means to end it; award voting opens AWARD_VOTING_LEAD_DAYS
+   * before (lib/seasonAwards.ts). Optional only so fixtures written before #121
+   * still type-check - `select("*")` always returns it once migrated.
+   */
+  planned_end_at?: string | null;
+  /** Set by "Open voting now" (open_award_voting), in server time. */
+  voting_opened_at?: string | null;
   is_active: boolean;
   created_at: string;
 };

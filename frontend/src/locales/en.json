@@ -389,6 +389,52 @@
     "gamesTooltip": "Games",
     "dailyActivity": "Daily Activity Heatmap"
   },
+  "seasonAwards": {
+    "awards": {
+      "award_offense": "Best Offensive Player",
+      "award_defense": "Best Defender - The Wall",
+      "award_fun": "Most Fun to Play With",
+      "award_community": "Community Award",
+      "award_improved": "Most Improved",
+      "award_rookie": "Rookie of the Season",
+      "award_guest": "Special Guest"
+    },
+    "errors": {
+      "not_allowed": "You're not allowed to do that.",
+      "voter_not_linked": "Link your account to your player to vote.",
+      "unknown_award": "That award doesn't exist.",
+      "voting_not_open": "Voting isn't open for this season.",
+      "self_vote": "You can't vote for yourself.",
+      "nominee_not_eligible": "That player isn't eligible for this award.",
+      "season_not_active": "Voting can only be opened early for the running season.",
+      "unknown": "Something went wrong. Please try again."
+    },
+    "nudge": {
+      "title": "Vote for the Season Awards",
+      "picked": "{{picked}}/{{total}} picked",
+      "closes": "closes {{date}}",
+      "closesAfterSeason": "closes {{days}} days into the next season",
+      "linkToVote": "Link your player to vote: open your player and choose “This is me”."
+    },
+    "nominees": {
+      "ranked": "Ranked players ({{min}}+ games this season)",
+      "rookie": "Ranked this season for the first time",
+      "guest": "Played 1-{{max}} games this season"
+    },
+    "ballot": {
+      "title": "Season Awards · {{season}}",
+      "intro": "Pick one player per award, or skip any. Picks save as you go and can be changed until voting closes.",
+      "closes": "Voting closes on {{date}}.",
+      "secret": "Your ballot is secret: nobody else can see it, admins included.",
+      "recheck": "Who qualifies is checked again when voting closes, and a vote for someone who no longer does is dropped.",
+      "noPick": "No pick",
+      "choose": "Choose a player…",
+      "nobodyEligible": "Nobody is eligible yet.",
+      "noLongerEligible": "{{name}} doesn't qualify for this award right now. Unless that changes before voting closes, this vote won't count.",
+      "saving": "saving…",
+      "done": "Done"
+    }
+  },
   "goals": {
     "label": "Goals scored : received",
     "atLeast": "at least",
@@ -510,7 +556,22 @@
     "confirmEnd": "Confirm - End Season {{number}}",
     "nameRequired": "Season name is required.",
     "startError": "Failed to start new season.",
-    "defaultName": "Season {{number}}"
+    "defaultName": "Season {{number}}",
+    "plannedEnd": "Planned end",
+    "plannedEndOptional": "Planned end (optional)",
+    "notPlanned": "Not set",
+    "plannedEndHint": "Format {{format}}. Season Awards voting opens {{days}} days before this date; left empty, it opens when the season ends.",
+    "plannedEndInvalid": "Enter the planned end as {{format}}.",
+    "plannedEndBeforeStart": "The planned end has to be after the season starts.",
+    "awardVoting": "Award voting",
+    "votingOpen": "Open",
+    "votingOpens": "Opens {{date}}",
+    "votingOpensAtEnd": "Opens when the season ends",
+    "save": "Save",
+    "openVoting": "Open voting now",
+    "openVotingConfirm": "Open Season Awards voting now? This can't be undone.",
+    "votingIsOpen": "Voting is open",
+    "scheduleError": "Couldn't save. Please try again."
   },
   "matchHistory": {
     "title": "Match History",

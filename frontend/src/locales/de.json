@@ -389,6 +389,52 @@
     "gamesTooltip": "Spiele",
     "dailyActivity": "Tägliche Aktivitäts-Heatmap"
   },
+  "seasonAwards": {
+    "awards": {
+      "award_offense": "Bester Stürmer",
+      "award_defense": "Bester Verteidiger - Die Wand",
+      "award_fun": "Grösster Spassfaktor",
+      "award_community": "Community-Preis",
+      "award_improved": "Grösster Fortschritt",
+      "award_rookie": "Rookie der Saison",
+      "award_guest": "Stargast"
+    },
+    "errors": {
+      "not_allowed": "Das darfst du nicht.",
+      "voter_not_linked": "Verknüpfe dein Konto mit deinem Spieler, um abzustimmen.",
+      "unknown_award": "Diesen Award gibt es nicht.",
+      "voting_not_open": "Für diese Saison läuft keine Abstimmung.",
+      "self_vote": "Du kannst nicht für dich selbst stimmen.",
+      "nominee_not_eligible": "Dieser Spieler kommt für diesen Award nicht in Frage.",
+      "season_not_active": "Vorzeitig öffnen lässt sich die Abstimmung nur für die laufende Saison.",
+      "unknown": "Etwas ist schiefgelaufen. Bitte versuch es nochmals."
+    },
+    "nudge": {
+      "title": "Stimm für die Saison-Awards ab",
+      "picked": "{{picked}}/{{total}} gewählt",
+      "closes": "endet am {{date}}",
+      "closesAfterSeason": "endet {{days}} Tage nach dem Start der nächsten Saison",
+      "linkToVote": "Verknüpfe deinen Spieler, um abzustimmen: Öffne deinen Spieler und wähle «Das bin ich»."
+    },
+    "nominees": {
+      "ranked": "Gewertete Spieler (ab {{min}} Spielen diese Saison)",
+      "rookie": "Diese Saison zum ersten Mal gewertet",
+      "guest": "Diese Saison 1-{{max}} Spiele gespielt"
+    },
+    "ballot": {
+      "title": "Saison-Awards · {{season}}",
+      "intro": "Wähle pro Award einen Spieler oder lass einen aus. Deine Wahl wird sofort gespeichert und lässt sich bis zum Ende der Abstimmung ändern.",
+      "closes": "Die Abstimmung endet am {{date}}.",
+      "secret": "Deine Stimmen sind geheim: Niemand sonst sieht sie, auch keine Admins.",
+      "recheck": "Wer in Frage kommt, wird am Ende der Abstimmung nochmals geprüft. Stimmen für Spieler, die dann nicht mehr in Frage kommen, verfallen.",
+      "noPick": "Keine Wahl",
+      "choose": "Spieler wählen…",
+      "nobodyEligible": "Noch kommt niemand in Frage.",
+      "noLongerEligible": "{{name}} kommt für diesen Award gerade nicht in Frage. Ändert sich das bis zum Ende der Abstimmung nicht, zählt diese Stimme nicht.",
+      "saving": "wird gespeichert…",
+      "done": "Fertig"
+    }
+  },
   "goals": {
     "label": "Tore erzielt : erhalten",
     "atLeast": "mindestens",
@@ -510,7 +556,22 @@
     "confirmEnd": "Bestätigen - Saison {{number}} beenden",
     "nameRequired": "Saisonname ist erforderlich.",
     "startError": "Neue Saison konnte nicht gestartet werden.",
-    "defaultName": "Saison {{number}}"
+    "defaultName": "Saison {{number}}",
+    "plannedEnd": "Geplantes Ende",
+    "plannedEndOptional": "Geplantes Ende (optional)",
+    "notPlanned": "Nicht festgelegt",
+    "plannedEndHint": "Format {{format}}. Die Abstimmung für die Saison-Awards beginnt {{days}} Tage vor diesem Datum; leer gelassen beginnt sie mit dem Saisonende.",
+    "plannedEndInvalid": "Gib das geplante Ende im Format {{format}} ein.",
+    "plannedEndBeforeStart": "Das geplante Ende muss nach dem Saisonstart liegen.",
+    "awardVoting": "Award-Abstimmung",
+    "votingOpen": "Läuft",
+    "votingOpens": "Beginnt am {{date}}",
+    "votingOpensAtEnd": "Beginnt mit dem Saisonende",
+    "save": "Speichern",
+    "openVoting": "Abstimmung jetzt öffnen",
+    "openVotingConfirm": "Die Abstimmung für die Saison-Awards jetzt öffnen? Das lässt sich nicht rückgängig machen.",
+    "votingIsOpen": "Abstimmung läuft",
+    "scheduleError": "Speichern fehlgeschlagen. Bitte versuch es nochmals."
   },
   "matchHistory": {
     "title": "Spielverlauf",
