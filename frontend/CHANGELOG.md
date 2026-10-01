@@ -1,5 +1,12 @@
 # toegg-elo-frontend
 
+## 1.12.0 (2026-09-30)
+
+### Minor Changes
+
+- [#131](https://github.com/miltronius/toegg-elo/pull/131) - Season achievements: earn On the Board, a podium or top-ten finish and In the Green again every season
+- repeated ones show as ×N.
+
 ## 1.11.0 (2026-09-27)
 
 ### Minor Changes
