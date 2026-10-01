@@ -11,6 +11,8 @@ import {
   getSeasons,
   getAllPlayerSeasonStats,
   getBanners,
+  getMyAwardVotes,
+  castAwardVote,
   deleteMatch,
   Player,
   Match,
@@ -19,6 +21,7 @@ import {
   Season,
   PlayerSeasonStats,
   Banner,
+  AwardVote,
 } from "./lib/supabase";
 import type { PlayerAchievementRow } from "./lib/achievements";
 import { DEFAULT_PARTNER_WEIGHT } from "./lib/elo";
@@ -43,6 +46,8 @@ import { RelationshipGraph } from "./components/RelationshipGraph";
 import { Achievements } from "./components/Achievements";
 import { Timeline } from "./components/Timeline";
 import { SeasonDialog } from "./components/SeasonDialog";
+import { AwardVoteNudge } from "./components/AwardVoteNudge";
+import { AwardBallotDialog } from "./components/AwardBallotDialog";
 import { ThemeToggle } from "./components/ThemeToggle";
 import { LanguageSwitcher } from "./components/LanguageSwitcher";
 import { Win95Shell } from "./components/Win95Shell";
@@ -126,6 +131,7 @@ const EMPTY_ACHIEVEMENTS: PlayerAchievementRow[] = [];
 const EMPTY_SEASONS: Season[] = [];
 const EMPTY_SEASON_STATS: PlayerSeasonStats[] = [];
 const EMPTY_BANNERS: Banner[] = [];
+const EMPTY_AWARD_VOTES: AwardVote[] = [];
 const EMPTY_ELO_HISTORY = new Map<string, EloHistory[]>();
 
 function App() {
@@ -142,6 +148,17 @@ function App() {
     queryFn: fetchAppData,
     enabled: !authLoading,
   });
+
+  // The caller's own ballot. A query of its own rather than part of appData:
+  // only the nudge and the ballot read it, and a pick shouldn't refetch the
+  // dashboard. RLS returns nobody else's votes, admins included.
+  const { data: awardVotes = EMPTY_AWARD_VOTES, isSuccess: awardVotesLoaded } =
+    useQuery({
+      queryKey: ["awardVotes", user?.id ?? null],
+      queryFn: getMyAwardVotes,
+      enabled: !authLoading && Boolean(user) && Boolean(myPlayerId),
+    });
+  const [ballotSeasonId, setBallotSeasonId] = useState<string | null>(null);
 
   // Flash a colorful moving border under the header for 2s whenever data is
   // (re)loaded, so the user gets a clear "it really updated" signal.
@@ -298,6 +315,13 @@ function App() {
         : "text-text-light border-b-transparent hover:text-text hover:border-b-primary"
     }`;
 
+  const ballotSeason = ballotSeasonId
+    ? (seasons.find((s) => s.id === ballotSeasonId) ?? null)
+    : null;
+  const awardNudge = (
+    <AwardVoteNudge seasons={seasons} votes={awardVotes} onOpenBallot={setBallotSeasonId} />
+  );
+
   const appContent = (
     <div className="min-h-screen flex flex-col">
       {isFetching && !isLoading && (
@@ -328,6 +352,7 @@ function App() {
           history={allEloHistory}
           players={players}
           achievements={allAchievementRows}
+          awardNudge={awardNudge}
         />
         <div className="flex items-center gap-3">
           <ThemeToggle />
@@ -501,6 +526,7 @@ function App() {
             eloHistory={eloHistory}
             allAchievementRows={allAchievementRows}
             seasons={seasons}
+            awardNudge={awardNudge}
           />
         )}
         {activeTab === "teams" && (
@@ -607,6 +633,21 @@ function App() {
           releases={RELEASES}
           focusVersion={changelog.focus}
           onClose={() => setChangelog(null)}
+        />
+      )}
+      {/* Waits for the ballot to load, or it would open blank and read as "no picks". */}
+      {ballotSeason && awardVotesLoaded && (
+        <AwardBallotDialog
+          season={ballotSeason}
+          seasons={seasons}
+          players={players}
+          seasonStats={allPlayerSeasonStats}
+          votes={awardVotes}
+          onCast={async (awardId, nomineeId) => {
+            await castAwardVote(ballotSeason.id, awardId, nomineeId);
+            await queryClient.invalidateQueries({ queryKey: ["awardVotes"] });
+          }}
+          onClose={() => setBallotSeasonId(null)}
         />
       )}
     </div>

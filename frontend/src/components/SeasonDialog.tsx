@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useTranslation, Trans } from "react-i18next";
 import {
   Season,
   endSeasonAndStartNew,
+  openAwardVoting,
+  updateSeasonPlannedEnd,
   type Match,
   type Player,
   type EloHistory,
@@ -10,7 +12,15 @@ import {
 import type { PlayerAchievementRow } from "../lib/achievements";
 import { DATE_LOCALE } from "../lib/i18n";
 import { DEFAULT_PARTNER_WEIGHT } from "../lib/elo";
+import { SWISS_DATETIME_FORMAT, maskSwissDateTime } from "../lib/banners";
+import {
+  AWARD_VOTING_LEAD_DAYS,
+  awardVotingStatus,
+  awardVotingWindow,
+  parsePlannedEnd,
+} from "../lib/seasonAwards";
 import { SeasonStats } from "./SeasonStats";
+import { SeasonScheduleAdmin } from "./SeasonScheduleAdmin";
 
 interface SeasonDialogProps {
   activeSeason: Season | null;
@@ -21,6 +31,8 @@ interface SeasonDialogProps {
   history: EloHistory[];
   players: Player[];
   achievements: PlayerAchievementRow[];
+  /** Season Awards vote nudge, forwarded to Season Stats. */
+  awardNudge?: ReactNode;
 }
 
 export function SeasonDialog({
@@ -32,6 +44,7 @@ export function SeasonDialog({
   history,
   players,
   achievements,
+  awardNudge,
 }: SeasonDialogProps) {
   const { t } = useTranslation();
 
@@ -43,12 +56,14 @@ export function SeasonDialog({
   const [newPartnerWeight, setNewPartnerWeight] = useState<number>(
     DEFAULT_PARTNER_WEIGHT,
   );
+  const [newPlannedEnd, setNewPlannedEnd] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const openDialog = () => {
     setView("info");
     setError(null);
+    setNewPlannedEnd("");
     if (activeSeason) {
       setNewName(
         t("seasonDialog.defaultName", { number: activeSeason.number + 1 }),
@@ -68,6 +83,15 @@ export function SeasonDialog({
       setError(t("seasonDialog.nameRequired"));
       return;
     }
+    const plannedEnd = parsePlannedEnd(newPlannedEnd, Date.now());
+    if (plannedEnd.kind === "invalid") {
+      setError(t("seasonDialog.plannedEndInvalid", { format: SWISS_DATETIME_FORMAT }));
+      return;
+    }
+    if (plannedEnd.kind === "before_start") {
+      setError(t("seasonDialog.plannedEndBeforeStart"));
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
@@ -76,6 +100,7 @@ export function SeasonDialog({
         newKFactor,
         newPenalty,
         newPartnerWeight,
+        plannedEnd.kind === "ok" ? plannedEnd.iso : null,
       );
       close();
       onSeasonChanged();
@@ -92,6 +117,16 @@ export function SeasonDialog({
       month: "2-digit",
       year: "numeric",
     });
+
+  const votingText = (season: Season) => {
+    if (awardVotingStatus(season, null, Date.now()) === "open") {
+      return t("seasonDialog.votingOpen");
+    }
+    const { opensAt } = awardVotingWindow(season, null);
+    return opensAt === null
+      ? t("seasonDialog.votingOpensAtEnd")
+      : t("seasonDialog.votingOpens", { date: formatDate(new Date(opensAt).toISOString()) });
+  };
 
   return (
     <>
@@ -160,7 +195,36 @@ export function SeasonDialog({
                   <dd className="m-0">
                     {activeSeason ? formatDate(activeSeason.started_at) : "-"}
                   </dd>
+
+                  <dt className="font-semibold text-text-light whitespace-nowrap">
+                    {t("seasonDialog.plannedEnd")}
+                  </dt>
+                  <dd className="m-0">
+                    {activeSeason?.planned_end_at
+                      ? formatDate(activeSeason.planned_end_at)
+                      : t("seasonDialog.notPlanned")}
+                  </dd>
+
+                  <dt className="font-semibold text-text-light whitespace-nowrap">
+                    {t("seasonDialog.awardVoting")}
+                  </dt>
+                  <dd className="m-0">{activeSeason ? votingText(activeSeason) : "-"}</dd>
                 </dl>
+
+                {isAdmin && activeSeason && (
+                  <SeasonScheduleAdmin
+                    key={activeSeason.id}
+                    season={activeSeason}
+                    onSavePlannedEnd={async (iso) => {
+                      await updateSeasonPlannedEnd(activeSeason.id, iso);
+                      onSeasonChanged();
+                    }}
+                    onOpenVoting={async () => {
+                      await openAwardVoting(activeSeason.id);
+                      onSeasonChanged();
+                    }}
+                  />
+                )}
 
                 <SeasonStats
                   activeSeason={activeSeason}
@@ -169,6 +233,7 @@ export function SeasonDialog({
                   history={history}
                   players={players}
                   achievements={achievements}
+                  awardNudge={awardNudge}
                 />
 
                 <div className="flex gap-4 justify-end mt-6">
@@ -276,6 +341,27 @@ export function SeasonDialog({
                   />
                   <span className="block text-[0.78rem] text-text-light mt-1">
                     {t("seasonDialog.penaltyHint")}
+                  </span>
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="season-planned-end-new">
+                    {t("seasonDialog.plannedEndOptional")}
+                  </label>
+                  <input
+                    id="season-planned-end-new"
+                    type="text"
+                    inputMode="numeric"
+                    value={newPlannedEnd}
+                    placeholder={SWISS_DATETIME_FORMAT}
+                    onChange={(e) => setNewPlannedEnd(maskSwissDateTime(e.target.value))}
+                    disabled={loading}
+                  />
+                  <span className="block text-[0.78rem] text-text-light mt-1">
+                    {t("seasonDialog.plannedEndHint", {
+                      format: SWISS_DATETIME_FORMAT,
+                      days: AWARD_VOTING_LEAD_DAYS,
+                    })}
                   </span>
                 </div>
 

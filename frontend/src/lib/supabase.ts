@@ -2,6 +2,7 @@ import { createClient } from "@supabase/supabase-js";
 import { recomputeAllAchievements } from "./achievements";
 import { didLose, didWin } from "./eloHistory";
 import { releaseBannerMessage, releaseBannerWindow } from "./banners";
+import type { AwardId, AwardVote } from "./seasonAwards";
 
 // The anon key is also known as the publishable key in Supabase
 // Both refer to the same public key found in your project settings
@@ -526,6 +527,7 @@ export async function endSeasonAndStartNew(
   newKFactor: number,
   newPenaltyPercent: number,
   newPartnerWeight: number,
+  newPlannedEndAt: string | null,
 ): Promise<void> {
   markLocalMutation();
   const { error } = await supabase.rpc("end_season_and_start_new", {
@@ -533,11 +535,67 @@ export async function endSeasonAndStartNew(
     new_k_factor: newKFactor,
     new_penalty_percent: newPenaltyPercent,
     new_partner_weight: newPartnerWeight,
+    new_planned_end_at: newPlannedEndAt,
   });
   if (error) throw error;
   // Ending a season doesn't go through calculate-elo, so the placements it
   // just made final would otherwise wait for the next recorded match.
   await recomputeAchievements();
+}
+
+/** Admin-only (RLS "Admins can update seasons"). null clears it. */
+export async function updateSeasonPlannedEnd(
+  seasonId: string,
+  plannedEndAt: string | null,
+): Promise<void> {
+  markLocalMutation();
+  const { error } = await supabase
+    .from("seasons")
+    .update({ planned_end_at: plannedEndAt })
+    .eq("id", seasonId);
+  if (error) throw error;
+}
+
+/** Admin-only: opens the running season's award voting now, in server time. */
+export async function openAwardVoting(seasonId: string): Promise<void> {
+  markLocalMutation();
+  const { error } = await supabase.rpc("open_award_voting", { p_season_id: seasonId });
+  if (error) throw error;
+}
+
+// ---------------------------------------------------------------------------
+// Season Awards voting
+// ---------------------------------------------------------------------------
+
+export type { AwardVote } from "./seasonAwards";
+
+/**
+ * The caller's own votes, every season. RLS returns nobody else's - admins
+ * included - so this is a ballot, never a tally.
+ */
+export async function getMyAwardVotes(): Promise<AwardVote[]> {
+  const { data, error } = await supabase
+    .from("season_award_votes")
+    .select("season_id, award_id, voter_user_id, nominee_player_id, updated_at");
+  if (error) throw error;
+  return (data ?? []) as AwardVote[];
+}
+
+/**
+ * Sets one pick, or clears it with null. The RPC raises the bare codes in
+ * seasonAwards.ts's AWARD_ERROR_CODES; awardErrorKey translates them.
+ */
+export async function castAwardVote(
+  seasonId: string,
+  awardId: AwardId,
+  nomineePlayerId: string | null,
+): Promise<void> {
+  const { error } = await supabase.rpc("cast_award_vote", {
+    p_season_id: seasonId,
+    p_award_id: awardId,
+    p_nominee_player_id: nomineePlayerId,
+  });
+  if (error) throw error;
 }
 
 // ---------------------------------------------------------------------------
