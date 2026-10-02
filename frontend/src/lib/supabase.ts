@@ -2,7 +2,7 @@ import { createClient } from "@supabase/supabase-js";
 import { recomputeAllAchievements } from "./achievements";
 import { didLose, didWin } from "./eloHistory";
 import { releaseBannerMessage, releaseBannerWindow } from "./banners";
-import type { AwardId, AwardTurnout, AwardVote } from "./seasonAwards";
+import type { AwardId, AwardResult, AwardTurnout, AwardVote } from "./seasonAwards";
 
 // The anon key is also known as the publishable key in Supabase
 // Both refer to the same public key found in your project settings
@@ -473,6 +473,8 @@ export type Season = {
    * days into the next season. "Close voting now" sets it to server time.
    */
   voting_closes_at?: string | null;
+  /** When an admin counted the award votes (finalize_season_awards); then final. */
+  awards_finalized_at?: string | null;
   is_active: boolean;
   created_at: string;
 };
@@ -583,7 +585,7 @@ export async function openAwardVoting(seasonId: string): Promise<void> {
 // Season Awards voting
 // ---------------------------------------------------------------------------
 
-export type { AwardTurnout, AwardVote } from "./seasonAwards";
+export type { AwardResult, AwardTurnout, AwardVote } from "./seasonAwards";
 
 /**
  * The caller's own votes, every season. RLS returns nobody else's - admins
@@ -603,6 +605,31 @@ export async function getAwardTurnout(seasonId: string): Promise<AwardTurnout> {
   if (error) throw error;
   const raw = (data ?? {}) as Partial<AwardTurnout>;
   return { voters: raw.voters ?? 0, eligible: raw.eligible ?? 0, awards: raw.awards ?? {} };
+}
+
+/**
+ * Every counted season's results (season_award_results): votes per nominee,
+ * winners marked. Public, like the standings - who voted for whom is gone by
+ * the time a row exists.
+ */
+export async function getSeasonAwardResults(): Promise<AwardResult[]> {
+  const { data, error } = await supabase
+    .from("season_award_results")
+    .select("season_id, award_id, player_id, votes, is_winner");
+  if (error) throw error;
+  return (data ?? []) as AwardResult[];
+}
+
+/**
+ * Admin-only: closes a still-open ballot and counts it (finalize_season_awards),
+ * then recomputes achievements so the meta tiers see the new award wins - the
+ * count doesn't go through calculate-elo, like ending a season.
+ */
+export async function finalizeSeasonAwards(seasonId: string): Promise<void> {
+  markLocalMutation();
+  const { error } = await supabase.rpc("finalize_season_awards", { p_season_id: seasonId });
+  if (error) throw error;
+  await recomputeAchievements();
 }
 
 /**
@@ -806,12 +833,13 @@ export async function recomputeAllAchievementsAdmin(): Promise<{
 }> {
   // Read everything the rebuild needs *before* the delete: a failing read
   // afterwards would leave the table empty.
-  const [players, matches, links, seasons, seasonStats] = await Promise.all([
+  const [players, matches, links, seasons, seasonStats, awardResults] = await Promise.all([
     getPlayers(),
     getMatches(),
     getAllPlayerAccounts(),
     getSeasons(),
     getAllPlayerSeasonStats(),
+    getSeasonAwardResults(),
   ]);
 
   // Clear every row first: recomputeAllAchievements upserts with
@@ -826,6 +854,7 @@ export async function recomputeAllAchievementsAdmin(): Promise<{
     links,
     seasons,
     seasonStats,
+    awardResults: awardResults.filter((r) => r.is_winner),
   });
   return { players: players.length, matches: matches.length };
 }

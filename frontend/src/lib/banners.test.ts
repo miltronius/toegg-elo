@@ -14,7 +14,7 @@ import {
   forAudience,
   maskSwissDateTime,
   parseSwissDateTime,
-  isGeneratedSeasonBanner,
+  isGeneratedBanner,
   marqueeSeconds,
   toSwissDateTime,
   visibleBanners,
@@ -212,22 +212,23 @@ describe("addDuration", () => {
   });
 });
 
-describe("isGeneratedSeasonBanner", () => {
+describe("isGeneratedBanner", () => {
   it("is true for a season banner with no stored message", () => {
-    expect(isGeneratedSeasonBanner(banner({ season_id: "s2", message: null }))).toBe(true);
+    expect(isGeneratedBanner(banner({ season_id: "s2", message: null }))).toBe(true);
   });
 
   it("treats a blank message as not overridden, so clearing reverts", () => {
-    expect(isGeneratedSeasonBanner(banner({ season_id: "s2", message: "   " }))).toBe(true);
+    expect(isGeneratedBanner(banner({ season_id: "s2", message: "   " }))).toBe(true);
   });
 
   it("is false once an admin writes their own text", () => {
-    expect(isGeneratedSeasonBanner(banner({ season_id: "s2", message: "My words" }))).toBe(false);
+    expect(isGeneratedBanner(banner({ season_id: "s2", message: "My words" }))).toBe(false);
   });
 
   it("is false for a hand-written banner, which has no season", () => {
-    expect(isGeneratedSeasonBanner(banner())).toBe(false);
-    expect(isGeneratedSeasonBanner(banner({ message: null }))).toBe(false);
+    expect(isGeneratedBanner(banner({ award_season_id: "s4", message: null }))).toBe(true);
+    expect(isGeneratedBanner(banner())).toBe(false);
+    expect(isGeneratedBanner(banner({ message: null }))).toBe(false);
   });
 });
 

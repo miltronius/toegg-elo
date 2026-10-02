@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import type { Banner, Season } from "../lib/supabase";
+import type { AwardResult, Banner, Player, Season } from "../lib/supabase";
 import { marqueeSeconds, visibleBanners } from "../lib/banners";
 import { bannerDisplayText } from "../lib/bannerText";
 import { useTurntable } from "../hooks/useTurntable";
@@ -8,6 +8,10 @@ import { useTurntable } from "../hooks/useTurntable";
 interface MessageBannerProps {
   banners: Banner[];
   seasons: Season[];
+  /** For a Season Awards results banner, which lists the winners. */
+  awardResults?: AwardResult[];
+  /** From get_players(): the names this viewer may see. */
+  players?: Pick<Player, "id" | "name">[];
   signedIn: boolean;
   /** Makes a release banner a link to the changelog at its version. */
   onOpenChangelog?: (version: string) => void;
@@ -57,6 +61,8 @@ const MARQUEE_COPIES = 3;
 export function MessageBanner({
   banners,
   seasons,
+  awardResults,
+  players,
   signedIn,
   onOpenChangelog,
 }: MessageBannerProps) {
@@ -73,13 +79,13 @@ export function MessageBanner({
       visibleBanners(banners, now, signedIn)
         .map((banner) => ({
           id: banner.id,
-          text: bannerDisplayText(banner, seasons, t),
+          text: bannerDisplayText(banner, { seasons, awardResults, players }, t),
           releaseVersion: banner.release_version ?? null,
         }))
         // A season banner pointing at a season we don't have resolves to "";
         // drop it rather than render an empty slot between separators.
         .filter((item) => item.text),
-    [banners, seasons, signedIn, now, t],
+    [banners, seasons, awardResults, players, signedIn, now, t],
   );
 
   const viewportPx =

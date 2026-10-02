@@ -15,6 +15,9 @@ import type { PlayerAchievementRow } from "../lib/achievements";
 import { computeSeasonStats } from "../lib/seasonStats";
 import { DATE_LOCALE } from "../lib/i18n";
 import { ActivityHeatmap } from "./ActivityHeatmap";
+import { SeasonAwardResults } from "./SeasonAwardResults";
+import type { AwardResult } from "../lib/seasonAwards";
+import { RESULTS_BANNER_DAYS } from "../lib/banners";
 
 interface SeasonStatsProps {
   activeSeason: Season | null;
@@ -23,6 +26,8 @@ interface SeasonStatsProps {
   history: EloHistory[];
   players: Player[];
   achievements: PlayerAchievementRow[];
+  /** Counted Season Awards (season_award_results), every season. */
+  awardResults?: AwardResult[];
 }
 
 function formatDay(day: string): string {
@@ -41,6 +46,7 @@ export function SeasonStats({
   history,
   players,
   achievements,
+  awardResults = [],
 }: SeasonStatsProps) {
   const { t } = useTranslation();
   const fmtDay = (day: string) => formatDay(day);
@@ -48,7 +54,16 @@ export function SeasonStats({
     () => [...seasons].sort((a, b) => b.number - a.number),
     [seasons],
   );
-  const [scope, setScope] = useState<string>(activeSeason?.id ?? "all");
+  // Opens on the running season - or, for the two weeks its results banner
+  // runs, on a season whose awards were just counted, so the results aren't
+  // hidden behind the scope select.
+  const [scope, setScope] = useState<string>(() => {
+    const cutoff = Date.now() - RESULTS_BANNER_DAYS * 86_400_000;
+    const fresh = seasons.find(
+      (s) => s.awards_finalized_at && Date.parse(s.awards_finalized_at) > cutoff,
+    );
+    return fresh?.id ?? activeSeason?.id ?? "all";
+  });
 
   const seasonId = scope === "all" ? null : scope;
   const stats = useMemo(() => {
@@ -112,6 +127,15 @@ export function SeasonStats({
           📅 {fmtDay(range.start)} - {fmtDay(range.end)}
           {season && !season.ended_at ? t("seasonStats.active") : ""}
         </div>
+      )}
+
+      {season && (
+        <SeasonAwardResults
+          season={season}
+          seasons={seasons}
+          results={awardResults}
+          players={players}
+        />
       )}
 
       {stats.gamesPlayed === 0 ? (

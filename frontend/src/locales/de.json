@@ -129,7 +129,9 @@
   },
   "banner": {
     "label": "Ankündigungen",
-    "seasonStarted": "🏆 Eine neue Saison hat begonnen - Saison {{number}}: {{name}}. Alle starten wieder bei 1500 Elo. Viel Erfolg!"
+    "seasonStarted": "🏆 Eine neue Saison hat begonnen - Saison {{number}}: {{name}}. Alle starten wieder bei 1500 Elo. Viel Erfolg!",
+    "seasonAwards": "🏆 S{{number}} · {{name}} Awards: {{winners}}",
+    "seasonAwardsNone": "🏆 S{{number}} · {{name}} Awards sind ausgezählt - diesmal hat niemand abgestimmt"
   },
   "changelog": {
     "title": "Was ist neu",
@@ -150,6 +152,8 @@
     "messagePlaceholder": "z.B. Turnier am Freitag um 17:00 - Anmeldung in der Küche!",
     "seasonMessageHint": "Das ist der automatische Text, den jeder in seiner eigenen Sprache sieht. Unverändert lassen (oder leeren), um ihn zu behalten; ändern, um deinen eigenen Wortlaut für alle festzulegen.",
     "seasonBadge": "Saison",
+    "awardsBadge": "Awards",
+    "awardsBannerTitle": "Beim Auszählen der Saison-Awards erstellt; unverändert zeigt es die Gewinner in der Sprache der jeweiligen Person",
     "seasonBannerTitle": "Automatisch erstellt, als diese Saison begonnen hat",
     "currentVersion": "Aktuelle Version: v{{version}}",
     "announce": "Ankündigen",
@@ -311,6 +315,12 @@
     "season_top_5": { "name": "High Five", "description": "Beende eine Saison unter den Top 5" },
     "season_top_10": { "name": "Top Ten", "description": "Beende eine Saison unter den Top 10" },
     "season_net_positive": { "name": "Im grünen Bereich", "description": "Beende eine Saison gewertet und über 1500" },
+    "award_offense": { "name": "Bester Stürmer", "description": "Gewinne den Saison-Award «Bester Stürmer»" },
+    "award_defense": { "name": "Bester Verteidiger - Die Wand", "description": "Gewinne den Saison-Award «Bester Verteidiger - Die Wand»" },
+    "award_fun": { "name": "Grösster Spassfaktor", "description": "Gewinne den Saison-Award «Grösster Spassfaktor»" },
+    "award_community": { "name": "Community-Preis", "description": "Gewinne den Saison-Award «Community-Preis»" },
+    "award_improved": { "name": "Grösster Fortschritt", "description": "Gewinne den Saison-Award «Grösster Fortschritt»" },
+    "award_rookie": { "name": "Rookie der Saison", "description": "Gewinne den Saison-Award «Rookie der Saison»" },
     "linked_account": { "name": "Das bin ich!", "description": "Verknüpfe dein Konto mit deinem Spieler" },
     "completionist": { "name": "Vervollständiger", "description": "Schalte 20 Erfolge frei" },
     "completionist_30": { "name": "Wahrer Vervollständiger", "description": "Schalte 30 Erfolge frei" }
@@ -413,6 +423,7 @@
       "self_vote": "Du kannst nicht für dich selbst stimmen.",
       "nominee_not_eligible": "Dieser Spieler kommt für diesen Award nicht in Frage.",
       "season_not_active": "Vorzeitig öffnen lässt sich die Abstimmung nur für die laufende Saison.",
+      "season_not_found": "Diese Saison gibt es nicht.",
       "unknown": "Etwas ist schiefgelaufen. Bitte versuch es nochmals."
     },
     "nudge": {
@@ -426,6 +437,13 @@
     "nominees": {
       "ranked": "Gewertete Spieler (ab {{min}} Spielen diese Saison)",
       "rookie": "Diese Saison zum ersten Mal gewertet"
+    },
+    "results": {
+      "title": "Saison-Awards",
+      "pending": "Die Abstimmung ist beendet. Das Ergebnis folgt, sobald ein Admin die Stimmen auszählt.",
+      "noVotes": "Keine Stimmen",
+      "votes_one": "{{count}} Stimme",
+      "votes_other": "{{count}} Stimmen"
     },
     "ballot": {
       "turnout": "{{voters}} von {{eligible}} Spielern haben bisher abgestimmt.",
@@ -595,6 +613,11 @@
     "votingClosesBeforeStart": "Das Enddatum der Abstimmung muss nach dem Saisonstart liegen.",
     "closeVoting": "Abstimmung jetzt beenden",
     "closeVotingConfirm": "Die Abstimmung für die Saison-Awards von {{season}} jetzt beenden? Die Stimmen werden eingefroren. Mit einem späteren Enddatum lässt sie sich wieder öffnen.",
+    "closeAndCount": "Abstimmung beenden und auszählen",
+    "countVotes": "Stimmen auszählen",
+    "closeAndCountConfirm": "Die Abstimmung für die Saison-Awards von {{season}} jetzt beenden und auszählen? Das Auszählen ist endgültig: Die Stimmzettel werden gelöscht, nur die Ergebnisse bleiben.",
+    "countConfirm": "Die Stimmen für die Saison-Awards von {{season}} jetzt auszählen? Das Auszählen ist endgültig: Die Stimmzettel werden gelöscht, nur die Ergebnisse bleiben.",
+    "countedHint": "Die Stimmen sind ausgezählt, das Ergebnis steht fest. Du findest es in der Saisonstatistik.",
     "votingOpenUntil": "Läuft bis {{date}}",
     "votingOpenUntilNext": "Läuft bis {{days}} Tage nach dem Start der nächsten Saison",
     "votingClosed": "Beendet am {{date}}",

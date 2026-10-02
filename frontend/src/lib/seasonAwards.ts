@@ -263,7 +263,44 @@ export function parseSeasonDate(text: string, startedAtMs: number): SeasonDate {
   return parsed;
 }
 
-/** The codes cast_award_vote and open_award_voting raise. */
+/** A row of season_award_results: one nominee's votes in a counted season. */
+export type AwardResult = {
+  season_id: string;
+  award_id: AwardId;
+  player_id: string;
+  votes: number;
+  is_winner: boolean;
+};
+
+/** One award's outcome in a counted season, for display. */
+export type AwardStanding = {
+  award: SeasonAward;
+  /** Most votes first; ties keep a stable order by player id. */
+  nominees: { playerId: string; votes: number; isWinner: boolean }[];
+  totalVotes: number;
+  /**
+   * Whether the award has a winner. A count always crowns the most-voted, so
+   * this is false only for an award nobody voted in.
+   */
+  awarded: boolean;
+};
+
+/**
+ * A counted season's results per award, in ballot order. The winners come from
+ * the stored `is_winner` (the count decided them), not from re-deriving here.
+ */
+export function awardStandings(results: AwardResult[], seasonId: string): AwardStanding[] {
+  return SEASON_AWARDS.map((award) => {
+    const nominees = results
+      .filter((r) => r.season_id === seasonId && r.award_id === award.id)
+      .map((r) => ({ playerId: r.player_id, votes: r.votes, isWinner: r.is_winner }))
+      .sort((a, b) => b.votes - a.votes || a.playerId.localeCompare(b.playerId));
+    const totalVotes = nominees.reduce((sum, n) => sum + n.votes, 0);
+    return { award, nominees, totalVotes, awarded: nominees.some((n) => n.isWinner) };
+  });
+}
+
+/** The codes the voting and counting RPCs raise. */
 export const AWARD_ERROR_CODES = [
   "not_allowed",
   "voter_not_linked",
@@ -272,6 +309,7 @@ export const AWARD_ERROR_CODES = [
   "self_vote",
   "nominee_not_eligible",
   "season_not_active",
+  "season_not_found",
 ] as const;
 
 /** Translation key for a voting RPC error, or null for anything unexpected. */

@@ -129,7 +129,9 @@
   },
   "banner": {
     "label": "Announcements",
-    "seasonStarted": "🏆 A new season has started - Season {{number}}: {{name}}. Everyone is back at 1500 Elo. Good luck!"
+    "seasonStarted": "🏆 A new season has started - Season {{number}}: {{name}}. Everyone is back at 1500 Elo. Good luck!",
+    "seasonAwards": "🏆 S{{number}} · {{name}} Awards: {{winners}}",
+    "seasonAwardsNone": "🏆 S{{number}} · {{name}} Awards are counted - nobody voted this time"
   },
   "changelog": {
     "title": "What's new",
@@ -150,6 +152,8 @@
     "messagePlaceholder": "e.g. Tournament this Friday at 17:00 - sign up in the kitchen!",
     "seasonMessageHint": "This is the automatic text, which each viewer sees in their own language. Leave it as it is (or clear it) to keep that; change it to fix your own wording for everyone.",
     "seasonBadge": "Season",
+    "awardsBadge": "Awards",
+    "awardsBannerTitle": "Created by counting the Season Awards; left as it is, it lists the winners in each viewer's language",
     "seasonBannerTitle": "Created automatically when this season started",
     "currentVersion": "Current version: v{{version}}",
     "announce": "Announce",
@@ -311,6 +315,12 @@
     "season_top_5": { "name": "High Five", "description": "Finish a season in the top 5" },
     "season_top_10": { "name": "Top Ten", "description": "Finish a season in the top 10" },
     "season_net_positive": { "name": "In the Green", "description": "Finish a season ranked, above 1500" },
+    "award_offense": { "name": "Best Offensive Player", "description": "Win the “Best Offensive Player” Season Award" },
+    "award_defense": { "name": "Best Defender - The Wall", "description": "Win the “Best Defender - The Wall” Season Award" },
+    "award_fun": { "name": "Most Fun to Play With", "description": "Win the “Most Fun to Play With” Season Award" },
+    "award_community": { "name": "Community Award", "description": "Win the “Community Award” Season Award" },
+    "award_improved": { "name": "Most Improved", "description": "Win the “Most Improved” Season Award" },
+    "award_rookie": { "name": "Rookie of the Season", "description": "Win the “Rookie of the Season” Season Award" },
     "linked_account": { "name": "That's Me!", "description": "Link your account to your player" },
     "completionist": { "name": "Completionist", "description": "Unlock 20 achievements" },
     "completionist_30": { "name": "True Completionist", "description": "Unlock 30 achievements" }
@@ -413,6 +423,7 @@
       "self_vote": "You can't vote for yourself.",
       "nominee_not_eligible": "That player isn't eligible for this award.",
       "season_not_active": "Voting can only be opened early for the running season.",
+      "season_not_found": "That season doesn't exist.",
       "unknown": "Something went wrong. Please try again."
     },
     "nudge": {
@@ -426,6 +437,13 @@
     "nominees": {
       "ranked": "Ranked players ({{min}}+ games this season)",
       "rookie": "Ranked this season for the first time"
+    },
+    "results": {
+      "title": "Season Awards",
+      "pending": "Voting has closed. The results follow once an admin counts the votes.",
+      "noVotes": "No votes",
+      "votes_one": "{{count}} vote",
+      "votes_other": "{{count}} votes"
     },
     "ballot": {
       "turnout": "{{voters}} of {{eligible}} players have voted so far.",
@@ -595,6 +613,11 @@
     "votingClosesBeforeStart": "The closing date has to be after the season starts.",
     "closeVoting": "Close voting now",
     "closeVotingConfirm": "Close Season Awards voting for {{season}} now? Picks are frozen. You can reopen it by setting a later closing date.",
+    "closeAndCount": "Close voting and count",
+    "countVotes": "Count votes",
+    "closeAndCountConfirm": "Close Season Awards voting for {{season}} and count the votes now? Counting is final: the ballots are deleted and only the totals are kept.",
+    "countConfirm": "Count the Season Awards votes for {{season}} now? Counting is final: the ballots are deleted and only the totals are kept.",
+    "countedHint": "The votes are counted and the results are final. See them in Season Stats.",
     "votingOpenUntil": "Open until {{date}}",
     "votingOpenUntilNext": "Open until {{days}} days into the next season",
     "votingClosed": "Closed {{date}}",

@@ -2,11 +2,12 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   closeAwardVoting,
+  finalizeSeasonAwards,
   openAwardVoting,
   updateSeasonVotingSchedule,
   type Season,
 } from "../lib/supabase";
-import { awardVotingStatus, nextSeasonOf } from "../lib/seasonAwards";
+import { nextSeasonOf } from "../lib/seasonAwards";
 import { SeasonScheduleAdmin } from "./SeasonScheduleAdmin";
 
 interface SeasonOptionsAdminProps {
@@ -22,8 +23,10 @@ const TICK_MS = 60_000;
 
 /**
  * The Admin tab's "Season options" card: one SeasonScheduleAdmin block for the
- * running season (planned end, award voting), plus one for the previous season
- * while its ballot is still open (it runs into the first two weeks of the next).
+ * running season (planned end, award voting) and one for the previous season,
+ * always - its ballot runs into the first two weeks of the next, "Count votes"
+ * needs somewhere to live once it closes, and afterwards the block still says
+ * where it stands ("Results are final", collapsed).
  */
 export function SeasonOptionsAdmin({ seasons, onChanged, now: fixedNow }: SeasonOptionsAdminProps) {
   const { t } = useTranslation();
@@ -37,7 +40,7 @@ export function SeasonOptionsAdmin({ seasons, onChanged, now: fixedNow }: Season
   const active = seasons.find((s) => s.is_active) ?? null;
   const previous = active ? (seasons.find((s) => s.number === active.number - 1) ?? null) : null;
   const managed = [
-    ...(previous && awardVotingStatus(previous, active, now) === "open" ? [previous] : []),
+    ...(previous ? [previous] : []),
     ...(active ? [active] : []),
   ];
 
@@ -68,6 +71,10 @@ export function SeasonOptionsAdmin({ seasons, onChanged, now: fixedNow }: Season
             }}
             onCloseVoting={async () => {
               await closeAwardVoting(season.id);
+              onChanged();
+            }}
+            onCount={async () => {
+              await finalizeSeasonAwards(season.id);
               onChanged();
             }}
           />
