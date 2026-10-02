@@ -263,9 +263,6 @@ export function parseSeasonDate(text: string, startedAtMs: number): SeasonDate {
   return parsed;
 }
 
-/** An award with fewer votes than this has no winner (finalize_season_awards). */
-export const AWARD_MIN_VOTES = 3;
-
 /** A row of season_award_results: one nominee's votes in a counted season. */
 export type AwardResult = {
   season_id: string;
@@ -281,7 +278,10 @@ export type AwardStanding = {
   /** Most votes first; ties keep a stable order by player id. */
   nominees: { playerId: string; votes: number; isWinner: boolean }[];
   totalVotes: number;
-  /** False when fewer than AWARD_MIN_VOTES votes were cast - no winner. */
+  /**
+   * Whether the award has a winner. A count always crowns the most-voted, so
+   * this is false only for an award nobody voted in.
+   */
   awarded: boolean;
 };
 

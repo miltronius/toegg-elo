@@ -44,8 +44,9 @@ REVOKE ALL ON FUNCTION award_voting_is_open(UUID) FROM PUBLIC, anon, authenticat
 -- 2. The results
 -- ============================================================
 -- One row per nominee who got at least one counted vote. Winners: the most
--- votes in the award; a tie shares the win; an award with fewer than 3 votes
--- cast (AWARD_MIN_VOTES in lib/seasonAwards.ts) has no winner.
+-- votes in the award, however few - an admin chose to count, so every award
+-- anyone voted in is awarded; a tie shares the win. Only an award nobody voted
+-- in has no winner (and no rows).
 CREATE TABLE IF NOT EXISTS season_award_results (
   season_id  UUID NOT NULL REFERENCES seasons(id) ON DELETE CASCADE,
   award_id   TEXT NOT NULL,
@@ -104,7 +105,6 @@ RETURNS void LANGUAGE plpgsql SECURITY DEFINER
 SET search_path = public
 AS $$
 DECLARE
-  c_min_votes CONSTANT INTEGER := 3;  -- AWARD_MIN_VOTES
   v_season    seasons%ROWTYPE;
   v_now       TIMESTAMPTZ := now();
 BEGIN
@@ -152,9 +152,7 @@ BEGIN
   UPDATE season_award_results r
      SET is_winner = (
            r.votes = (SELECT max(x.votes) FROM season_award_results x
-                       WHERE x.season_id = r.season_id AND x.award_id = r.award_id)
-           AND (SELECT sum(x.votes) FROM season_award_results x
-                 WHERE x.season_id = r.season_id AND x.award_id = r.award_id) >= c_min_votes)
+                       WHERE x.season_id = r.season_id AND x.award_id = r.award_id))
    WHERE r.season_id = p_season_id;
 
   -- 3. Each win is a per-season achievement with the award's id. The frontend

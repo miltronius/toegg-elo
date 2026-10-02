@@ -2,7 +2,6 @@ import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { Player, Season } from "../lib/supabase";
 import {
-  AWARD_MIN_VOTES,
   awardStandings,
   awardVotingStatus,
   nextSeasonOf,
@@ -19,8 +18,8 @@ interface SeasonAwardResultsProps {
 
 /**
  * Season Stats' "Season Awards" section for one season. Counted: every award
- * with the winners highlighted and the full ranking by votes, or "not awarded"
- * where fewer than AWARD_MIN_VOTES were cast. Closed but not counted: a note
+ * with the winners highlighted and the full ranking by votes ("No votes" for
+ * an award nobody voted in). Closed but not counted: a note
  * that the results follow once an admin counts. Before that it shows nothing -
  * an open ballot has the vote nudge at the top of the dialog instead.
  */
@@ -43,7 +42,7 @@ export function SeasonAwardResults({ season, seasons, results, players }: Season
         <p className="award-results-pending">{t("seasonAwards.results.pending")}</p>
       ) : (
         <div className="award-results-grid">
-          {standings.map(({ award, nominees, totalVotes, awarded }) => (
+          {standings.map(({ award, nominees, awarded }) => (
             <div key={award.id} className={`award-result${awarded ? " is-awarded" : ""}`}>
               <div className="award-result-head">
                 <span aria-hidden="true">{award.icon}</span>{" "}
@@ -57,11 +56,7 @@ export function SeasonAwardResults({ season, seasons, results, players }: Season
                     .join(" & ")}
                 </div>
               ) : (
-                <div className="award-result-none">
-                  {totalVotes === 0
-                    ? t("seasonAwards.results.noVotes")
-                    : t("seasonAwards.results.notAwarded", { min: AWARD_MIN_VOTES })}
-                </div>
+                <div className="award-result-none">{t("seasonAwards.results.noVotes")}</div>
               )}
               {nominees.length > 0 && (
                 <ol className="award-result-ranking">

@@ -1,7 +1,7 @@
 import type { TFunction } from "i18next";
 import type { Player, Season } from "./supabase";
 import { isGeneratedBanner, type Banner } from "./banners";
-import { AWARD_MIN_VOTES, awardStandings, type AwardResult } from "./seasonAwards";
+import { awardStandings, type AwardResult } from "./seasonAwards";
 
 /**
  * What a generated banner's text is built from. A season banner needs only
@@ -63,7 +63,7 @@ function awardsBannerText(season: Season, ctx: BannerContext, t: TFunction): str
   const vars = { number: season.number, name: season.name };
   return winners.length > 0
     ? t("banner.seasonAwards", { ...vars, winners: winners.join(" · ") })
-    : t("banner.seasonAwardsNone", { ...vars, min: AWARD_MIN_VOTES });
+    : t("banner.seasonAwardsNone", vars);
 }
 
 /**

@@ -131,7 +131,7 @@
     "label": "Ankündigungen",
     "seasonStarted": "🏆 Eine neue Saison hat begonnen - Saison {{number}}: {{name}}. Alle starten wieder bei 1500 Elo. Viel Erfolg!",
     "seasonAwards": "🏆 S{{number}} · {{name}} Awards: {{winners}}",
-    "seasonAwardsNone": "🏆 S{{number}} · {{name}} Awards sind ausgezählt - diesmal hat kein Award {{min}} Stimmen erreicht"
+    "seasonAwardsNone": "🏆 S{{number}} · {{name}} Awards sind ausgezählt - diesmal hat niemand abgestimmt"
   },
   "changelog": {
     "title": "Was ist neu",
@@ -442,7 +442,6 @@
       "title": "Saison-Awards",
       "pending": "Die Abstimmung ist beendet. Das Ergebnis folgt, sobald ein Admin die Stimmen auszählt.",
       "noVotes": "Keine Stimmen",
-      "notAwarded": "Nicht vergeben (weniger als {{min}} Stimmen)",
       "votes_one": "{{count}} Stimme",
       "votes_other": "{{count}} Stimmen"
     },

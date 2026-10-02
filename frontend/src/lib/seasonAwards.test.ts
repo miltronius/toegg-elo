@@ -361,12 +361,12 @@ describe("awardStandings", () => {
     expect(fun.awarded).toBe(true);
   });
 
-  it("reads an award without a winner as not awarded, from the stored result", () => {
-    const got = awardStandings([r("award_rookie", "p1", 1), r("award_rookie", "p2", 1)], "s4");
-    const rookie = got.find((s) => s.award.id === "award_rookie")!;
-    expect(rookie.awarded).toBe(false);
-    expect(rookie.totalVotes).toBe(2);
-    // An award nobody voted in is empty and not awarded either.
+  it("awards a single vote, and leaves only an award nobody voted in unawarded", () => {
+    const got = awardStandings([r("award_rookie", "p1", 1, true)], "s4");
+    expect(got.find((s) => s.award.id === "award_rookie")).toMatchObject({
+      awarded: true,
+      totalVotes: 1,
+    });
     expect(got.find((s) => s.award.id === "award_offense")).toMatchObject({
       nominees: [],
       totalVotes: 0,

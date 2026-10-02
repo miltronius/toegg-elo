@@ -38,7 +38,7 @@ const RESULTS = [
   r("award_offense", "p2", 1),
   r("award_fun", "p1", 2, true),
   r("award_fun", "p3", 2, true),
-  r("award_defense", "p2", 2),
+  r("award_defense", "p2", 1, true),
 ];
 
 const award = (name: string) => screen.getByText(name).closest(".award-result") as HTMLElement;
@@ -61,7 +61,8 @@ describe("SeasonAwardResults", () => {
       "Ben1 vote",
     ]);
     expect(within(award("Most Fun to Play With")).getByText("Anna & Carla")).toBeInTheDocument();
-    expect(within(award("Best Defender - The Wall")).getByText("Not awarded (fewer than 3 votes)")).toBeInTheDocument();
+    // However few the votes, the most-voted win once an admin counts.
+    expect(within(award("Best Defender - The Wall")).getByText("Ben", { selector: ".award-result-winners" })).toBeInTheDocument();
     expect(within(award("Most Improved")).getByText("No votes")).toBeInTheDocument();
   });
 

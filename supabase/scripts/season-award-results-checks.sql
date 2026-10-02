@@ -101,7 +101,7 @@ SELECT pg_temp.expect('admin opens voting', $q$SELECT open_award_voting(pg_temp.
 
 -- ── The ballots ──────────────────────────────────────────────
 -- offense: 6 gets 2, 7 gets 1        -> 3 cast, 6 wins
--- defense: 6 gets 1, 7 gets 1        -> 2 cast, no winner
+-- defense: 6 gets 1, 7 gets 1        -> one vote each still wins, shared
 -- fun:     6 gets 2, 7 gets 2        -> tie, both win
 -- rookie:  8 gets 3, but 8 turns out to have been ranked before -> dropped
 SELECT pg_temp.vote(1, 'award_offense', 6);
@@ -130,15 +130,16 @@ SELECT pg_temp.expect('admin closes voting and counts', $q$SELECT finalize_seaso
 SELECT pg_temp.expect_count('closed at the count', 'SELECT count(*) FROM seasons WHERE is_active AND voting_closes_at = now()', 1);
 SELECT pg_temp.expect_count('stamped final', 'SELECT count(*) FROM seasons WHERE is_active AND awards_finalized_at = now()', 1);
 SELECT pg_temp.expect_count('offense: most votes wins', $q$SELECT count(*) WHERE pg_temp.result('award_offense', 6) = '2 winner' AND pg_temp.result('award_offense', 7) = '1'$q$, 1);
-SELECT pg_temp.expect_count('defense: under 3 votes, no winner', $q$SELECT count(*) WHERE pg_temp.result('award_defense', 6) = '1' AND pg_temp.result('award_defense', 7) = '1'$q$, 1);
+SELECT pg_temp.expect_count('defense: however few the votes, the most-voted win', $q$SELECT count(*) WHERE pg_temp.result('award_defense', 6) = '1 winner' AND pg_temp.result('award_defense', 7) = '1 winner'$q$, 1);
+SELECT pg_temp.expect_count('an award nobody voted in has no winner', $q$SELECT count(*) FROM season_award_results WHERE season_id = pg_temp.active() AND award_id = 'award_community'$q$, 0);
 SELECT pg_temp.expect_count('fun: a tie shares the win', $q$SELECT count(*) WHERE pg_temp.result('award_fun', 6) = '2 winner' AND pg_temp.result('award_fun', 7) = '2 winner'$q$, 1);
 SELECT pg_temp.expect_count('rookie: votes for an ineligible nominee are dropped', $q$SELECT count(*) FROM season_award_results WHERE season_id = pg_temp.active() AND award_id = 'award_rookie'$q$, 0);
 SELECT pg_temp.expect_count('nothing else was written', $q$SELECT count(*) FROM season_award_results WHERE season_id = pg_temp.active()$q$, 6);
 
 RESET ROLE;
 SELECT pg_temp.expect_count('the ballots are gone', 'SELECT count(*) FROM season_award_votes WHERE season_id = pg_temp.active()', 0);
-SELECT pg_temp.expect_count('winners get the award achievement', $q$SELECT count(*) FROM player_achievements WHERE season_id = pg_temp.active() AND (player_id, achievement_id) IN ((pg_temp.p(6), 'award_offense'), (pg_temp.p(6), 'award_fun'), (pg_temp.p(7), 'award_fun'))$q$, 3);
-SELECT pg_temp.expect_count('...and only winners', $q$SELECT count(*) FROM player_achievements WHERE season_id = pg_temp.active() AND achievement_id LIKE 'award\_%'$q$, 3);
+SELECT pg_temp.expect_count('winners get the award achievement', $q$SELECT count(*) FROM player_achievements WHERE season_id = pg_temp.active() AND (player_id, achievement_id) IN ((pg_temp.p(6), 'award_offense'), (pg_temp.p(6), 'award_fun'), (pg_temp.p(7), 'award_fun'), (pg_temp.p(6), 'award_defense'), (pg_temp.p(7), 'award_defense'))$q$, 5);
+SELECT pg_temp.expect_count('...and only winners', $q$SELECT count(*) FROM player_achievements WHERE season_id = pg_temp.active() AND achievement_id LIKE 'award\_%'$q$, 5);
 SELECT pg_temp.expect_count('one results banner, translated by default', $q$SELECT count(*) FROM banners WHERE award_season_id = pg_temp.active() AND message IS NULL AND is_active AND audience = 'everyone' AND ends_at = now() + interval '14 days'$q$, 1);
 
 -- ── After the count ──────────────────────────────────────────

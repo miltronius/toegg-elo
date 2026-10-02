@@ -131,7 +131,7 @@
     "label": "Announcements",
     "seasonStarted": "🏆 A new season has started - Season {{number}}: {{name}}. Everyone is back at 1500 Elo. Good luck!",
     "seasonAwards": "🏆 S{{number}} · {{name}} Awards: {{winners}}",
-    "seasonAwardsNone": "🏆 S{{number}} · {{name}} Awards are counted - no award reached {{min}} votes this time"
+    "seasonAwardsNone": "🏆 S{{number}} · {{name}} Awards are counted - nobody voted this time"
   },
   "changelog": {
     "title": "What's new",
@@ -442,7 +442,6 @@
       "title": "Season Awards",
       "pending": "Voting has closed. The results follow once an admin counts the votes.",
       "noVotes": "No votes",
-      "notAwarded": "Not awarded (fewer than {{min}} votes)",
       "votes_one": "{{count}} vote",
       "votes_other": "{{count}} votes"
     },
