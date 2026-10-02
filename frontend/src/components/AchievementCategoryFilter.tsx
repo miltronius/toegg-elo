@@ -14,17 +14,30 @@ interface AchievementCategoryFilterProps {
   counts?: Partial<
     Record<AchievementCategory, { total: number; unlocked?: number }>
   >;
-  /** Badges shown in the closed trigger before the rest collapse into "+N". */
+  /**
+   * With several picked, the trigger shows emoji-only badges, this many before
+   * the rest collapse into "+N". A single pick always shows its full badge.
+   */
   maxBadges?: number;
   /** Open the list from the trigger's left edge rather than its right. */
   alignStart?: boolean;
 }
 
-export function CategoryBadge({ id }: { id: AchievementCategory }) {
+export function CategoryBadge({
+  id,
+  compact = false,
+}: {
+  id: AchievementCategory;
+  /** Emoji only; the name stays for screen readers and the tooltip. */
+  compact?: boolean;
+}) {
   const { t } = useTranslation();
   const icon = ACHIEVEMENT_CATEGORIES.find((c) => c.id === id)?.icon;
   return (
-    <span className={`cat-badge cat-badge--${id}`}>
+    <span
+      className={`cat-badge cat-badge--${id}${compact ? " cat-badge--compact" : ""}`}
+      title={compact ? t(`achievementCategories.${id}`) : undefined}
+    >
       <span aria-hidden="true">{icon}</span>
       <span className="cat-badge-label">
         {t(`achievementCategories.${id}`)}
@@ -41,7 +54,7 @@ export function AchievementCategoryFilter({
   selected,
   onChange,
   counts,
-  maxBadges = 2,
+  maxBadges = 4,
   alignStart = false,
 }: AchievementCategoryFilterProps) {
   const { t } = useTranslation();
@@ -117,7 +130,8 @@ export function AchievementCategoryFilter({
     }
   };
 
-  const shown = selected.slice(0, maxBadges);
+  const compact = selected.length > 1;
+  const shown = compact ? selected.slice(0, maxBadges) : selected;
   const rest = selected.length - shown.length;
 
   return (
@@ -145,7 +159,7 @@ export function AchievementCategoryFilter({
         ) : (
           <>
             {shown.map((id) => (
-              <CategoryBadge key={id} id={id} />
+              <CategoryBadge key={id} id={id} compact={compact} />
             ))}
             {rest > 0 && (
               <span className="cat-filter-more">

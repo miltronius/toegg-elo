@@ -142,6 +142,9 @@ describe("AchievementGallery - category filter", () => {
     await userEvent.click(screen.getByRole("option", { name: /Goals/ }));
     await userEvent.keyboard("{Escape}");
     expect(screen.queryByText("First Victory")).not.toBeInTheDocument();
+    // Several picked: emoji-only badges, the names kept for screen readers.
+    expect(trigger.querySelectorAll(".cat-badge--compact")).toHaveLength(2);
+    expect(trigger).toHaveTextContent("Season");
 
     await userEvent.click(
       screen.getByRole("button", { name: "Clear category filter" }),

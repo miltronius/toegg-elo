@@ -1756,6 +1756,7 @@ td.winrate {
 }
 .cat-badge {
   --cat: var(--color-text-light);
+  position: relative;
   display: inline-flex;
   align-items: center;
   gap: 0.3em;
@@ -1774,6 +1775,17 @@ td.winrate {
 .cat-badge-label {
   overflow: hidden;
   text-overflow: ellipsis;
+}
+.cat-badge--compact {
+  padding: 0.05rem 0.3rem;
+}
+.cat-badge--compact .cat-badge-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 .cat-badge--record {
   --cat: var(--cat-record);

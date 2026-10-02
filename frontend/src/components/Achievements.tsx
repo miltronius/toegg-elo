@@ -334,7 +334,7 @@ function AchievementsOverview({
           selected={categories}
           onChange={onCategoriesChange}
           counts={totalsOnly}
-          maxBadges={1}
+          maxBadges={3}
           alignStart
         />
       </div>
