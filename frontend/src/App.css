@@ -2456,6 +2456,18 @@ button.award-nudge:hover {
   display: block;
   overflow-wrap: anywhere;
 }
+/* An invisible bold copy, so every label is always as wide as it is when
+   current. Otherwise the bold current entry widens the list, which is sized to
+   its longest entry and hangs from its right edge - so clicking between
+   entries shifted the whole list sideways. */
+.section-nav-label::after {
+  content: attr(data-label);
+  display: block;
+  height: 0;
+  overflow: hidden;
+  visibility: hidden;
+  font-weight: 600;
+}
 .section-nav-detail {
   display: block;
   font-size: 0.72rem;

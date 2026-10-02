@@ -117,7 +117,9 @@ export function SectionNav({ entries, label, onReveal }: SectionNavProps) {
               aria-current={entry.id === active ? "location" : undefined}
               onClick={(e) => go(e, entry.id)}
             >
-              <span className="section-nav-label">{entry.label}</span>
+              <span className="section-nav-label" data-label={entry.label}>
+                {entry.label}
+              </span>
               {entry.detail && <span className="section-nav-detail">{entry.detail}</span>}
             </a>
           </li>
