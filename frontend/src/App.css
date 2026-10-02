@@ -1858,9 +1858,11 @@ td.winrate {
   cursor: pointer;
   overflow: hidden;
 }
-/* Room for the clear button, which sits over the trigger left of the caret. */
-.cat-filter-trigger.has-clear {
-  padding-right: 1.9rem;
+/* Room for the clear button, which sits over the trigger left of the caret.
+   The gap goes before the caret, not as trigger padding: padding would push
+   the caret left, under the clear button. */
+.cat-filter-trigger.has-clear .cat-filter-caret {
+  padding-left: 1.6rem;
 }
 .cat-filter-clear {
   position: absolute;
