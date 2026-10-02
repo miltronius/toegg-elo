@@ -394,7 +394,16 @@ function AchievementsOverview({
                     </div>
                   </div>
                   <div className="achievements-overview-cat">
-                    <CategoryBadge id={def.category} />
+                    <button
+                      type="button"
+                      className="cat-badge-btn"
+                      aria-label={t("achievements.filterToCategory", {
+                        name: t(`achievementCategories.${def.category}`),
+                      })}
+                      onClick={() => onCategoriesChange([def.category])}
+                    >
+                      <CategoryBadge id={def.category} />
+                    </button>
                   </div>
                   <div>
                     <div className="achievements-progress-bar achievements-overview-bar">

@@ -1454,6 +1454,31 @@ td.winrate {
 .achievements-overview-cat {
   min-width: 0;
 }
+/* A row's badge filters the list to its category. */
+.cat-badge-btn {
+  display: inline-flex;
+  max-width: 100%;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  cursor: pointer;
+}
+.cat-badge-btn:hover .cat-badge {
+  background: color-mix(in srgb, var(--cat) 24%, transparent);
+}
+.cat-badge-btn:hover .cat-badge--activity {
+  background: var(--color-bg-light);
+}
+.cat-badge-btn:hover .cat-badge--meta {
+  background: var(--cat);
+  filter: brightness(1.2);
+}
+.cat-badge-btn:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+  border-radius: 999px;
+}
 .achievements-overview-row {
   border-radius: 6px;
   transition:
@@ -1756,7 +1781,6 @@ td.winrate {
 }
 .cat-badge {
   --cat: var(--color-text-light);
-  cursor: pointer;
   position: relative;
   display: inline-flex;
   align-items: center;

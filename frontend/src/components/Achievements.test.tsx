@@ -186,4 +186,16 @@ describe("Achievements overview - category column", () => {
     expect(screen.getByText("Flawless Victory")).toBeInTheDocument();
     expect(screen.queryByText("Season Champion")).not.toBeInTheDocument();
   });
+
+  it("filters to a row's category when its badge is clicked", async () => {
+    renderOverview();
+    await userEvent.click(
+      screen.getAllByRole("button", { name: "Show only Season" })[0],
+    );
+    expect(screen.getByText("Season Champion")).toBeInTheDocument();
+    expect(screen.queryByText("Flawless Victory")).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Filter by category" }),
+    ).toHaveTextContent("Season");
+  });
 });

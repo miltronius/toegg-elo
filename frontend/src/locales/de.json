@@ -354,7 +354,8 @@
     "categoryFilter": "Nach Kategorie filtern",
     "allCategories": "Alle Kategorien",
     "moreCategories": "+{{count}}",
-    "clearCategories": "Kategoriefilter zurücksetzen"
+    "clearCategories": "Kategoriefilter zurücksetzen",
+    "filterToCategory": "Nur {{name}} anzeigen"
   },
   "achievementCategories": {
     "record": "Siege & Niederlagen",
