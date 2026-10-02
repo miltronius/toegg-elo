@@ -4,16 +4,8 @@
 
 ### Minor Changes
 
-- [#137](https://github.com/miltronius/toegg-elo/pull/137) [`bb8adb0`](https://github.com/miltronius/toegg-elo/commit/bb8adb00a391ca43bd56e3193285ee6cddb02f11) Thanks [@miltronius](https://github.com/miltronius)! - Achievement categories: filter the Achievements tab and a player's achievements by Wins & Losses, Streaks, Goals and more
-  Every definition carries a display-only `category` (`ACHIEVEMENT_CATEGORIES` in `lib/achievements.ts`); colours are the `--cat-<id>` CSS vars. No DB change.
-
-- [#134](https://github.com/miltronius/toegg-elo/pull/134) [`38a6c8d`](https://github.com/miltronius/toegg-elo/commit/38a6c8d9b361c486296c2bf2aadf33e321b28a3e) Thanks [@miltronius](https://github.com/miltronius)! - Season Awards results: an admin counts the votes once voting has closed, the winners get the award as an achievement, and the results appear in Season Stats and in a banner.
-  
-  Adds `season_award_results`, `seasons.awards_finalized_at`, `banners.award_season_id` and the admin-only `finalize_season_awards` RPC (closes a still-open ballot, drops votes for nominees who no longer qualify, tallies, records winners, deletes the ballots). Award wins are per-season achievements in both copies of the achievements code. Apply `20261002_season_award_results.sql` before deploying the frontend and `calculate-elo`.
-
-- [#133](https://github.com/miltronius/toegg-elo/pull/133) [`dffda35`](https://github.com/miltronius/toegg-elo/commit/dffda35cb07b2e87b082087b45631452441276ab) Thanks [@miltronius](https://github.com/miltronius)! - Season Awards voting: linked players vote for six awards, from a week before a season ends until two weeks into the next - secret ballot on shiny award and nominee cards, changeable until it closes, with live turnout.
-  
-  Adds `seasons.planned_end_at`/`voting_opened_at`, the `season_award_votes` table and `seasons.voting_closes_at`, the `cast_award_vote`/`open_award_voting`/`close_award_voting`/`award_turnout` RPCs, and closes anon access to `end_season_and_start_new`. Apply `20260930_season_award_voting.sql` before deploying the frontend.
+- Add Achievement categories
+- Add Season Awards
 
 ## 1.12.0 (2026-09-30)
 
