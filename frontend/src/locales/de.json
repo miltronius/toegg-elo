@@ -129,7 +129,9 @@
   },
   "banner": {
     "label": "Ankündigungen",
-    "seasonStarted": "🏆 Eine neue Saison hat begonnen - Saison {{number}}: {{name}}. Alle starten wieder bei 1500 Elo. Viel Erfolg!"
+    "seasonStarted": "🏆 Eine neue Saison hat begonnen - Saison {{number}}: {{name}}. Alle starten wieder bei 1500 Elo. Viel Erfolg!",
+    "seasonAwards": "🏆 S{{number}} · {{name}} Awards: {{winners}}",
+    "seasonAwardsNone": "🏆 S{{number}} · {{name}} Awards sind ausgezählt - diesmal hat kein Award {{min}} Stimmen erreicht"
   },
   "changelog": {
     "title": "Was ist neu",
@@ -150,6 +152,8 @@
     "messagePlaceholder": "z.B. Turnier am Freitag um 17:00 - Anmeldung in der Küche!",
     "seasonMessageHint": "Das ist der automatische Text, den jeder in seiner eigenen Sprache sieht. Unverändert lassen (oder leeren), um ihn zu behalten; ändern, um deinen eigenen Wortlaut für alle festzulegen.",
     "seasonBadge": "Saison",
+    "awardsBadge": "Awards",
+    "awardsBannerTitle": "Beim Auszählen der Saison-Awards erstellt; unverändert zeigt es die Gewinner in der Sprache der jeweiligen Person",
     "seasonBannerTitle": "Automatisch erstellt, als diese Saison begonnen hat",
     "currentVersion": "Aktuelle Version: v{{version}}",
     "announce": "Ankündigen",

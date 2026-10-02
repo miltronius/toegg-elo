@@ -8,7 +8,7 @@
  * A row holds one language, which is why a season banner's `message` starts
  * NULL, meaning "render the built-in translated announcement". The moment an
  * admin types a message the stored text wins, and clearing it reverts to the
- * translation. `isGeneratedSeasonBanner` is that distinction.
+ * translation. `isGeneratedBanner` is that distinction.
  *
  * Visibility is a window (`starts_at`/`ends_at`, either bound optional) gated by
  * `is_active`. Keeping the switch separate from the window is what lets an
@@ -67,6 +67,12 @@ export type Banner = {
    * migration adds the column.
    */
   release_version?: string | null;
+  /**
+   * Set only on the Season Awards results banner a count created
+   * (finalize_season_awards). Optional like release_version, for the same
+   * reason: the frontend can ship before the migration adds the column.
+   */
+  award_season_id?: string | null;
   starts_at: string | null;
   ends_at: string | null;
   is_active: boolean;
@@ -79,13 +85,13 @@ export type Banner = {
 };
 
 /**
- * A season banner whose text an admin hasn't overridden, so the viewer should
- * see the translated announcement rather than anything stored. Blank-but-set
- * counts as not overridden, which is what makes clearing the field in the admin
- * form a revert rather than an empty banner.
+ * A season or Season Awards results banner whose text an admin hasn't
+ * overridden, so the viewer should see the generated announcement rather than
+ * anything stored. Blank-but-set counts as not overridden, which is what makes
+ * clearing the field in the admin form a revert rather than an empty banner.
  */
-export function isGeneratedSeasonBanner(banner: Banner): boolean {
-  return banner.season_id !== null && !banner.message?.trim();
+export function isGeneratedBanner(banner: Banner): boolean {
+  return (banner.season_id != null || banner.award_season_id != null) && !banner.message?.trim();
 }
 
 /**

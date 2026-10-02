@@ -10,6 +10,8 @@ import {
   type Banner,
   type BannerInput,
   type Season,
+  type AwardResult,
+  type Player,
 } from "../lib/supabase";
 import {
   BANNER_AUDIENCES,
@@ -20,7 +22,7 @@ import {
   bannerStatus,
   maskSwissDateTime,
   parseSwissDateTime,
-  isGeneratedSeasonBanner,
+  isGeneratedBanner,
   isReleaseAnnounced,
   moveItem,
   orderBanners,
@@ -30,12 +32,15 @@ import {
   type BannerDuration,
   type BannerStatus,
 } from "../lib/banners";
-import { bannerDisplayText, storedMessage } from "../lib/bannerText";
+import { bannerDisplayText, storedMessage, type BannerContext } from "../lib/bannerText";
 import { DATE_LOCALE } from "../lib/i18n";
 
 interface BannerAdminProps {
   banners: Banner[];
   seasons: Season[];
+  /** For a Season Awards results banner, which lists the winners. */
+  awardResults?: AwardResult[];
+  players?: Pick<Player, "id" | "name">[];
   onChanged: () => void;
   /** The version this build is; what "Announce" announces. */
   appVersion: string;
@@ -82,13 +87,13 @@ const emptyForm = (): FormState => ({
 
 const formFor = (
   banner: Banner,
-  seasons: Season[],
+  ctx: BannerContext,
   t: TFunction,
 ): FormState => ({
   // The text the banner actually shows, so a season banner's generated
   // announcement can be edited in place. Leaving it untouched still stores NULL
   // (see storedMessage), so it keeps being translated per viewer.
-  message: bannerDisplayText(banner, seasons, t),
+  message: bannerDisplayText(banner, ctx, t),
   isActive: banner.is_active,
   audience: banner.audience,
   from: toSwissDateTime(banner.starts_at),
@@ -106,10 +111,13 @@ const formFor = (
 export function BannerAdmin({
   banners,
   seasons,
+  awardResults,
+  players,
   onChanged,
   appVersion,
 }: BannerAdminProps) {
   const { t } = useTranslation();
+  const ctx: BannerContext = { seasons, awardResults, players };
   const [form, setForm] = useState<FormState>(emptyForm);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -189,15 +197,18 @@ export function BannerAdmin({
   const editing = editingId
     ? (banners.find((b) => b.id === editingId) ?? null)
     : null;
-  /** Season banners may be left blank; that reverts them to the translation. */
-  const isSeasonBanner = editing?.season_id != null;
+  /**
+   * Season and results banners may be left blank; that reverts them to the
+   * generated text.
+   */
+  const isSeasonBanner = editing?.season_id != null || editing?.award_season_id != null;
 
   const handleSubmit = async () => {
     if (!form.message.trim() && !isSeasonBanner) {
       setError(t("bannerAdmin.messageRequired"));
       return;
     }
-    const message = storedMessage(form.message, editing, seasons, t);
+    const message = storedMessage(form.message, editing, ctx, t);
 
     // The window is stored exactly as typed, whether or not the banner is
     // currently switched on - hiding one must not throw away its dates. A typo
@@ -562,6 +573,14 @@ export function BannerAdmin({
                       {t("bannerAdmin.seasonBadge")}
                     </span>
                   )}
+                  {banner.award_season_id != null && (
+                    <span
+                      className="text-[0.7rem] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full border bg-bg-light text-text-light border-border"
+                      title={t("bannerAdmin.awardsBannerTitle")}
+                    >
+                      {t("bannerAdmin.awardsBadge")}
+                    </span>
+                  )}
                   {banner.release_version != null && (
                     <span
                       className="text-[0.7rem] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full border bg-bg-light text-text-light border-border"
@@ -576,10 +595,10 @@ export function BannerAdmin({
                       hasn't overridden - i.e. exactly what viewers see. */}
                   <span
                     className={`flex-1 min-w-40 break-words ${
-                      isGeneratedSeasonBanner(banner) ? "italic" : ""
+                      isGeneratedBanner(banner) ? "italic" : ""
                     }`}
                   >
-                    {bannerDisplayText(banner, seasons, t)}
+                    {bannerDisplayText(banner, ctx, t)}
                   </span>
                   <span className="text-text-light text-[0.78rem] whitespace-nowrap">
                     {t(`bannerAdmin.audiences.${banner.audience}`)} ·{" "}
@@ -600,7 +619,7 @@ export function BannerAdmin({
                       type="button"
                       className="btn-small"
                       onClick={() => {
-                        setForm(formFor(banner, seasons, t));
+                        setForm(formFor(banner, ctx, t));
                         setEditingId(banner.id);
                         setError(null);
                       }}

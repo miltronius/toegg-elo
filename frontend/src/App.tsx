@@ -457,6 +457,8 @@ function App() {
       <MessageBanner
         banners={banners}
         seasons={seasons}
+        awardResults={awardResults}
+        players={players}
         signedIn={Boolean(user)}
         onOpenChangelog={openChangelog}
       />
@@ -648,6 +650,8 @@ function App() {
                 <BannerAdmin
                   banners={banners}
                   seasons={seasons}
+                  awardResults={awardResults}
+                  players={players}
                   onChanged={refresh}
                   appVersion={APP_VERSION}
                 />
