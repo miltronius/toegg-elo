@@ -16,6 +16,8 @@ import {
   picksForSeason,
   seasonsOpenForVoting,
   turnoutRatio,
+  awardStandings,
+  type AwardResult,
   votingStatusLabel,
   type AwardId,
   type AwardSeason,
@@ -332,5 +334,48 @@ describe("votingStatusLabel", () => {
     expect(votingStatusLabel({ ...closed, awards_finalized_at: iso(T0) }, null, T0)).toEqual({
       key: "votingFinalized",
     });
+  });
+});
+
+describe("awardStandings", () => {
+  const r = (award_id: AwardId, player_id: string, votes: number, is_winner = false, season_id = "s4"): AwardResult => ({
+    season_id,
+    award_id,
+    player_id,
+    votes,
+    is_winner,
+  });
+
+  it("lists every award in ballot order, nominees by votes", () => {
+    const got = awardStandings(
+      [r("award_fun", "p2", 1), r("award_fun", "p1", 3, true), r("award_offense", "p9", 5, true, "s5")],
+      "s4",
+    );
+    expect(got.map((s) => s.award.id)).toEqual(SEASON_AWARDS.map((a) => a.id));
+    const fun = got.find((s) => s.award.id === "award_fun")!;
+    expect(fun.nominees).toEqual([
+      { playerId: "p1", votes: 3, isWinner: true },
+      { playerId: "p2", votes: 1, isWinner: false },
+    ]);
+    expect(fun.totalVotes).toBe(4);
+    expect(fun.awarded).toBe(true);
+  });
+
+  it("reads an award without a winner as not awarded, from the stored result", () => {
+    const got = awardStandings([r("award_rookie", "p1", 1), r("award_rookie", "p2", 1)], "s4");
+    const rookie = got.find((s) => s.award.id === "award_rookie")!;
+    expect(rookie.awarded).toBe(false);
+    expect(rookie.totalVotes).toBe(2);
+    // An award nobody voted in is empty and not awarded either.
+    expect(got.find((s) => s.award.id === "award_offense")).toMatchObject({
+      nominees: [],
+      totalVotes: 0,
+      awarded: false,
+    });
+  });
+
+  it("keeps a shared win shared", () => {
+    const got = awardStandings([r("award_fun", "p2", 2, true), r("award_fun", "p1", 2, true)], "s4");
+    expect(got.find((s) => s.award.id === "award_fun")!.nominees.map((n) => n.playerId)).toEqual(["p1", "p2"]);
   });
 });

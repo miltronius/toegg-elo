@@ -1,6 +1,8 @@
 import { assertEquals } from "@std/assert";
 import {
+  type AwardResultRow,
   computeAchievementsForPlayer,
+  computeAwardWins,
   computeGoalAchievements,
   computeSeasonParticipation,
   computeSeasonPlacements,
@@ -422,4 +424,71 @@ Deno.test("meta achievements count distinct ids, not rows", () => {
   assertEquals(hunter?.unlockedAt, first);
   // Two repeats don't reach 20 distinct.
   assertEquals(got.some((a) => a.achievementId === "completionist"), false);
+});
+
+// --- Season Awards (#122) ---
+
+const COUNTED = "2026-08-10T12:00:00.000Z";
+const counted = (over: Partial<SeasonRow> = {}): SeasonRow => ({
+  id: "s1",
+  number: 1,
+  started_at: "2026-05-30T00:00:00.000Z",
+  ended_at: "2026-08-03T00:00:00.000Z",
+  awards_finalized_at: COUNTED,
+  ...over,
+});
+const result = (player_id: string, award_id: string, is_winner = true, season_id = "s1"): AwardResultRow => ({
+  season_id,
+  award_id,
+  player_id,
+  is_winner,
+});
+
+Deno.test("award wins: one per award won, dated when the votes were counted", () => {
+  const got = computeAwardWins([counted()], [
+    result("p1", "award_fun"),
+    result("p1", "award_offense"),
+    result("p2", "award_fun", false),
+  ]);
+  assertEquals(got.get("p1"), [
+    { achievementId: "award_fun", unlockedAt: new Date(COUNTED), seasonId: "s1" },
+    { achievementId: "award_offense", unlockedAt: new Date(COUNTED), seasonId: "s1" },
+  ]);
+  assertEquals(got.get("p2"), undefined);
+});
+
+Deno.test("award wins: a shared win goes to both", () => {
+  const got = computeAwardWins([counted()], [result("p1", "award_fun"), result("p2", "award_fun")]);
+  assertEquals([...got.keys()].sort(), ["p1", "p2"]);
+});
+
+Deno.test("award wins: nothing from a season not counted yet, or an unknown award", () => {
+  const got = computeAwardWins(
+    [counted({ awards_finalized_at: null })],
+    [result("p1", "award_fun"), result("p2", "award_guest")],
+  );
+  assertEquals(got.size, 0);
+});
+
+Deno.test("award wins: one per season, so a repeat win is a second row", () => {
+  const got = computeAwardWins(
+    [counted(), counted({ id: "s2", number: 2, awards_finalized_at: "2026-10-01T00:00:00.000Z" })],
+    [result("p1", "award_fun"), result("p1", "award_fun", true, "s2")],
+  );
+  assertEquals(got.get("p1")?.map((u) => u.seasonId), ["s1", "s2"]);
+});
+
+Deno.test("award wins count toward the meta achievements", () => {
+  // Nine one-time achievements of play plus one award win reach 10 distinct ids.
+  const withAward = computeAchievementsForPlayer("p1", { id: "p1" } as never, [], [], [], null, [
+    ...Array.from({ length: 9 }, (_, i) => ({
+      achievementId: (["win_1", "win_5", "win_10", "win_20", "win_50", "play_10", "play_20", "play_50", "streak_win_3"] as const)[i],
+      unlockedAt: new Date(Date.UTC(2026, 0, 1 + i)),
+    })),
+    { achievementId: "award_fun", unlockedAt: new Date(COUNTED), seasonId: "s1" },
+  ]);
+  assertEquals(
+    withAward.some((u) => u.achievementId === "achievement_hunter"),
+    true,
+  );
 });

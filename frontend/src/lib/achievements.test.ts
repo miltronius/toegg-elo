@@ -699,7 +699,9 @@ describe("recomputeAllAchievements with pre-read inputs", () => {
     let conflictTarget = "";
     const client = {
       from: (table: string) => {
-        if (["player_accounts", "seasons", "player_season_stats"].includes(table)) {
+        if (
+          ["player_accounts", "seasons", "player_season_stats", "season_award_results"].includes(table)
+        ) {
           throw new Error(`${table} must not be read`);
         }
         if (table === "elo_history") {
@@ -722,7 +724,13 @@ describe("recomputeAllAchievements with pre-read inputs", () => {
     await recomputeAllAchievements(client, players, [], {
       links: [{ player_id: "p1", linked_at: "2026-09-20T10:00:00Z" }],
       seasons: [
-        { id: "s1", number: 1, started_at: "2026-05-30T00:00:00Z", ended_at: "2026-08-03T00:00:00Z" },
+        {
+          id: "s1",
+          number: 1,
+          started_at: "2026-05-30T00:00:00Z",
+          ended_at: "2026-08-03T00:00:00Z",
+          awards_finalized_at: "2026-08-10T12:00:00Z",
+        },
       ],
       seasonStats: players.map((p, i) => ({
         player_id: p.id,
@@ -731,6 +739,7 @@ describe("recomputeAllAchievements with pre-read inputs", () => {
         wins: 3,
         losses: 0,
       })),
+      awardResults: [{ season_id: "s1", award_id: "award_fun", player_id: "p2", is_winner: true }],
     });
 
     expect(conflictTarget).toBe("player_id,achievement_id,season_id");
@@ -747,6 +756,15 @@ describe("recomputeAllAchievements with pre-read inputs", () => {
         achievement_id: "season_top_1",
         season_id: "s1",
         unlocked_at: "2026-08-03T00:00:00.000Z",
+      }),
+    );
+    // An award win, dated when the votes were counted.
+    expect(upserted).toContainEqual(
+      expect.objectContaining({
+        player_id: "p2",
+        achievement_id: "award_fun",
+        season_id: "s1",
+        unlocked_at: "2026-08-10T12:00:00.000Z",
       }),
     );
   });

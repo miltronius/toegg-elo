@@ -311,6 +311,12 @@
     "season_top_5": { "name": "High Five", "description": "Finish a season in the top 5" },
     "season_top_10": { "name": "Top Ten", "description": "Finish a season in the top 10" },
     "season_net_positive": { "name": "In the Green", "description": "Finish a season ranked, above 1500" },
+    "award_offense": { "name": "Best Offensive Player", "description": "Win the “Best Offensive Player” Season Award" },
+    "award_defense": { "name": "Best Defender - The Wall", "description": "Win the “Best Defender - The Wall” Season Award" },
+    "award_fun": { "name": "Most Fun to Play With", "description": "Win the “Most Fun to Play With” Season Award" },
+    "award_community": { "name": "Community Award", "description": "Win the “Community Award” Season Award" },
+    "award_improved": { "name": "Most Improved", "description": "Win the “Most Improved” Season Award" },
+    "award_rookie": { "name": "Rookie of the Season", "description": "Win the “Rookie of the Season” Season Award" },
     "linked_account": { "name": "That's Me!", "description": "Link your account to your player" },
     "completionist": { "name": "Completionist", "description": "Unlock 20 achievements" },
     "completionist_30": { "name": "True Completionist", "description": "Unlock 30 achievements" }
@@ -413,6 +419,7 @@
       "self_vote": "You can't vote for yourself.",
       "nominee_not_eligible": "That player isn't eligible for this award.",
       "season_not_active": "Voting can only be opened early for the running season.",
+      "season_not_found": "That season doesn't exist.",
       "unknown": "Something went wrong. Please try again."
     },
     "nudge": {

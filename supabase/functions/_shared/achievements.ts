@@ -64,6 +64,12 @@ export type AchievementId =
   | "season_top_5"
   | "season_top_10"
   | "season_net_positive"
+  | "award_offense"
+  | "award_defense"
+  | "award_fun"
+  | "award_community"
+  | "award_improved"
+  | "award_rookie"
   | "linked_account"
   | "completionist"
   | "completionist_30";
@@ -279,6 +285,8 @@ export interface SeasonRow {
   number: number;
   started_at: string;
   ended_at: string | null;
+  /** When the season's award votes were counted (#122); absent before. */
+  awards_finalized_at?: string | null;
 }
 
 export interface SeasonStatRow {
@@ -382,6 +390,58 @@ export function computeSeasonPlacements(
         });
       }
     }
+  }
+  return byPlayer;
+}
+
+// ---------------------------------------------------------------------------
+// Season Awards (#122)
+// ---------------------------------------------------------------------------
+
+/**
+ * Each Season Award is also a per-season achievement with the same id (and
+ * icon and name). Mirrors SEASON_AWARDS in frontend/src/lib/seasonAwards.ts
+ * and the award_id CHECK on season_award_results.
+ */
+export const AWARD_ACHIEVEMENT_IDS: readonly AchievementId[] = [
+  "award_offense",
+  "award_defense",
+  "award_fun",
+  "award_community",
+  "award_improved",
+  "award_rookie",
+];
+
+/** A row of season_award_results; only winners are ever read. */
+export interface AwardResultRow {
+  season_id: string;
+  award_id: string;
+  player_id: string;
+  is_winner: boolean;
+}
+
+/**
+ * Award wins as per-season achievements, by player: one per award won in a
+ * counted season, dated awards_finalized_at - the moment finalize_season_awards
+ * also wrote as unlocked_at, so the count and a recompute never disagree. A
+ * season not counted yet contributes nothing, whatever its rows say.
+ */
+export function computeAwardWins(
+  seasons: SeasonRow[],
+  results: AwardResultRow[],
+): Map<string, UnlockedAchievement[]> {
+  const countedAt = new Map<string, Date>();
+  for (const s of seasons) {
+    if (s.awards_finalized_at) countedAt.set(s.id, new Date(s.awards_finalized_at));
+  }
+  const byPlayer = new Map<string, UnlockedAchievement[]>();
+  for (const r of results) {
+    const at = countedAt.get(r.season_id);
+    const id = AWARD_ACHIEVEMENT_IDS.find((a) => a === r.award_id);
+    if (!r.is_winner || !at || !id) continue;
+    const list = byPlayer.get(r.player_id) ?? [];
+    list.push({ achievementId: id, unlockedAt: at, seasonId: r.season_id });
+    byPlayer.set(r.player_id, list);
   }
   return byPlayer;
 }
@@ -1065,25 +1125,36 @@ export interface AchievementPreRead {
   links: PlayerAccountLink[];
   seasons: SeasonRow[];
   seasonStats: SeasonStatRow[];
+  /** Winners only (season_award_results). */
+  awardResults: AwardResultRow[];
 }
 
 async function readAchievementInputs(
   supabase: SupabaseClient,
 ): Promise<AchievementPreRead> {
-  const [links, seasons, seasonStats] = await Promise.all([
+  const [links, seasons, seasonStats, awardResults] = await Promise.all([
     supabase.from("player_accounts").select("player_id, linked_at"),
-    supabase.from("seasons").select("id, number, started_at, ended_at"),
+    supabase
+      .from("seasons")
+      .select("id, number, started_at, ended_at, awards_finalized_at"),
     supabase
       .from("player_season_stats")
       .select("player_id, season_id, current_season_elo, wins, losses"),
+    supabase
+      .from("season_award_results")
+      .select("season_id, award_id, player_id, is_winner")
+      .eq("is_winner", true),
   ]);
   // Throw rather than skip on a failed read, so no meta-achievement is written
   // with a date that ignores what couldn't be read.
-  for (const r of [links, seasons, seasonStats]) if (r.error) throw r.error;
+  for (const r of [links, seasons, seasonStats, awardResults]) {
+    if (r.error) throw r.error;
+  }
   return {
     links: (links.data ?? []) as PlayerAccountLink[],
     seasons: (seasons.data ?? []) as SeasonRow[],
     seasonStats: (seasonStats.data ?? []) as SeasonStatRow[],
+    awardResults: (awardResults.data ?? []) as AwardResultRow[],
   };
 }
 
@@ -1105,12 +1176,13 @@ export async function recomputeAllAchievements(
   const { data: eloHistory } = await supabase.from("elo_history").select("*");
   const history = (eloHistory ?? []) as EloHistory[];
 
-  const { links, seasons, seasonStats } =
+  const { links, seasons, seasonStats, awardResults } =
     pre ?? (await readAchievementInputs(supabase));
   const linkedAt = new Map<string, Date>(
     links.map((l) => [l.player_id, new Date(l.linked_at)]),
   );
   const placements = computeSeasonPlacements(seasons, seasonStats);
+  const awardWins = computeAwardWins(seasons, awardResults);
 
   for (const player of players) {
     const unlocked = computeAchievementsForPlayer(
@@ -1120,7 +1192,7 @@ export async function recomputeAllAchievements(
       players,
       history,
       linkedAt.get(player.id) ?? null,
-      placements.get(player.id) ?? [],
+      [...(placements.get(player.id) ?? []), ...(awardWins.get(player.id) ?? [])],
     );
     for (const u of unlocked) {
       rows.push({

@@ -311,6 +311,12 @@
     "season_top_5": { "name": "High Five", "description": "Beende eine Saison unter den Top 5" },
     "season_top_10": { "name": "Top Ten", "description": "Beende eine Saison unter den Top 10" },
     "season_net_positive": { "name": "Im grünen Bereich", "description": "Beende eine Saison gewertet und über 1500" },
+    "award_offense": { "name": "Bester Stürmer", "description": "Gewinne den Saison-Award «Bester Stürmer»" },
+    "award_defense": { "name": "Bester Verteidiger - Die Wand", "description": "Gewinne den Saison-Award «Bester Verteidiger - Die Wand»" },
+    "award_fun": { "name": "Grösster Spassfaktor", "description": "Gewinne den Saison-Award «Grösster Spassfaktor»" },
+    "award_community": { "name": "Community-Preis", "description": "Gewinne den Saison-Award «Community-Preis»" },
+    "award_improved": { "name": "Grösster Fortschritt", "description": "Gewinne den Saison-Award «Grösster Fortschritt»" },
+    "award_rookie": { "name": "Rookie der Saison", "description": "Gewinne den Saison-Award «Rookie der Saison»" },
     "linked_account": { "name": "Das bin ich!", "description": "Verknüpfe dein Konto mit deinem Spieler" },
     "completionist": { "name": "Vervollständiger", "description": "Schalte 20 Erfolge frei" },
     "completionist_30": { "name": "Wahrer Vervollständiger", "description": "Schalte 30 Erfolge frei" }
@@ -413,6 +419,7 @@
       "self_vote": "Du kannst nicht für dich selbst stimmen.",
       "nominee_not_eligible": "Dieser Spieler kommt für diesen Award nicht in Frage.",
       "season_not_active": "Vorzeitig öffnen lässt sich die Abstimmung nur für die laufende Saison.",
+      "season_not_found": "Diese Saison gibt es nicht.",
       "unknown": "Etwas ist schiefgelaufen. Bitte versuch es nochmals."
     },
     "nudge": {
