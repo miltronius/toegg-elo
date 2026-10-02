@@ -360,7 +360,11 @@
     "movedUp": " stieg auf von ",
     "dropped": " fiel von ",
     "to": " auf ",
-    "loadingOlder": "Ältere Einträge werden geladen…"
+    "loadingOlder": "Ältere Einträge werden geladen…",
+    "contents": "Saisons",
+    "seasonSince": "Seit {{start}}",
+    "seasonPlannedEnd": "geplantes Ende {{date}}",
+    "seasonRange": "{{start}} – {{end}}"
   },
   "seasonStats": {
     "title": "📊 Statistik",
@@ -388,6 +392,59 @@
     "gamesByWeekday": "Spiele nach Wochentag",
     "gamesTooltip": "Spiele",
     "dailyActivity": "Tägliche Aktivitäts-Heatmap"
+  },
+  "admin": {
+    "contents": "Auf dieser Seite"
+  },
+  "seasonAwards": {
+    "awards": {
+      "award_offense": "Bester Stürmer",
+      "award_defense": "Bester Verteidiger - Die Wand",
+      "award_fun": "Grösster Spassfaktor",
+      "award_community": "Community-Preis",
+      "award_improved": "Grösster Fortschritt",
+      "award_rookie": "Rookie der Saison"
+    },
+    "errors": {
+      "not_allowed": "Das darfst du nicht.",
+      "voter_not_linked": "Verknüpfe dein Konto mit deinem Spieler, um abzustimmen.",
+      "unknown_award": "Diesen Award gibt es nicht.",
+      "voting_not_open": "Für diese Saison läuft keine Abstimmung.",
+      "self_vote": "Du kannst nicht für dich selbst stimmen.",
+      "nominee_not_eligible": "Dieser Spieler kommt für diesen Award nicht in Frage.",
+      "season_not_active": "Vorzeitig öffnen lässt sich die Abstimmung nur für die laufende Saison.",
+      "unknown": "Etwas ist schiefgelaufen. Bitte versuch es nochmals."
+    },
+    "nudge": {
+      "turnout": "{{voters}}/{{eligible}} haben abgestimmt",
+      "title": "Stimm für die Saison-Awards ab",
+      "picked": "{{picked}}/{{total}} gewählt",
+      "closes": "endet am {{date}}",
+      "closesAfterSeason": "endet {{days}} Tage nach dem Start der nächsten Saison",
+      "linkToVote": "Verknüpfe deinen Spieler, um abzustimmen: Öffne deinen Spieler und wähle «Das bin ich»."
+    },
+    "nominees": {
+      "ranked": "Gewertete Spieler (ab {{min}} Spielen diese Saison)",
+      "rookie": "Diese Saison zum ersten Mal gewertet"
+    },
+    "ballot": {
+      "turnout": "{{voters}} von {{eligible}} Spielern haben bisher abgestimmt.",
+      "yourPick": "Deine Wahl: {{name}}",
+      "notPickedYet": "Noch nicht gewählt",
+      "votes_one": "{{count}} Stimme abgegeben",
+      "votes_other": "{{count}} Stimmen abgegeben",
+      "title": "Saison-Awards · {{season}}",
+      "intro": "Wähle pro Award einen Spieler oder lass einen aus. Deine Wahl wird sofort gespeichert und lässt sich bis zum Ende der Abstimmung ändern; ein zweiter Klick auf deine Wahl hebt sie auf.",
+      "closes": "Die Abstimmung endet am {{date}}.",
+      "secret": "Deine Stimmen sind geheim: Niemand sonst sieht sie, auch keine Admins.",
+      "recheck": "Wer in Frage kommt, wird am Ende der Abstimmung nochmals geprüft. Stimmen für Spieler, die dann nicht mehr in Frage kommen, verfallen.",
+      "cardMeta_one": "{{elo}} Elo · {{count}} Spiel",
+      "cardMeta_other": "{{elo}} Elo · {{count}} Spiele",
+      "nobodyEligible": "Noch kommt niemand in Frage.",
+      "noLongerEligible": "{{name}} kommt für diesen Award gerade nicht in Frage. Ändert sich das bis zum Ende der Abstimmung nicht, zählt diese Stimme nicht.",
+      "saving": "wird gespeichert…",
+      "done": "Fertig"
+    }
   },
   "goals": {
     "label": "Tore erzielt : erhalten",
@@ -510,7 +567,38 @@
     "confirmEnd": "Bestätigen - Saison {{number}} beenden",
     "nameRequired": "Saisonname ist erforderlich.",
     "startError": "Neue Saison konnte nicht gestartet werden.",
-    "defaultName": "Saison {{number}}"
+    "defaultName": "Saison {{number}}",
+    "plannedEnd": "Geplantes Ende",
+    "plannedEndOptional": "Geplantes Ende (optional)",
+    "notPlanned": "Nicht festgelegt",
+    "plannedEndHint": "Format {{format}}. Die Abstimmung für die Saison-Awards beginnt {{days}} Tage vor diesem Datum; leer gelassen beginnt sie mit dem Saisonende.",
+    "plannedEndInvalid": "Gib das geplante Ende im Format {{format}} ein.",
+    "plannedEndBeforeStart": "Das geplante Ende muss nach dem Saisonstart liegen.",
+    "awardVoting": "Award-Abstimmung",
+    "votingOpens": "Beginnt am {{date}}",
+    "votingOpensAtEnd": "Beginnt mit dem Saisonende",
+    "save": "Speichern",
+    "openVoting": "Abstimmung jetzt öffnen",
+    "openVotingConfirm": "Die Abstimmung für die Saison-Awards jetzt öffnen? Das lässt sich nicht rückgängig machen.",
+    "scheduleError": "Speichern fehlgeschlagen. Bitte versuch es nochmals.",
+    "seasonOptionsTitle": "Saison-Optionen",
+    "seasonOptionsHint": "Das geplante Ende der laufenden Saison und ihre Award-Abstimmung - sowie die Abstimmung der vorherigen Saison, solange diese noch läuft.",
+    "seasonGroup": "Saison",
+    "plannedSeasonEnd": "Geplantes Saisonende",
+    "plannedSeasonEndHint": "Format {{format}}. Wann du die Saison beenden willst; sie endet nicht von selbst.",
+    "votingOpensPreview": "Die Award-Abstimmung beginnt am {{date}}, {{days}} Tage vorher.",
+    "votingOpensPreviewNow": "Die Award-Abstimmung beginnt, sobald du speicherst: Das ist weniger als {{days}} Tage entfernt.",
+    "votingOpensPreviewNone": "Ohne geplantes Ende beginnt die Award-Abstimmung mit dem Saisonende.",
+    "votingCloses": "Abstimmung endet (optional)",
+    "votingClosesHint": "Format {{format}}. Ersetzt das Standarddatum; leer gelassen endet die Abstimmung {{days}} Tage nach dem Start der nächsten Saison.",
+    "votingClosesInvalid": "Gib das Enddatum der Abstimmung im Format {{format}} ein.",
+    "votingClosesBeforeStart": "Das Enddatum der Abstimmung muss nach dem Saisonstart liegen.",
+    "closeVoting": "Abstimmung jetzt beenden",
+    "closeVotingConfirm": "Die Abstimmung für die Saison-Awards von {{season}} jetzt beenden? Die Stimmen werden eingefroren. Mit einem späteren Enddatum lässt sie sich wieder öffnen.",
+    "votingOpenUntil": "Läuft bis {{date}}",
+    "votingOpenUntilNext": "Läuft bis {{days}} Tage nach dem Start der nächsten Saison",
+    "votingClosed": "Beendet am {{date}}",
+    "votingFinalized": "Ergebnis steht fest"
   },
   "matchHistory": {
     "title": "Spielverlauf",

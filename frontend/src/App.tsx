@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useTranslation } from "react-i18next";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   getPlayers,
   getMatches,
@@ -11,6 +11,9 @@ import {
   getSeasons,
   getAllPlayerSeasonStats,
   getBanners,
+  getMyAwardVotes,
+  getAwardTurnout,
+  castAwardVote,
   deleteMatch,
   Player,
   Match,
@@ -19,6 +22,8 @@ import {
   Season,
   PlayerSeasonStats,
   Banner,
+  AwardVote,
+  AwardTurnout,
 } from "./lib/supabase";
 import type { PlayerAchievementRow } from "./lib/achievements";
 import { DEFAULT_PARTNER_WEIGHT } from "./lib/elo";
@@ -34,6 +39,8 @@ import { MatchHistory } from "./components/MatchHistory";
 import { PlayerDetail } from "./components/PlayerDetail";
 import { UserManagement } from "./components/UserManagement";
 import { BannerAdmin } from "./components/BannerAdmin";
+import { SeasonOptionsAdmin } from "./components/SeasonOptionsAdmin";
+import { SectionNav } from "./components/SectionNav";
 import { MessageBanner } from "./components/MessageBanner";
 import { ChangelogDialog } from "./components/ChangelogDialog";
 import { APP_VERSION, RELEASES } from "./lib/appChangelog";
@@ -43,6 +50,9 @@ import { RelationshipGraph } from "./components/RelationshipGraph";
 import { Achievements } from "./components/Achievements";
 import { Timeline } from "./components/Timeline";
 import { SeasonDialog } from "./components/SeasonDialog";
+import { AwardVoteNudge } from "./components/AwardVoteNudge";
+import { AwardBallotDialog } from "./components/AwardBallotDialog";
+import { ballotAccess } from "./lib/seasonAwards";
 import { ThemeToggle } from "./components/ThemeToggle";
 import { LanguageSwitcher } from "./components/LanguageSwitcher";
 import { Win95Shell } from "./components/Win95Shell";
@@ -126,6 +136,15 @@ const EMPTY_ACHIEVEMENTS: PlayerAchievementRow[] = [];
 const EMPTY_SEASONS: Season[] = [];
 const EMPTY_SEASON_STATS: PlayerSeasonStats[] = [];
 const EMPTY_BANNERS: Banner[] = [];
+const EMPTY_AWARD_VOTES: AwardVote[] = [];
+
+// The Admin tab's sections, for its list of contents, labelled with each
+// card's own heading key.
+const ADMIN_SECTIONS = [
+  { id: "admin-users", labelKey: "userManagement.title" },
+  { id: "admin-seasons", labelKey: "seasonDialog.seasonOptionsTitle" },
+  { id: "admin-banners", labelKey: "bannerAdmin.title" },
+] as const;
 const EMPTY_ELO_HISTORY = new Map<string, EloHistory[]>();
 
 function App() {
@@ -142,6 +161,17 @@ function App() {
     queryFn: fetchAppData,
     enabled: !authLoading,
   });
+
+  // The caller's own ballot. A query of its own rather than part of appData:
+  // only the nudge and the ballot read it, and a pick shouldn't refetch the
+  // dashboard. RLS returns nobody else's votes, admins included.
+  const { data: awardVotes = EMPTY_AWARD_VOTES, isSuccess: awardVotesLoaded } =
+    useQuery({
+      queryKey: ["awardVotes", user?.id ?? null],
+      queryFn: getMyAwardVotes,
+      enabled: !authLoading && Boolean(user) && Boolean(myPlayerId),
+    });
+  const [ballotSeasonId, setBallotSeasonId] = useState<string | null>(null);
 
   // Flash a colorful moving border under the header for 2s whenever data is
   // (re)loaded, so the user gets a clear "it really updated" signal.
@@ -287,6 +317,30 @@ function App() {
     [players, effectiveSeason, playerSeasonStats],
   );
 
+  // Turnout (counts only) for the seasons whose ballot can be open: the
+  // running one and the one before it (open until two weeks into this one).
+  // Picked without the clock, so it stays a pure render; the nudge decides
+  // which of them are actually open. Only for accounts that can vote -
+  // award_turnout refuses anyone else.
+  const turnoutSeasonIds = useMemo(() => {
+    if (ballotAccess({ role, myPlayerId }) !== "vote") return [];
+    const newest = [...seasons].sort((a, b) => b.number - a.number).slice(0, 2);
+    return newest.map((s) => s.id);
+  }, [seasons, role, myPlayerId]);
+  const awardTurnout = useQueries({
+    queries: turnoutSeasonIds.map((id) => ({
+      queryKey: ["awardTurnout", id],
+      queryFn: () => getAwardTurnout(id),
+    })),
+    combine: (results) => {
+      const byId: Partial<Record<string, AwardTurnout>> = {};
+      results.forEach((r, i) => {
+        if (r.data) byId[turnoutSeasonIds[i]] = r.data;
+      });
+      return byId;
+    },
+  });
+
   if (authLoading || isLoading) {
     return <AppSkeleton />;
   }
@@ -297,6 +351,18 @@ function App() {
         ? "text-primary border-b-primary"
         : "text-text-light border-b-transparent hover:text-text hover:border-b-primary"
     }`;
+
+  const ballotSeason = ballotSeasonId
+    ? (seasons.find((s) => s.id === ballotSeasonId) ?? null)
+    : null;
+  const awardNudge = (
+    <AwardVoteNudge
+      seasons={seasons}
+      votes={awardVotes}
+      turnout={awardTurnout}
+      onOpenBallot={setBallotSeasonId}
+    />
+  );
 
   const appContent = (
     <div className="min-h-screen flex flex-col">
@@ -328,6 +394,7 @@ function App() {
           history={allEloHistory}
           players={players}
           achievements={allAchievementRows}
+          awardNudge={awardNudge}
         />
         <div className="flex items-center gap-3">
           <ThemeToggle />
@@ -445,7 +512,13 @@ function App() {
           max-width column every other tab uses. */}
       <main
         className={`flex-1 w-full ${
-          activeTab === "relationships" ? "p-4" : "p-8 max-w-300 mx-auto"
+          activeTab === "relationships"
+            ? "p-4"
+            : // Admin and Timeline are wider by their list of contents'
+              // column, so their content keeps the width other tabs have.
+              activeTab === "users" || activeTab === "timeline"
+              ? "p-8 max-w-300 xl:max-w-356 mx-auto"
+              : "p-8 max-w-300 mx-auto"
         }`}
       >
         {activeTab === "leaderboard" && (
@@ -501,6 +574,7 @@ function App() {
             eloHistory={eloHistory}
             allAchievementRows={allAchievementRows}
             seasons={seasons}
+            awardNudge={awardNudge}
           />
         )}
         {activeTab === "teams" && (
@@ -544,19 +618,32 @@ function App() {
           />
         )}
         {activeTab === "users" && isAdmin && (
-          <>
-            <UserManagement
-              players={players}
-              onRecomputed={refresh}
-              onLinksChanged={refresh}
+          <div className="with-section-nav">
+            <SectionNav
+              entries={ADMIN_SECTIONS.map((s) => ({ id: s.id, label: t(s.labelKey) }))}
+              label={t("admin.contents")}
             />
-            <BannerAdmin
-              banners={banners}
-              seasons={seasons}
-              onChanged={refresh}
-              appVersion={APP_VERSION}
-            />
-          </>
+            <div className="admin-sections">
+              <section id="admin-users" tabIndex={-1} className="nav-section">
+                <UserManagement
+                  players={players}
+                  onRecomputed={refresh}
+                  onLinksChanged={refresh}
+                />
+              </section>
+              <section id="admin-seasons" tabIndex={-1} className="nav-section">
+                <SeasonOptionsAdmin seasons={seasons} onChanged={refresh} />
+              </section>
+              <section id="admin-banners" tabIndex={-1} className="nav-section">
+                <BannerAdmin
+                  banners={banners}
+                  seasons={seasons}
+                  onChanged={refresh}
+                  appVersion={APP_VERSION}
+                />
+              </section>
+            </div>
+          </div>
         )}
       </main>
       {canEdit && (
@@ -607,6 +694,25 @@ function App() {
           releases={RELEASES}
           focusVersion={changelog.focus}
           onClose={() => setChangelog(null)}
+        />
+      )}
+      {/* Waits for the ballot to load, or it would open blank and read as "no picks". */}
+      {ballotSeason && awardVotesLoaded && (
+        <AwardBallotDialog
+          season={ballotSeason}
+          seasons={seasons}
+          players={players}
+          seasonStats={allPlayerSeasonStats}
+          votes={awardVotes}
+          turnout={awardTurnout[ballotSeason.id] ?? null}
+          onCast={async (awardId, nomineeId) => {
+            await castAwardVote(ballotSeason.id, awardId, nomineeId);
+            await Promise.all([
+              queryClient.invalidateQueries({ queryKey: ["awardVotes"] }),
+              queryClient.invalidateQueries({ queryKey: ["awardTurnout", ballotSeason.id] }),
+            ]);
+          }}
+          onClose={() => setBallotSeasonId(null)}
         />
       )}
     </div>

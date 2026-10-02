@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
 import { Player, Match, EloHistory, Season } from "../lib/supabase";
@@ -6,6 +6,12 @@ import { didLose, didWin } from "../lib/eloHistory";
 import { DATE_LOCALE } from "../lib/i18n";
 import type { PlayerAchievementRow } from "../lib/achievements";
 import { ACHIEVEMENT_DEFINITIONS } from "../lib/achievements";
+import {
+  daysToReveal,
+  visibleItems,
+  withSeasonBands,
+} from "../lib/timelineSeasons";
+import { SectionNav } from "./SectionNav";
 
 interface DashboardProps {
   players: Player[];
@@ -13,6 +19,8 @@ interface DashboardProps {
   eloHistory: Map<string, EloHistory[]>;
   allAchievementRows: PlayerAchievementRow[];
   seasons: Season[];
+  /** Season Awards vote nudge (App builds it), shown under the title. */
+  awardNudge?: ReactNode;
 }
 
 type MatchEvent = {
@@ -56,8 +64,12 @@ type SeasonTransitionEvent = {
   standings: SeasonStanding[];
 };
 
+// A season that began without a previous one ending that day - the very first.
+type SeasonStartEvent = { type: "season_start"; season: Season };
+
 type EventGroup =
   | { kind: "season"; event: SeasonTransitionEvent }
+  | { kind: "season_start"; event: SeasonStartEvent }
   | { kind: "matches"; events: MatchEvent[] }
   | { kind: "achievements"; events: AchievementEvent[] }
   | { kind: "rankings"; events: (RankChangeEvent | FirstGameEvent)[] };
@@ -90,6 +102,16 @@ function buildTimeline(
       startedSeason: next,
       standings: [],
     });
+  }
+
+  // Seasons whose start no transition announces (the first one) get their own.
+  const startByDate = new Map<string, SeasonStartEvent>();
+  const startedByTransition = new Set(
+    [...transitionByDate.values()].map((tr) => tr.startedSeason.id),
+  );
+  for (const s of sortedSeasons) {
+    if (startedByTransition.has(s.id)) continue;
+    startByDate.set(s.started_at.slice(0, 10), { type: "season_start", season: s });
   }
 
   // Build match-id → elo entries lookup
@@ -273,9 +295,9 @@ function buildTimeline(
       }));
   }
 
-  // Collect all dates: match days + season transition days
+  // Collect all dates: match days + season transition and start days
   const allDates = [
-    ...new Set([...activeDates, ...transitionByDate.keys()]),
+    ...new Set([...activeDates, ...transitionByDate.keys(), ...startByDate.keys()]),
   ].sort();
 
   // Build day sections (newest first)
@@ -300,9 +322,11 @@ function buildTimeline(
       });
     }
 
-    // Season transition (shown first)
+    // Season transition / start (shown first)
     const transition = transitionByDate.get(date);
     if (transition) groups.unshift({ kind: "season", event: transition });
+    const start = startByDate.get(date);
+    if (start) groups.unshift({ kind: "season_start", event: start });
 
     // Rankings group
     const dayRankChanges = rankChangesForDay.get(date) ?? [];
@@ -353,6 +377,28 @@ function formatDay(date: string, t: TFunction): string {
     timeZone: "UTC",
   });
 }
+
+function formatShortDate(iso: string): string {
+  return new Date(iso).toLocaleDateString(DATE_LOCALE, {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+}
+
+/** "Since 04.09.2026 · planned end 30.11.2026" or "01.06.2026 – 04.09.2026". */
+function seasonDates(season: Season, t: TFunction): string {
+  const start = formatShortDate(season.started_at);
+  if (season.ended_at) {
+    return t("timeline.seasonRange", { start, end: formatShortDate(season.ended_at) });
+  }
+  const since = t("timeline.seasonSince", { start });
+  return season.planned_end_at
+    ? `${since} · ${t("timeline.seasonPlannedEnd", { date: formatShortDate(season.planned_end_at) })}`
+    : since;
+}
+
+const seasonAnchor = (season: Season) => `timeline-season-${season.number}`;
 
 function formatTime(iso: string): string {
   return new Date(iso).toLocaleTimeString(DATE_LOCALE, {
@@ -429,10 +475,12 @@ export function Timeline({
   eloHistory,
   allAchievementRows,
   seasons,
+  awardNudge,
 }: DashboardProps) {
   const { t } = useTranslation();
   const GROUP_LABELS: Record<EventGroup["kind"], string> = {
     season: "",
+    season_start: "",
     matches: t("timeline.groupMatches"),
     achievements: t("timeline.groupAchievements"),
     rankings: t("timeline.groupRankings"),
@@ -454,8 +502,24 @@ export function Timeline({
   const INITIAL_DAYS = 7;
   const BATCH_DAYS = 7;
   const [visibleCount, setVisibleCount] = useState(INITIAL_DAYS);
-  const visibleDays = daySections.slice(0, visibleCount);
   const hasMore = daySections.length > visibleCount;
+
+  // Each season's band above its days; only the bands and days in reach of
+  // the rendered days are drawn (see visibleItems).
+  const items = useMemo(() => withSeasonBands(daySections, seasons), [daySections, seasons]);
+  const shownItems = visibleItems(items, visibleCount);
+  const seasonsNewestFirst = useMemo(
+    () => [...seasons].sort((a, b) => b.number - a.number),
+    [seasons],
+  );
+  // The list of contents can point at a season whose band isn't rendered yet:
+  // render enough older days for it (plus a batch of its own), then it scrolls.
+  const revealSeason = (anchor: string) => {
+    const season = seasonsNewestFirst.find((s) => seasonAnchor(s) === anchor);
+    if (!season) return;
+    const needed = daysToReveal(items, season.id) + BATCH_DAYS - 1;
+    setVisibleCount((c) => Math.max(c, needed));
+  };
 
   // Load the next batch shortly before the sentinel reaches the viewport, so
   // content is attached to the bottom without the user hitting a hard stop.
@@ -480,6 +544,7 @@ export function Timeline({
     return (
       <div className="card">
         <h2>{t("timeline.title")}</h2>
+        {awardNudge}
         <p className="text-center text-text-light py-8">
           {t("timeline.empty")}
         </p>
@@ -488,234 +553,280 @@ export function Timeline({
   }
 
   return (
-    <div className="card">
-      <h2>{t("timeline.title")}</h2>
-      <div className="dashboard-timeline">
-        {visibleDays.map((day) => (
-          <div key={day.date} className="dashboard-day">
-            <div className="dashboard-day-header">{formatDay(day.date, t)}</div>
-            <div className="dashboard-groups">
-              {day.groups.map((group) => (
-                <div key={group.kind}>
-                  <div className="dashboard-group-label">
-                    {GROUP_LABELS[group.kind]}
-                  </div>
-                  <div className="dashboard-events">
-                    {group.kind === "matches" &&
-                      group.events.map((event, i) => {
-                        const m = event.match;
-                        const aWon = m.winning_team === "A";
-                        const winners = aWon
-                          ? [m.team_a_player_1_id, m.team_a_player_2_id]
-                          : [m.team_b_player_1_id, m.team_b_player_2_id];
-                        const losers = aWon
-                          ? [m.team_b_player_1_id, m.team_b_player_2_id]
-                          : [m.team_a_player_1_id, m.team_a_player_2_id];
+    <div className="with-section-nav">
+      <SectionNav
+        label={t("timeline.contents")}
+        entries={seasonsNewestFirst.map((season) => ({
+          id: seasonAnchor(season),
+          label: `S${season.number} · ${season.name}`,
+          detail: seasonDates(season, t),
+        }))}
+        onReveal={revealSeason}
+      />
+      <div className="card">
+        <h2>{t("timeline.title")}</h2>
+        {awardNudge}
+        <div className="dashboard-timeline">
+          {shownItems.map((item) => {
+            if (item.kind === "season") {
+              const season = item.season;
+              return (
+                <div
+                  key={`season-${season.id}`}
+                  id={seasonAnchor(season)}
+                  tabIndex={-1}
+                  className={`timeline-season-band nav-section${season.ended_at ? "" : " is-running"}`}
+                >
+                  <span className="timeline-season-band-name">
+                    S{season.number} · {season.name}
+                  </span>
+                  <span className="timeline-season-band-dates">{seasonDates(season, t)}</span>
+                </div>
+              );
+            }
+            const day = item.day;
+            return (
+              <div key={day.date} className="dashboard-day">
+                <div className="dashboard-day-header">{formatDay(day.date, t)}</div>
+                <div className="dashboard-groups">
+                  {day.groups.map((group) => (
+                    <div key={group.kind}>
+                      <div className="dashboard-group-label">
+                        {GROUP_LABELS[group.kind]}
+                      </div>
+                      <div className="dashboard-events">
+                        {group.kind === "matches" &&
+                          group.events.map((event, i) => {
+                            const m = event.match;
+                            const aWon = m.winning_team === "A";
+                            const winners = aWon
+                              ? [m.team_a_player_1_id, m.team_a_player_2_id]
+                              : [m.team_b_player_1_id, m.team_b_player_2_id];
+                            const losers = aWon
+                              ? [m.team_b_player_1_id, m.team_b_player_2_id]
+                              : [m.team_a_player_1_id, m.team_a_player_2_id];
 
-                        const renderPlayer = (
-                          id: string,
-                          isWinner: boolean,
-                        ) => {
-                          const name = playerMap.get(id)?.name ?? "?";
-                          const h = event.eloChanges.find(
-                            (e) => e.player_id === id,
+                            const renderPlayer = (
+                              id: string,
+                              isWinner: boolean,
+                            ) => {
+                              const name = playerMap.get(id)?.name ?? "?";
+                              const h = event.eloChanges.find(
+                                (e) => e.player_id === id,
+                              );
+                              const delta = h ? h.elo_after - h.elo_before : null;
+                              return (
+                                <span key={id} className="dashboard-player-inline">
+                                  <span
+                                    className={
+                                      isWinner
+                                        ? "dashboard-match-winner"
+                                        : "dashboard-match-loser"
+                                    }
+                                  >
+                                    {name}
+                                  </span>
+                                  {delta !== null && (
+                                    <span
+                                      className={`dashboard-elo-delta ${delta >= 0 ? "positive" : "negative"}`}
+                                    >
+                                      {delta >= 0 ? "+" : ""}
+                                      {delta}
+                                    </span>
+                                  )}
+                                </span>
+                              );
+                            };
+
+                            return (
+                              <div key={i} className="dashboard-event">
+                                <span className="dashboard-event-icon">⚽</span>
+                                <span className="dashboard-event-time">
+                                  {formatTime(event.time)}
+                                </span>
+                                <span className="dashboard-event-body">
+                                  {winners.map((id, j) => (
+                                    <span key={id}>
+                                      {j > 0 && (
+                                        <span className="dashboard-match-sep">
+                                          {" "}
+                                          &{" "}
+                                        </span>
+                                      )}
+                                      {renderPlayer(id, true)}
+                                    </span>
+                                  ))}
+                                  {/* Only on recorded series - a legacy match has
+                                      no tally, just a winner. */}
+                                  {m.games && (
+                                    <span className="dashboard-match-score">
+                                      {aWon ? m.team_a_games : m.team_b_games}
+                                      {"-"}
+                                      {aWon ? m.team_b_games : m.team_a_games}
+                                    </span>
+                                  )}
+                                  <span className="dashboard-match-vs">
+                                    {t("timeline.wonVs")}
+                                  </span>
+                                  {losers.map((id, j) => (
+                                    <span key={id}>
+                                      {j > 0 && (
+                                        <span className="dashboard-match-sep">
+                                          {" "}
+                                          &{" "}
+                                        </span>
+                                      )}
+                                      {renderPlayer(id, false)}
+                                    </span>
+                                  ))}
+                                </span>
+                              </div>
                           );
-                          const delta = h ? h.elo_after - h.elo_before : null;
+                        })}
+
+                      {group.kind === "achievements" &&
+                        group.events.map((event, i) => {
+                          const def = ACHIEVEMENT_DEFINITIONS.find(
+                            (d) => d.id === event.row.achievement_id,
+                          );
+                          const playerName =
+                            playerMap.get(event.row.player_id)?.name ?? "?";
                           return (
-                            <span key={id} className="dashboard-player-inline">
-                              <span
-                                className={
-                                  isWinner
-                                    ? "dashboard-match-winner"
-                                    : "dashboard-match-loser"
-                                }
-                              >
-                                {name}
+                            <div key={i} className="dashboard-event">
+                              <span className="dashboard-event-icon">
+                                {def?.icon ?? "🏅"}
                               </span>
-                              {delta !== null && (
-                                <span
-                                  className={`dashboard-elo-delta ${delta >= 0 ? "positive" : "negative"}`}
-                                >
-                                  {delta >= 0 ? "+" : ""}
-                                  {delta}
+                              <span className="dashboard-event-time">
+                                {formatTime(event.time)}
+                              </span>
+                              <span className="dashboard-event-body">
+                                <span className="dashboard-match-winner">
+                                  {playerName}
                                 </span>
-                              )}
-                            </span>
+                                {t("timeline.earned")}
+                                <span className="dashboard-achievement-name">
+                                  "
+                                  {def
+                                    ? t(
+                                        `achievementDefs.${def.id}.name`,
+                                        def.name,
+                                      )
+                                    : event.row.achievement_id}
+                                  "
+                                </span>
+                              </span>
+                            </div>
                           );
-                        };
+                        })}
 
-                        return (
-                          <div key={i} className="dashboard-event">
-                            <span className="dashboard-event-icon">⚽</span>
-                            <span className="dashboard-event-time">
-                              {formatTime(event.time)}
-                            </span>
+                      {group.kind === "season" && (
+                        <>
+                          <div className="dashboard-event dashboard-season-transition">
+                            <span className="dashboard-event-icon">🏆</span>
+                            <span className="dashboard-event-time" />
                             <span className="dashboard-event-body">
-                              {winners.map((id, j) => (
-                                <span key={id}>
-                                  {j > 0 && (
-                                    <span className="dashboard-match-sep">
-                                      {" "}
-                                      &{" "}
-                                    </span>
-                                  )}
-                                  {renderPlayer(id, true)}
-                                </span>
-                              ))}
-                              {/* Only on recorded series - a legacy match has
-                                  no tally, just a winner. */}
-                              {m.games && (
-                                <span className="dashboard-match-score">
-                                  {aWon ? m.team_a_games : m.team_b_games}
-                                  {"-"}
-                                  {aWon ? m.team_b_games : m.team_a_games}
-                                </span>
-                              )}
-                              <span className="dashboard-match-vs">
-                                {t("timeline.wonVs")}
+                              <span className="dashboard-season-label">
+                                {t("timeline.seasonEnded", {
+                                  number: group.event.endedSeason.number,
+                                  name: group.event.endedSeason.name,
+                                })}
                               </span>
-                              {losers.map((id, j) => (
-                                <span key={id}>
-                                  {j > 0 && (
-                                    <span className="dashboard-match-sep">
-                                      {" "}
-                                      &{" "}
-                                    </span>
-                                  )}
-                                  {renderPlayer(id, false)}
-                                </span>
-                              ))}
-                            </span>
-                          </div>
-                        );
-                      })}
-
-                    {group.kind === "achievements" &&
-                      group.events.map((event, i) => {
-                        const def = ACHIEVEMENT_DEFINITIONS.find(
-                          (d) => d.id === event.row.achievement_id,
-                        );
-                        const playerName =
-                          playerMap.get(event.row.player_id)?.name ?? "?";
-                        return (
-                          <div key={i} className="dashboard-event">
-                            <span className="dashboard-event-icon">
-                              {def?.icon ?? "🏅"}
-                            </span>
-                            <span className="dashboard-event-time">
-                              {formatTime(event.time)}
-                            </span>
-                            <span className="dashboard-event-body">
-                              <span className="dashboard-match-winner">
-                                {playerName}
-                              </span>
-                              {t("timeline.earned")}
-                              <span className="dashboard-achievement-name">
-                                "
-                                {def
-                                  ? t(
-                                      `achievementDefs.${def.id}.name`,
-                                      def.name,
-                                    )
-                                  : event.row.achievement_id}
-                                "
+                              <span className="dashboard-match-sep"> · </span>
+                              <span className="dashboard-season-label">
+                                {t("timeline.seasonStarted", {
+                                  number: group.event.startedSeason.number,
+                                  name: group.event.startedSeason.name,
+                                })}
                               </span>
                             </span>
                           </div>
-                        );
-                      })}
+                          <SeasonPodium
+                            standings={group.event.standings}
+                            endedSeason={group.event.endedSeason}
+                            playerMap={playerMap}
+                            t={t}
+                          />
+                        </>
+                      )}
 
-                    {group.kind === "season" && (
-                      <>
+                      {group.kind === "season_start" && (
                         <div className="dashboard-event dashboard-season-transition">
-                          <span className="dashboard-event-icon">🏆</span>
+                          <span className="dashboard-event-icon">🏁</span>
                           <span className="dashboard-event-time" />
                           <span className="dashboard-event-body">
                             <span className="dashboard-season-label">
-                              {t("timeline.seasonEnded", {
-                                number: group.event.endedSeason.number,
-                                name: group.event.endedSeason.name,
-                              })}
-                            </span>
-                            <span className="dashboard-match-sep"> · </span>
-                            <span className="dashboard-season-label">
                               {t("timeline.seasonStarted", {
-                                number: group.event.startedSeason.number,
-                                name: group.event.startedSeason.name,
+                                number: group.event.season.number,
+                                name: group.event.season.name,
                               })}
                             </span>
                           </span>
                         </div>
-                        <SeasonPodium
-                          standings={group.event.standings}
-                          endedSeason={group.event.endedSeason}
-                          playerMap={playerMap}
-                          t={t}
-                        />
-                      </>
-                    )}
+                      )}
 
-                    {group.kind === "rankings" &&
-                      group.events.map((event, i) => {
-                        const playerName =
-                          playerMap.get(event.playerId)?.name ?? "?";
-                        if (event.type === "first_game") {
+                      {group.kind === "rankings" &&
+                        group.events.map((event, i) => {
+                          const playerName =
+                            playerMap.get(event.playerId)?.name ?? "?";
+                          if (event.type === "first_game") {
+                            return (
+                              <div key={i} className="dashboard-event">
+                                <span className="dashboard-event-icon">⭐</span>
+                                <span className="dashboard-event-time" />
+                                <span className="dashboard-event-body">
+                                  <span className="dashboard-match-winner">
+                                    {playerName}
+                                  </span>
+                                  {t("timeline.firstGame")}
+                                  <span className="dashboard-rank">
+                                    #{event.rank}
+                                  </span>
+                                </span>
+                              </div>
+                            );
+                          }
+                          const movedUp = event.fromRank > event.toRank;
                           return (
                             <div key={i} className="dashboard-event">
-                              <span className="dashboard-event-icon">⭐</span>
+                              <span className="dashboard-event-icon">
+                                {movedUp ? "📈" : "📉"}
+                              </span>
                               <span className="dashboard-event-time" />
                               <span className="dashboard-event-body">
                                 <span className="dashboard-match-winner">
                                   {playerName}
                                 </span>
-                                {t("timeline.firstGame")}
+                                {movedUp
+                                  ? t("timeline.movedUp")
+                                  : t("timeline.dropped")}
                                 <span className="dashboard-rank">
-                                  #{event.rank}
+                                  #{event.fromRank}
+                                </span>
+                                {t("timeline.to")}
+                                <span className="dashboard-rank">
+                                  #{event.toRank}
                                 </span>
                               </span>
                             </div>
                           );
-                        }
-                        const movedUp = event.fromRank > event.toRank;
-                        return (
-                          <div key={i} className="dashboard-event">
-                            <span className="dashboard-event-icon">
-                              {movedUp ? "📈" : "📉"}
-                            </span>
-                            <span className="dashboard-event-time" />
-                            <span className="dashboard-event-body">
-                              <span className="dashboard-match-winner">
-                                {playerName}
-                              </span>
-                              {movedUp
-                                ? t("timeline.movedUp")
-                                : t("timeline.dropped")}
-                              <span className="dashboard-rank">
-                                #{event.fromRank}
-                              </span>
-                              {t("timeline.to")}
-                              <span className="dashboard-rank">
-                                #{event.toRank}
-                              </span>
-                            </span>
-                          </div>
-                        );
-                      })}
+                        })}
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
-        ))}
-      </div>
-      {hasMore && (
-        <div
-          ref={sentinelRef}
-          className="flex justify-center py-6 text-text-light text-sm"
-        >
-          {t("timeline.loadingOlder")}
+            );
+          })}
         </div>
-      )}
+        {hasMore && (
+          <div
+            ref={sentinelRef}
+            className="flex justify-center py-6 text-text-light text-sm"
+          >
+            {t("timeline.loadingOlder")}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
