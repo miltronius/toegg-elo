@@ -12,10 +12,11 @@ import {
   ballotAccess,
   eligibleNomineeIds,
   nextSeasonOf,
-  parsePlannedEnd,
+  parseSeasonDate,
   picksForSeason,
   seasonsOpenForVoting,
   turnoutRatio,
+  votingStatusLabel,
   type AwardId,
   type AwardSeason,
   type AwardVote,
@@ -32,6 +33,7 @@ function season(over: Partial<AwardSeason> = {}): AwardSeason {
     ended_at: null,
     planned_end_at: null,
     voting_opened_at: null,
+    voting_closes_at: null,
     ...over,
   };
 }
@@ -100,6 +102,20 @@ describe("awardVotingWindow", () => {
     );
   });
 
+  it("closes at the admin's closing date instead, earlier or later", () => {
+    const s = season({ ended_at: iso(T0) });
+    expect(
+      awardVotingWindow({ ...s, voting_closes_at: iso(T0 + 3 * DAY) }, next(T0)).closesAt,
+    ).toBe(T0 + 3 * DAY);
+    expect(
+      awardVotingWindow({ ...s, voting_closes_at: iso(T0 + 30 * DAY) }, next(T0)).closesAt,
+    ).toBe(T0 + 30 * DAY);
+  });
+
+  it("can close a running season's vote before there is a next season", () => {
+    expect(awardVotingWindow(season({ voting_closes_at: iso(T0) }), null).closesAt).toBe(T0);
+  });
+
   it("ignores an unparseable timestamp", () => {
     expect(awardVotingWindow(season({ planned_end_at: "soon" }), null).opensAt).toBeNull();
   });
@@ -137,6 +153,12 @@ describe("awardVotingStatus", () => {
     const s = season({ ended_at: iso(T0) });
     expect(awardVotingStatus(s, next(T0), T0 + 14 * DAY - 1)).toBe("open");
     expect(awardVotingStatus(s, next(T0), T0 + 14 * DAY)).toBe("closed");
+  });
+
+  it("closes exactly at the admin's closing date", () => {
+    const s = season({ voting_opened_at: iso(T0 - DAY), voting_closes_at: iso(T0) });
+    expect(awardVotingStatus(s, null, T0 - 1)).toBe("open");
+    expect(awardVotingStatus(s, null, T0)).toBe("closed");
   });
 
   it("reports finalized once #122 has tallied it, whatever the clock", () => {
@@ -246,22 +268,22 @@ describe("picksForSeason", () => {
   });
 });
 
-describe("parsePlannedEnd", () => {
+describe("parseSeasonDate", () => {
   // Local time, like the field.
   const start = new Date(2026, 9, 1, 12, 0).getTime();
 
   it("passes empty and invalid text through", () => {
-    expect(parsePlannedEnd("", start)).toEqual({ kind: "empty" });
-    expect(parsePlannedEnd("31.02.2026", start)).toEqual({ kind: "invalid" });
+    expect(parseSeasonDate("", start)).toEqual({ kind: "empty" });
+    expect(parseSeasonDate("31.02.2026", start)).toEqual({ kind: "invalid" });
   });
 
   it("refuses an end at or before the start", () => {
-    expect(parsePlannedEnd("01.10.2026 12:00", start)).toEqual({ kind: "before_start" });
-    expect(parsePlannedEnd("30.09.2026", start)).toEqual({ kind: "before_start" });
+    expect(parseSeasonDate("01.10.2026 12:00", start)).toEqual({ kind: "before_start" });
+    expect(parseSeasonDate("30.09.2026", start)).toEqual({ kind: "before_start" });
   });
 
   it("accepts a later moment", () => {
-    expect(parsePlannedEnd("01.10.2026 12:01", start)).toEqual({
+    expect(parseSeasonDate("01.10.2026 12:01", start)).toEqual({
       kind: "ok",
       iso: new Date(2026, 9, 1, 12, 1).toISOString(),
     });
@@ -283,5 +305,32 @@ describe("turnoutRatio", () => {
 
   it("never shows more voters than eligible accounts", () => {
     expect(turnoutRatio({ voters: 5, eligible: 4, awards: {} })).toEqual({ voters: 5, eligible: 5 });
+  });
+});
+
+describe("votingStatusLabel", () => {
+  it("says when a not-yet-open vote opens", () => {
+    expect(votingStatusLabel(season({ planned_end_at: iso(T0) }), null, T0 - 30 * DAY)).toEqual({
+      key: "votingOpens",
+      at: T0 - 7 * DAY,
+    });
+    expect(votingStatusLabel(season(), null, T0)).toEqual({ key: "votingOpensAtEnd" });
+  });
+
+  it("says until when an open vote runs", () => {
+    const open = season({ voting_opened_at: iso(T0 - DAY) });
+    expect(votingStatusLabel(open, null, T0)).toEqual({ key: "votingOpenUntilNext" });
+    expect(votingStatusLabel({ ...open, voting_closes_at: iso(T0 + DAY) }, null, T0)).toEqual({
+      key: "votingOpenUntil",
+      at: T0 + DAY,
+    });
+  });
+
+  it("says when a vote closed, and when results are final", () => {
+    const closed = season({ voting_opened_at: iso(T0 - 2 * DAY), voting_closes_at: iso(T0 - DAY) });
+    expect(votingStatusLabel(closed, null, T0)).toEqual({ key: "votingClosed", at: T0 - DAY });
+    expect(votingStatusLabel({ ...closed, awards_finalized_at: iso(T0) }, null, T0)).toEqual({
+      key: "votingFinalized",
+    });
   });
 });

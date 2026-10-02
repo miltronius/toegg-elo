@@ -18,10 +18,17 @@
 -- ============================================================
 ALTER TABLE seasons ADD COLUMN IF NOT EXISTS planned_end_at   TIMESTAMPTZ;
 ALTER TABLE seasons ADD COLUMN IF NOT EXISTS voting_opened_at TIMESTAMPTZ;
+-- The admin's closing date. NULL = the default, 14 days into the next season;
+-- set, it replaces that default either way (earlier or later). "Close voting
+-- now" sets it to now(); a later date reopens, until #122 finalises.
+ALTER TABLE seasons ADD COLUMN IF NOT EXISTS voting_closes_at TIMESTAMPTZ;
 
 ALTER TABLE seasons DROP CONSTRAINT IF EXISTS seasons_planned_end_after_start;
 ALTER TABLE seasons ADD CONSTRAINT seasons_planned_end_after_start
   CHECK (planned_end_at IS NULL OR planned_end_at > started_at);
+ALTER TABLE seasons DROP CONSTRAINT IF EXISTS seasons_voting_closes_after_start;
+ALTER TABLE seasons ADD CONSTRAINT seasons_voting_closes_after_start
+  CHECK (voting_closes_at IS NULL OR voting_closes_at > started_at);
 
 -- ============================================================
 -- 2. end_season_and_start_new takes the new season's planned end
@@ -107,13 +114,35 @@ $$;
 REVOKE ALL ON FUNCTION open_award_voting(UUID) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION open_award_voting(UUID) TO authenticated;
 
+-- "Close voting now": any season whose ballot is open (usually the previous
+-- one, during the first two weeks of the next). Server time, like opening.
+-- Not one-way: the admin can set a later voting_closes_at to reopen.
+-- Defined before award_voting_is_open below; plpgsql resolves it at call time.
+CREATE OR REPLACE FUNCTION close_award_voting(p_season_id UUID)
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  IF COALESCE(get_my_role(), '') <> 'admin' THEN
+    RAISE EXCEPTION 'not_allowed';
+  END IF;
+  IF NOT COALESCE(award_voting_is_open(p_season_id), false) THEN
+    RAISE EXCEPTION 'voting_not_open';
+  END IF;
+  UPDATE seasons SET voting_closes_at = now() WHERE id = p_season_id;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION close_award_voting(UUID) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION close_award_voting(UUID) TO authenticated;
+
 -- ============================================================
 -- 4. The window and who may be nominated (internal; #122 reuses both)
 -- ============================================================
 -- Mirrors awardVotingStatus in lib/seasonAwards.ts: open from the earliest of
 -- "Open voting now", 7 days before the planned end, and the actual end, until
--- 14 days into the next season. LEAST ignores NULLs; nothing set at all is not
--- open. Fixed hours, not days: the TS works in milliseconds, and an INTERVAL
+-- the admin's closing date or else 14 days into the next season. LEAST ignores
+-- NULLs; nothing set at all is not open, and no close at all never closes. Fixed hours, not days: the TS works in milliseconds, and an INTERVAL
 -- in days would follow DST in the session time zone.
 CREATE OR REPLACE FUNCTION award_voting_is_open(p_season_id UUID)
 RETURNS boolean LANGUAGE sql STABLE
@@ -123,8 +152,9 @@ AS $$
            now() >= LEAST(s.voting_opened_at,
                           s.planned_end_at - INTERVAL '168 hours',  -- AWARD_VOTING_LEAD_DAYS
                           s.ended_at)
-           AND (nx.started_at IS NULL
-                OR now() < nx.started_at + INTERVAL '336 hours'),  -- AWARD_VOTING_TAIL_DAYS
+           AND now() < COALESCE(s.voting_closes_at,
+                                nx.started_at + INTERVAL '336 hours',  -- AWARD_VOTING_TAIL_DAYS
+                                'infinity'::timestamptz),
            false)
     FROM seasons s
     LEFT JOIN seasons nx ON nx.number = s.number + 1

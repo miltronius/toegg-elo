@@ -468,6 +468,11 @@ export type Season = {
   planned_end_at?: string | null;
   /** Set by "Open voting now" (open_award_voting), in server time. */
   voting_opened_at?: string | null;
+  /**
+   * The admin's closing date for award voting, replacing the default of 14
+   * days into the next season. "Close voting now" sets it to server time.
+   */
+  voting_closes_at?: string | null;
   is_active: boolean;
   created_at: string;
 };
@@ -543,16 +548,27 @@ export async function endSeasonAndStartNew(
   await recomputeAchievements();
 }
 
-/** Admin-only (RLS "Admins can update seasons"). null clears it. */
-export async function updateSeasonPlannedEnd(
+export type SeasonVotingSchedule = Partial<
+  Pick<Season, "planned_end_at" | "voting_closes_at">
+>;
+
+/**
+ * Admin-only (RLS "Admins can update seasons"): the planned end and/or the
+ * award voting close. A field left out is untouched; null clears it.
+ */
+export async function updateSeasonVotingSchedule(
   seasonId: string,
-  plannedEndAt: string | null,
+  schedule: SeasonVotingSchedule,
 ): Promise<void> {
   markLocalMutation();
-  const { error } = await supabase
-    .from("seasons")
-    .update({ planned_end_at: plannedEndAt })
-    .eq("id", seasonId);
+  const { error } = await supabase.from("seasons").update(schedule).eq("id", seasonId);
+  if (error) throw error;
+}
+
+/** Admin-only: closes a season's open award voting now, in server time. */
+export async function closeAwardVoting(seasonId: string): Promise<void> {
+  markLocalMutation();
+  const { error } = await supabase.rpc("close_award_voting", { p_season_id: seasonId });
   if (error) throw error;
 }
 

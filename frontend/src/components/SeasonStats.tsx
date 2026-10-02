@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ResponsiveContainer,
@@ -23,11 +23,6 @@ interface SeasonStatsProps {
   history: EloHistory[];
   players: Player[];
   achievements: PlayerAchievementRow[];
-  /**
-   * Season Awards vote nudge. Not tied to the scope select, so a just-ended
-   * season's ballot isn't hidden behind the default scope.
-   */
-  awardNudge?: ReactNode;
 }
 
 function formatDay(day: string): string {
@@ -46,7 +41,6 @@ export function SeasonStats({
   history,
   players,
   achievements,
-  awardNudge,
 }: SeasonStatsProps) {
   const { t } = useTranslation();
   const fmtDay = (day: string) => formatDay(day);
@@ -112,8 +106,6 @@ export function SeasonStats({
           ))}
         </select>
       </div>
-
-      {awardNudge}
 
       {range && (
         <div className="season-stats-daterange">

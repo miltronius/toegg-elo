@@ -2443,6 +2443,16 @@ button.award-nudge:hover {
   padding-top: 1rem;
   margin-bottom: 1rem;
 }
+.season-schedule-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  margin: 0 0 0.2rem;
+}
+.season-schedule-status {
+  font-size: 0.85rem;
+  color: var(--color-text-light);
+  margin-bottom: 0.75rem;
+}
 
 /* ── GitHub-style daily activity heatmap ──────────────────────────── */
 .heatmap-container {

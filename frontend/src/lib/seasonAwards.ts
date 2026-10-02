@@ -85,7 +85,7 @@ export function turnoutRatio(turnout: AwardTurnout): { voters: number; eligible:
 /** The season fields the window reads. `awards_finalized_at` arrives with #122. */
 export type AwardSeason = Pick<
   Season,
-  "number" | "started_at" | "ended_at" | "planned_end_at" | "voting_opened_at"
+  "number" | "started_at" | "ended_at" | "planned_end_at" | "voting_opened_at" | "voting_closes_at"
 > & { awards_finalized_at?: string | null };
 
 export type AwardVotingStatus = "not_open" | "open" | "closed" | "finalized";
@@ -109,7 +109,9 @@ export function nextSeasonOf<T extends Pick<Season, "number">>(
  * When a season's ballot opens and closes, in ms. It opens at the earliest of
  * the admin's "Open voting now", a lead week before the planned end, and the
  * actual end (so every season gets a vote); null while none is set. It closes
- * two weeks into the next season; null while there is none yet.
+ * at the admin's closing date (`voting_closes_at`, "Close voting now" or the
+ * auto-close field) if one is set - earlier or later than the default - and
+ * otherwise two weeks into the next season; null while neither exists.
  */
 export function awardVotingWindow(
   season: AwardSeason,
@@ -122,9 +124,10 @@ export function awardVotingWindow(
     parseTime(season.ended_at),
   ].filter((t): t is number => t !== null);
   const nextStart = nextSeason ? parseTime(nextSeason.started_at) : null;
+  const defaultClose = nextStart === null ? null : nextStart + AWARD_VOTING_TAIL_DAYS * DAY_MS;
   return {
     opensAt: triggers.length > 0 ? Math.min(...triggers) : null,
-    closesAt: nextStart === null ? null : nextStart + AWARD_VOTING_TAIL_DAYS * DAY_MS,
+    closesAt: parseTime(season.voting_closes_at) ?? defaultClose,
   };
 }
 
@@ -139,6 +142,37 @@ export function awardVotingStatus(
   if (closesAt !== null && now >= closesAt) return "closed";
   if (opensAt === null || now < opensAt) return "not_open";
   return "open";
+}
+
+/**
+ * What to say about a season's voting, as a `seasonDialog.*` key plus the
+ * moment it names. Shared by the season info row and the admin block, so the
+ * two can't describe the same window differently.
+ */
+export type VotingStatusLabel =
+  | { key: "votingFinalized" }
+  | { key: "votingClosed"; at: number }
+  | { key: "votingOpenUntil"; at: number }
+  | { key: "votingOpenUntilNext" }
+  | { key: "votingOpens"; at: number }
+  | { key: "votingOpensAtEnd" };
+
+export function votingStatusLabel(
+  season: AwardSeason,
+  nextSeason: Pick<Season, "started_at"> | null,
+  now: number,
+): VotingStatusLabel {
+  const status = awardVotingStatus(season, nextSeason, now);
+  const { opensAt, closesAt } = awardVotingWindow(season, nextSeason);
+  if (status === "finalized") return { key: "votingFinalized" };
+  // closed implies a closing moment: nothing else can close a ballot.
+  if (status === "closed") return { key: "votingClosed", at: closesAt! };
+  if (status === "open") {
+    return closesAt === null
+      ? { key: "votingOpenUntilNext" }
+      : { key: "votingOpenUntil", at: closesAt };
+  }
+  return opensAt === null ? { key: "votingOpensAtEnd" } : { key: "votingOpens", at: opensAt };
 }
 
 /**
@@ -215,10 +249,13 @@ export function picksForSeason(
   return picks;
 }
 
-/** A planned end must come after the season's start (seasons CHECK). */
-export type PlannedEnd = ParsedMoment | { kind: "before_start" };
+/**
+ * A season date typed as Swiss text - the planned end or the voting close -
+ * which must come after the season's start (the seasons CHECKs).
+ */
+export type SeasonDate = ParsedMoment | { kind: "before_start" };
 
-export function parsePlannedEnd(text: string, startedAtMs: number): PlannedEnd {
+export function parseSeasonDate(text: string, startedAtMs: number): SeasonDate {
   const parsed = parseSwissDateTime(text);
   if (parsed.kind === "ok" && Date.parse(parsed.iso) <= startedAtMs) {
     return { kind: "before_start" };

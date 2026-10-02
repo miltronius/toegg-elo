@@ -88,7 +88,8 @@ RETURNS void LANGUAGE plpgsql AS $$
 DECLARE v_number INT;
 BEGIN
   SELECT number INTO v_number FROM seasons WHERE is_active;
-  UPDATE seasons SET voting_opened_at = opened, planned_end_at = planned, ended_at = ended
+  UPDATE seasons SET voting_opened_at = opened, planned_end_at = planned, ended_at = ended,
+                     voting_closes_at = NULL
    WHERE is_active;
   DELETE FROM seasons WHERE number = v_number + 1;
   IF next_started IS NOT NULL THEN
@@ -106,6 +107,7 @@ CREATE FUNCTION pg_temp.vote(award TEXT, nominee UUID) RETURNS void LANGUAGE sql
 SET LOCAL ROLE anon;
 SELECT pg_temp.act_as(NULL);
 SELECT pg_temp.expect('anon cannot vote', $q$SELECT pg_temp.vote('award_offense', pg_temp.p(2))$q$, 'permission denied for function cast_award_vote');
+SELECT pg_temp.expect('anon cannot close voting', $q$SELECT close_award_voting(pg_temp.active())$q$, 'permission denied for function close_award_voting');
 SELECT pg_temp.expect('anon cannot open voting', $q$SELECT open_award_voting(pg_temp.active())$q$, 'permission denied for function open_award_voting');
 SELECT pg_temp.expect('anon cannot end the season', $q$SELECT end_season_and_start_new('Vote Check', 48, 0, 0.25)$q$, 'permission denied for function end_season_and_start_new');
 SELECT pg_temp.expect_count('anon reads no votes', 'SELECT count(*) FROM season_award_votes', 0);
@@ -121,6 +123,7 @@ SELECT pg_temp.expect('unlinked user cannot vote', $q$SELECT pg_temp.vote('award
 SELECT pg_temp.act_as(pg_temp.u(1));
 SELECT pg_temp.expect('not open yet', $q$SELECT pg_temp.vote('award_offense', pg_temp.p(2))$q$, 'voting_not_open');
 SELECT pg_temp.expect('user cannot open voting', $q$SELECT open_award_voting(pg_temp.active())$q$, 'not_allowed');
+SELECT pg_temp.expect('user cannot close voting', $q$SELECT close_award_voting(pg_temp.active())$q$, 'not_allowed');
 SELECT pg_temp.expect('user cannot end the season', $q$SELECT end_season_and_start_new('Vote Check', 48, 0, 0.25)$q$, 'Only admins can end seasons');
 SELECT pg_temp.expect('window helper not callable', $q$SELECT award_voting_is_open(pg_temp.active())$q$, 'permission denied for function award_voting_is_open');
 SELECT pg_temp.expect('eligibility helper not callable', $q$SELECT award_nominee_eligible(pg_temp.active(), 'award_offense', pg_temp.p(2))$q$, 'permission denied for function award_nominee_eligible');
@@ -225,6 +228,42 @@ SET LOCAL ROLE authenticated;
 SELECT pg_temp.act_as(pg_temp.u(1));
 SELECT pg_temp.expect('closed at exactly 14 days', $q$SELECT pg_temp.vote('award_rookie', pg_temp.p(2))$q$, 'voting_not_open');
 SELECT pg_temp.expect('a closed ballot cannot be cleared either', $q$SELECT pg_temp.vote('award_rookie', NULL)$q$, 'voting_not_open');
+
+-- ── Closing: the admin's date, and Close voting now ──────────
+-- A closing date replaces the default in both directions.
+RESET ROLE;
+SELECT pg_temp.shape(now() - interval '1 day', NULL, NULL, NULL);
+UPDATE seasons SET voting_closes_at = now() WHERE is_active;
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(pg_temp.u(1));
+SELECT pg_temp.expect('closed at exactly the closing date', $q$SELECT pg_temp.vote('award_rookie', pg_temp.p(2))$q$, 'voting_not_open');
+
+RESET ROLE;
+SELECT pg_temp.shape(now() - interval '1 day', NULL, NULL, NULL);
+UPDATE seasons SET voting_closes_at = now() + interval '1 second' WHERE is_active;
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(pg_temp.u(1));
+SELECT pg_temp.expect('open until the closing date', $q$SELECT pg_temp.vote('award_rookie', pg_temp.p(2))$q$, NULL);
+
+RESET ROLE;
+SELECT pg_temp.shape(NULL, NULL, now() - interval '20 days', now() - interval '336 hours');
+UPDATE seasons SET voting_closes_at = now() + interval '1 day' WHERE is_active;
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(pg_temp.u(1));
+SELECT pg_temp.expect('a later closing date extends past the 14 days', $q$SELECT pg_temp.vote('award_rookie', pg_temp.p(2))$q$, NULL);
+
+RESET ROLE;
+SELECT pg_temp.shape(now() - interval '1 day', NULL, NULL, NULL);
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.act_as(pg_temp.u(2));
+SELECT pg_temp.expect('admin closes voting', $q$SELECT close_award_voting(pg_temp.active())$q$, NULL);
+SELECT pg_temp.expect_count('closed at server time', 'SELECT count(*) FROM seasons WHERE is_active AND voting_closes_at = now()', 1);
+SELECT pg_temp.expect('closing a closed ballot is refused', $q$SELECT close_award_voting(pg_temp.active())$q$, 'voting_not_open');
+SELECT pg_temp.act_as(pg_temp.u(1));
+SELECT pg_temp.expect('no votes once closed', $q$SELECT pg_temp.vote('award_rookie', pg_temp.p(2))$q$, 'voting_not_open');
+
+RESET ROLE;
+SELECT pg_temp.expect('a closing date before the start is refused', $q$UPDATE seasons SET voting_closes_at = started_at WHERE is_active$q$, 'new row for relation "seasons" violates check constraint "seasons_voting_closes_after_start"');
 
 -- ── Starting a season with a planned end ─────────────────────
 RESET ROLE;

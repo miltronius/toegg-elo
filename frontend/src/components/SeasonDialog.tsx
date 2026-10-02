@@ -3,8 +3,9 @@ import { useTranslation, Trans } from "react-i18next";
 import {
   Season,
   endSeasonAndStartNew,
+  closeAwardVoting,
   openAwardVoting,
-  updateSeasonPlannedEnd,
+  updateSeasonVotingSchedule,
   type Match,
   type Player,
   type EloHistory,
@@ -15,12 +16,14 @@ import { DEFAULT_PARTNER_WEIGHT } from "../lib/elo";
 import { SWISS_DATETIME_FORMAT, maskSwissDateTime } from "../lib/banners";
 import {
   AWARD_VOTING_LEAD_DAYS,
+  AWARD_VOTING_TAIL_DAYS,
   awardVotingStatus,
-  awardVotingWindow,
-  parsePlannedEnd,
+  nextSeasonOf,
+  parseSeasonDate,
+  votingStatusLabel,
 } from "../lib/seasonAwards";
 import { SeasonStats } from "./SeasonStats";
-import { SeasonScheduleAdmin } from "./SeasonScheduleAdmin";
+import { SeasonScheduleAdmin, formatDateTime } from "./SeasonScheduleAdmin";
 
 interface SeasonDialogProps {
   activeSeason: Season | null;
@@ -31,7 +34,7 @@ interface SeasonDialogProps {
   history: EloHistory[];
   players: Player[];
   achievements: PlayerAchievementRow[];
-  /** Season Awards vote nudge, forwarded to Season Stats. */
+  /** Season Awards vote nudge, shown at the top of the info view. */
   awardNudge?: ReactNode;
 }
 
@@ -83,7 +86,7 @@ export function SeasonDialog({
       setError(t("seasonDialog.nameRequired"));
       return;
     }
-    const plannedEnd = parsePlannedEnd(newPlannedEnd, Date.now());
+    const plannedEnd = parseSeasonDate(newPlannedEnd, Date.now());
     if (plannedEnd.kind === "invalid") {
       setError(t("seasonDialog.plannedEndInvalid", { format: SWISS_DATETIME_FORMAT }));
       return;
@@ -119,14 +122,25 @@ export function SeasonDialog({
     });
 
   const votingText = (season: Season) => {
-    if (awardVotingStatus(season, null, Date.now()) === "open") {
-      return t("seasonDialog.votingOpen");
-    }
-    const { opensAt } = awardVotingWindow(season, null);
-    return opensAt === null
-      ? t("seasonDialog.votingOpensAtEnd")
-      : t("seasonDialog.votingOpens", { date: formatDate(new Date(opensAt).toISOString()) });
+    const label = votingStatusLabel(season, nextSeasonOf(season, seasons), Date.now());
+    return t(`seasonDialog.${label.key}`, {
+      date: "at" in label ? formatDateTime(label.at) : "",
+      days: AWARD_VOTING_TAIL_DAYS,
+    });
   };
+
+  // Admin voting controls: the running season, plus the previous one while
+  // its ballot is still open (it runs into the first two weeks of this one).
+  const previousSeason = activeSeason
+    ? (seasons.find((s) => s.number === activeSeason.number - 1) ?? null)
+    : null;
+  const adminVotingSeasons = [
+    ...(previousSeason &&
+    awardVotingStatus(previousSeason, activeSeason, Date.now()) === "open"
+      ? [previousSeason]
+      : []),
+    ...(activeSeason ? [activeSeason] : []),
+  ];
 
   return (
     <>
@@ -160,6 +174,8 @@ export function SeasonDialog({
                     })}
                   </span>
                 </h2>
+
+                {awardNudge}
 
                 <dl className="grid grid-cols-[auto_1fr] gap-x-5 gap-y-2 mb-6 text-[0.9rem]">
                   <dt className="font-semibold text-text-light whitespace-nowrap">
@@ -211,20 +227,28 @@ export function SeasonDialog({
                   <dd className="m-0">{activeSeason ? votingText(activeSeason) : "-"}</dd>
                 </dl>
 
-                {isAdmin && activeSeason && (
-                  <SeasonScheduleAdmin
-                    key={activeSeason.id}
-                    season={activeSeason}
-                    onSavePlannedEnd={async (iso) => {
-                      await updateSeasonPlannedEnd(activeSeason.id, iso);
-                      onSeasonChanged();
-                    }}
-                    onOpenVoting={async () => {
-                      await openAwardVoting(activeSeason.id);
-                      onSeasonChanged();
-                    }}
-                  />
-                )}
+                {isAdmin &&
+                  adminVotingSeasons.map((season) => (
+                    <SeasonScheduleAdmin
+                      // Keyed on the stored dates too, so the fields pick up a
+                      // change (e.g. Close voting now) once seasons refetch.
+                      key={`${season.id}-${season.planned_end_at}-${season.voting_closes_at}`}
+                      season={season}
+                      nextSeason={nextSeasonOf(season, seasons)}
+                      onSave={async (schedule) => {
+                        await updateSeasonVotingSchedule(season.id, schedule);
+                        onSeasonChanged();
+                      }}
+                      onOpenVoting={async () => {
+                        await openAwardVoting(season.id);
+                        onSeasonChanged();
+                      }}
+                      onCloseVoting={async () => {
+                        await closeAwardVoting(season.id);
+                        onSeasonChanged();
+                      }}
+                    />
+                  ))}
 
                 <SeasonStats
                   activeSeason={activeSeason}
@@ -233,7 +257,6 @@ export function SeasonDialog({
                   history={history}
                   players={players}
                   achievements={achievements}
-                  awardNudge={awardNudge}
                 />
 
                 <div className="flex gap-4 justify-end mt-6">
