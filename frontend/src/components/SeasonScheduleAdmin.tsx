@@ -39,6 +39,10 @@ export const formatDateTime = (ms: number) =>
  * one, during the first two weeks of the next - the closing date and "Close
  * voting now". Opening is one-way (open_award_voting keeps the first moment);
  * closing isn't, since a later closing date reopens. Both confirm.
+ *
+ * Collapsible (<details>): the summary keeps the title and status, so a closed
+ * block still says where voting stands. It starts open only while the ballot
+ * is open - the state an admin is most likely to act on.
  */
 export function SeasonScheduleAdmin({
   season,
@@ -120,14 +124,13 @@ export function SeasonScheduleAdmin({
   const fieldId = (name: string) => `season-${name}-${season.id}`;
 
   return (
-    <section
-      className="season-schedule-admin"
-      aria-labelledby={fieldId("voting-admin")}
-    >
-      <h3 id={fieldId("voting-admin")} className="season-schedule-title">
-        🗳️ {t("seasonDialog.votingAdminTitle", { season: label })}
-      </h3>
-      <p className="season-schedule-status">{statusText}</p>
+    <details className="season-schedule-admin" open={status === "open"}>
+      <summary className="season-schedule-summary">
+        <h3 className="season-schedule-title">
+          🗳️ {t("seasonDialog.votingAdminTitle", { season: label })}
+        </h3>
+        <span className="season-schedule-status">{statusText}</span>
+      </summary>
 
       {running && (
         <div className="form-group">
@@ -193,6 +196,6 @@ export function SeasonScheduleAdmin({
           {error}
         </p>
       )}
-    </section>
+    </details>
   );
 }

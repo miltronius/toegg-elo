@@ -146,6 +146,21 @@ describe("SeasonScheduleAdmin", () => {
     expect(screen.queryByRole("button", { name: /voting now/ })).toBeNull();
   });
 
+  it("collapses, starting open only while the ballot is open", async () => {
+    const { user } = setup();
+    const block = screen.getByRole("group");
+    expect(block).not.toHaveAttribute("open");
+    // The summary still says where voting stands.
+    expect(screen.getByText("Opens when the season ends")).toBeInTheDocument();
+    await user.click(screen.getByRole("heading"));
+    expect(block).toHaveAttribute("open");
+  });
+
+  it("starts open while the vote is open", () => {
+    setup({ season: season({ voting_opened_at: new Date(T0 - 1000).toISOString() }) });
+    expect(screen.getByRole("group")).toHaveAttribute("open");
+  });
+
   it("explains a refusal", async () => {
     vi.spyOn(window, "confirm").mockReturnValue(true);
     setup({ onOpenVoting: vi.fn().mockRejectedValue({ message: "season_not_active" }) });
