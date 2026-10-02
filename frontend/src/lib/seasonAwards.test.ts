@@ -43,7 +43,7 @@ describe("constants", () => {
     expect(AWARD_VOTING_TAIL_DAYS).toBe(14);
   });
 
-  it("list the seven awards in ballot order, as the award_id CHECK does", () => {
+  it("list the six awards in ballot order, as the award_id CHECK does", () => {
     expect(SEASON_AWARDS.map((a) => a.id)).toEqual([
       "award_offense",
       "award_defense",
@@ -51,7 +51,6 @@ describe("constants", () => {
       "award_community",
       "award_improved",
       "award_rookie",
-      "award_guest",
     ]);
   });
 
@@ -190,8 +189,7 @@ describe("eligibleNomineeIds", () => {
     row("almost", "s3", 2), // played before but was never ranked: still a rookie
     row("later", "s4", 3),
     row("later", "s5", 9), // a later season doesn't count against a rookie
-    row("guest1", "s4", 1),
-    row("guest2", "s4", 2),
+    row("guest", "s4", 2), // played, but too little to be ranked
     row("idle", "s4", 0),
     row("elsewhere", "s3", 7), // no row in s4 at all
   ];
@@ -208,10 +206,6 @@ describe("eligibleNomineeIds", () => {
 
   it("takes rookies ranked now and never ranked before", () => {
     expect(ids("award_rookie")).toEqual(["almost", "later", "ranked"]);
-  });
-
-  it("takes guests who played, but too little to be ranked", () => {
-    expect(ids("award_guest")).toEqual(["guest1", "guest2"]);
   });
 });
 
@@ -244,10 +238,10 @@ describe("picksForSeason", () => {
     });
     expect(
       picksForSeason(
-        [vote("s5", "award_fun", "p2"), vote("s4", "award_fun", "p9"), vote("s5", "award_guest", "p3")],
+        [vote("s5", "award_fun", "p2"), vote("s4", "award_fun", "p9"), vote("s5", "award_rookie", "p3")],
         "s5",
       ),
-    ).toEqual({ award_fun: "p2", award_guest: "p3" });
+    ).toEqual({ award_fun: "p2", award_rookie: "p3" });
   });
 });
 

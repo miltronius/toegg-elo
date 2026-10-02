@@ -50,7 +50,7 @@ function renderNudge(over: Partial<React.ComponentProps<typeof AwardVoteNudge>> 
   const view = render(
     <AwardVoteNudge
       seasons={[S5, S4]}
-      votes={[vote("award_fun"), vote("award_guest")]}
+      votes={[vote("award_fun"), vote("award_rookie")]}
       onOpenBallot={onOpenBallot}
       now={T0 + DAY}
       {...over}
@@ -66,7 +66,7 @@ describe("AwardVoteNudge", () => {
     const { onOpenBallot } = renderNudge();
     const nudge = screen.getByRole("button", { name: /Vote for the Season Awards/ });
     expect(nudge).toHaveTextContent("S4 · Summer");
-    expect(nudge).toHaveTextContent("2/7 picked");
+    expect(nudge).toHaveTextContent("2/6 picked");
     expect(nudge).toHaveTextContent("closes 15.10.2026");
     await userEvent.click(nudge);
     expect(onOpenBallot).toHaveBeenCalledWith("s4");
@@ -77,7 +77,7 @@ describe("AwardVoteNudge", () => {
     me.myPlayerId = "p1";
     renderNudge({ seasons: [season({ voting_opened_at: iso(T0) })], votes: [] });
     expect(screen.getByRole("button")).toHaveTextContent(
-      "0/7 picked · closes 14 days into the next season",
+      "0/6 picked · closes 14 days into the next season",
     );
   });
 

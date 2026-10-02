@@ -2,6 +2,6 @@
 "toegg-elo-frontend": minor
 ---
 
-Season Awards voting: linked players vote for seven awards, from a week before a season ends until two weeks into the next - secret ballot, changeable until it closes.
+Season Awards voting: linked players vote for six awards, from a week before a season ends until two weeks into the next - secret ballot, changeable until it closes.
 
 Adds `seasons.planned_end_at`/`voting_opened_at`, the `season_award_votes` table and the `cast_award_vote`/`open_award_voting` RPCs, and closes anon access to `end_season_and_start_new`. Apply `20260930_season_award_voting.sql` before deploying the frontend.

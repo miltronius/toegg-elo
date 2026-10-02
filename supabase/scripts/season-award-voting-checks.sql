@@ -23,7 +23,7 @@ UPDATE profiles SET role = 'admin' WHERE id = pg_temp.u(2);
 
 -- Players (on_player_created gives each a 0-game row in the running season):
 -- 1 = user 1's own, ranked; 2 = ranked for the first time (rookie too);
--- 3 = one game (guest); 4 = ranked now and in an earlier season;
+-- 3 = one game (not ranked); 4 = ranked now and in an earlier season;
 -- 5 = the admin's, ranked; 6 = no games.
 INSERT INTO players (id, name)
 SELECT pg_temp.p(n), 'Vote Check ' || n FROM generate_series(1, 6) n;
@@ -135,11 +135,9 @@ SELECT pg_temp.expect_count('opened at server time', 'SELECT count(*) FROM seaso
 SELECT pg_temp.act_as(pg_temp.u(1));
 SELECT pg_temp.expect('vote once opened', $q$SELECT pg_temp.vote('award_offense', pg_temp.p(2))$q$, NULL);
 SELECT pg_temp.expect('no self-vote', $q$SELECT pg_temp.vote('award_offense', pg_temp.p(1))$q$, 'self_vote');
-SELECT pg_temp.expect('a guest is not ranked', $q$SELECT pg_temp.vote('award_offense', pg_temp.p(3))$q$, 'nominee_not_eligible');
+SELECT pg_temp.expect('one game is not ranked', $q$SELECT pg_temp.vote('award_offense', pg_temp.p(3))$q$, 'nominee_not_eligible');
 SELECT pg_temp.expect('no games, no nomination', $q$SELECT pg_temp.vote('award_offense', pg_temp.p(6))$q$, 'nominee_not_eligible');
-SELECT pg_temp.expect('guest award takes a guest', $q$SELECT pg_temp.vote('award_guest', pg_temp.p(3))$q$, NULL);
-SELECT pg_temp.expect('guest award refuses a ranked player', $q$SELECT pg_temp.vote('award_guest', pg_temp.p(2))$q$, 'nominee_not_eligible');
-SELECT pg_temp.expect('guest award refuses no games', $q$SELECT pg_temp.vote('award_guest', pg_temp.p(6))$q$, 'nominee_not_eligible');
+SELECT pg_temp.expect('the withdrawn guest award is unknown', $q$SELECT pg_temp.vote('award_guest', pg_temp.p(3))$q$, 'unknown_award');
 SELECT pg_temp.expect('rookie award takes a first-time ranked player', $q$SELECT pg_temp.vote('award_rookie', pg_temp.p(2))$q$, NULL);
 SELECT pg_temp.expect('rookie award refuses a veteran', $q$SELECT pg_temp.vote('award_rookie', pg_temp.p(4))$q$, 'nominee_not_eligible');
 SELECT pg_temp.expect('unknown award', $q$SELECT pg_temp.vote('award_bogus', pg_temp.p(2))$q$, 'unknown_award');
@@ -148,7 +146,7 @@ SELECT pg_temp.expect('change a pick', $q$SELECT pg_temp.vote('award_offense', p
 SELECT pg_temp.expect_count('a change replaces the pick', $q$SELECT count(*) FROM season_award_votes WHERE award_id = 'award_offense' AND nominee_player_id = pg_temp.p(4)$q$, 1);
 SELECT pg_temp.expect_count('one row per award', $q$SELECT count(*) FROM season_award_votes WHERE award_id = 'award_offense'$q$, 1);
 SELECT pg_temp.expect('clear a pick', $q$SELECT pg_temp.vote('award_offense', NULL)$q$, NULL);
-SELECT pg_temp.expect_count('voter reads own ballot', 'SELECT count(*) FROM season_award_votes', 2);
+SELECT pg_temp.expect_count('voter reads own ballot', 'SELECT count(*) FROM season_award_votes', 1);
 SELECT pg_temp.expect('no direct insert', $q$INSERT INTO season_award_votes (season_id, award_id, voter_user_id, nominee_player_id) VALUES (pg_temp.active(), 'award_fun', pg_temp.u(1), pg_temp.p(2))$q$, 'permission denied for table season_award_votes');
 SELECT pg_temp.expect('no direct delete', $q$DELETE FROM season_award_votes WHERE true$q$, 'permission denied for table season_award_votes');
 
@@ -159,49 +157,49 @@ SELECT pg_temp.expect_count('admin reads only their own votes', 'SELECT count(*)
 SELECT pg_temp.act_as(pg_temp.u(4));
 SELECT pg_temp.expect_count('others read nothing', 'SELECT count(*) FROM season_award_votes', 0);
 
--- ── Window edges (user 1 re-picks the guest, who stays eligible) ──
+-- ── Window edges (user 1 re-picks the rookie, who stays eligible) ──
 RESET ROLE;
 SELECT pg_temp.shape(NULL, now() + interval '168 hours', NULL, NULL);
 SET LOCAL ROLE authenticated;
 SELECT pg_temp.act_as(pg_temp.u(1));
-SELECT pg_temp.expect('opens exactly 7 days before the planned end', $q$SELECT pg_temp.vote('award_guest', pg_temp.p(3))$q$, NULL);
+SELECT pg_temp.expect('opens exactly 7 days before the planned end', $q$SELECT pg_temp.vote('award_rookie', pg_temp.p(2))$q$, NULL);
 
 RESET ROLE;
 SELECT pg_temp.shape(NULL, now() + interval '168 hours 1 second', NULL, NULL);
 SET LOCAL ROLE authenticated;
 SELECT pg_temp.act_as(pg_temp.u(1));
-SELECT pg_temp.expect('not a second earlier', $q$SELECT pg_temp.vote('award_guest', pg_temp.p(3))$q$, 'voting_not_open');
+SELECT pg_temp.expect('not a second earlier', $q$SELECT pg_temp.vote('award_rookie', pg_temp.p(2))$q$, 'voting_not_open');
 
 RESET ROLE;
 SELECT pg_temp.shape(NULL, NULL, NULL, NULL);
 SET LOCAL ROLE authenticated;
 SELECT pg_temp.act_as(pg_temp.u(1));
-SELECT pg_temp.expect('nothing set, nothing open', $q$SELECT pg_temp.vote('award_guest', pg_temp.p(3))$q$, 'voting_not_open');
+SELECT pg_temp.expect('nothing set, nothing open', $q$SELECT pg_temp.vote('award_rookie', pg_temp.p(2))$q$, 'voting_not_open');
 
 RESET ROLE;
 SELECT pg_temp.shape(now(), NULL, NULL, NULL);
 SET LOCAL ROLE authenticated;
 SELECT pg_temp.act_as(pg_temp.u(1));
-SELECT pg_temp.expect('opened this instant counts', $q$SELECT pg_temp.vote('award_guest', pg_temp.p(3))$q$, NULL);
+SELECT pg_temp.expect('opened this instant counts', $q$SELECT pg_temp.vote('award_rookie', pg_temp.p(2))$q$, NULL);
 
 RESET ROLE;
 SELECT pg_temp.shape(NULL, NULL, now() - interval '1 hour', now() - interval '1 hour');
 SET LOCAL ROLE authenticated;
 SELECT pg_temp.act_as(pg_temp.u(1));
-SELECT pg_temp.expect('the end opens it without a plan', $q$SELECT pg_temp.vote('award_guest', pg_temp.p(3))$q$, NULL);
+SELECT pg_temp.expect('the end opens it without a plan', $q$SELECT pg_temp.vote('award_rookie', pg_temp.p(2))$q$, NULL);
 
 RESET ROLE;
 SELECT pg_temp.shape(NULL, NULL, now() - interval '20 days', now() - interval '336 hours' + interval '1 second');
 SET LOCAL ROLE authenticated;
 SELECT pg_temp.act_as(pg_temp.u(1));
-SELECT pg_temp.expect('open until 14 days into the next season', $q$SELECT pg_temp.vote('award_guest', pg_temp.p(3))$q$, NULL);
+SELECT pg_temp.expect('open until 14 days into the next season', $q$SELECT pg_temp.vote('award_rookie', pg_temp.p(2))$q$, NULL);
 
 RESET ROLE;
 SELECT pg_temp.shape(NULL, NULL, now() - interval '20 days', now() - interval '336 hours');
 SET LOCAL ROLE authenticated;
 SELECT pg_temp.act_as(pg_temp.u(1));
-SELECT pg_temp.expect('closed at exactly 14 days', $q$SELECT pg_temp.vote('award_guest', pg_temp.p(3))$q$, 'voting_not_open');
-SELECT pg_temp.expect('a closed ballot cannot be cleared either', $q$SELECT pg_temp.vote('award_guest', NULL)$q$, 'voting_not_open');
+SELECT pg_temp.expect('closed at exactly 14 days', $q$SELECT pg_temp.vote('award_rookie', pg_temp.p(2))$q$, 'voting_not_open');
+SELECT pg_temp.expect('a closed ballot cannot be cleared either', $q$SELECT pg_temp.vote('award_rookie', NULL)$q$, 'voting_not_open');
 
 -- ── Starting a season with a planned end ─────────────────────
 RESET ROLE;

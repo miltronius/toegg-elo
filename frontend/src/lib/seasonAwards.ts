@@ -29,16 +29,14 @@ export type AwardId =
   | "award_fun"
   | "award_community"
   | "award_improved"
-  | "award_rookie"
-  | "award_guest";
+  | "award_rookie";
 
 /**
  * Who can be nominated:
  * `ranked` - at least RANKED_MIN_GAMES games in the season.
  * `rookie` - ranked in the season, and never ranked in an earlier one.
- * `guest` - played in the season, but too little to be ranked.
  */
-export type AwardNominees = "ranked" | "rookie" | "guest";
+export type AwardNominees = "ranked" | "rookie";
 
 export type SeasonAward = { id: AwardId; icon: string; nominees: AwardNominees };
 
@@ -54,7 +52,6 @@ export const SEASON_AWARDS: readonly SeasonAward[] = [
   { id: "award_community", icon: "🤝", nominees: "ranked" },
   { id: "award_improved", icon: "🚀", nominees: "ranked" },
   { id: "award_rookie", icon: "🌱", nominees: "rookie" },
-  { id: "award_guest", icon: "🎟️", nominees: "guest" },
 ];
 
 /** One pick on the caller's ballot, as RLS returns it (own rows only). */
@@ -160,11 +157,7 @@ export function eligibleNomineeIds(
   const ids = new Set<string>();
   for (const row of seasonStats) {
     if (row.season_id !== season.id) continue;
-    const games = gamesOf(row);
-    const ranked = games >= RANKED_MIN_GAMES;
-    if (award.nominees === "guest" ? games >= 1 && !ranked : ranked) {
-      ids.add(row.player_id);
-    }
+    if (gamesOf(row) >= RANKED_MIN_GAMES) ids.add(row.player_id);
   }
   if (award.nominees === "rookie") {
     const earlier = new Set(

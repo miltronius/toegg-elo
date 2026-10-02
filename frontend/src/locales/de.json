@@ -396,8 +396,7 @@
       "award_fun": "Grösster Spassfaktor",
       "award_community": "Community-Preis",
       "award_improved": "Grösster Fortschritt",
-      "award_rookie": "Rookie der Saison",
-      "award_guest": "Stargast"
+      "award_rookie": "Rookie der Saison"
     },
     "errors": {
       "not_allowed": "Das darfst du nicht.",
@@ -418,8 +417,7 @@
     },
     "nominees": {
       "ranked": "Gewertete Spieler (ab {{min}} Spielen diese Saison)",
-      "rookie": "Diese Saison zum ersten Mal gewertet",
-      "guest": "Diese Saison 1-{{max}} Spiele gespielt"
+      "rookie": "Diese Saison zum ersten Mal gewertet"
     },
     "ballot": {
       "title": "Saison-Awards · {{season}}",

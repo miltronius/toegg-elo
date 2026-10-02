@@ -1,4 +1,4 @@
--- Season Awards voting (#121). Linked players vote on seven fixed awards from a
+-- Season Awards voting (#121). Linked players vote on six fixed awards from a
 -- week before a season's planned end until two weeks into the next season; the
 -- tally, winners and banner are #122.
 --
@@ -143,7 +143,6 @@ AS $$
                       WHERE player_id = p_player_id AND season_id = p_season_id), 0) AS n
   )
   SELECT CASE
-           WHEN p_award_id = 'award_guest' THEN g.n BETWEEN 1 AND 2
            WHEN p_award_id = 'award_rookie' THEN g.n >= 3 AND NOT EXISTS (
              SELECT 1
                FROM player_season_stats pss
@@ -166,15 +165,26 @@ REVOKE ALL ON FUNCTION award_nominee_eligible(UUID, TEXT, UUID) FROM PUBLIC, ano
 -- ============================================================
 CREATE TABLE IF NOT EXISTS season_award_votes (
   season_id         UUID NOT NULL REFERENCES seasons(id) ON DELETE CASCADE,
-  -- SEASON_AWARDS in lib/seasonAwards.ts; cast_award_vote repeats the list.
-  award_id          TEXT NOT NULL CHECK (award_id IN (
-                      'award_offense', 'award_defense', 'award_fun', 'award_community',
-                      'award_improved', 'award_rookie', 'award_guest')),
+  award_id          TEXT NOT NULL,
   voter_user_id     UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
   nominee_player_id UUID NOT NULL REFERENCES players(id) ON DELETE CASCADE,
   updated_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
   PRIMARY KEY (season_id, award_id, voter_user_id)
 );
+
+-- SEASON_AWARDS in lib/seasonAwards.ts; cast_award_vote repeats the list.
+-- A named constraint, re-added on every run, so a re-run picks up a changed
+-- list (CREATE TABLE IF NOT EXISTS would keep the old one). The DELETE clears
+-- votes for an award that was dropped from the list - on staging, the
+-- "Special Guest" award that was withdrawn before release.
+ALTER TABLE season_award_votes DROP CONSTRAINT IF EXISTS season_award_votes_award_id_check;
+DELETE FROM season_award_votes WHERE award_id NOT IN (
+  'award_offense', 'award_defense', 'award_fun', 'award_community',
+  'award_improved', 'award_rookie');
+ALTER TABLE season_award_votes ADD CONSTRAINT season_award_votes_award_id_check
+  CHECK (award_id IN (
+    'award_offense', 'award_defense', 'award_fun', 'award_community',
+    'award_improved', 'award_rookie'));
 
 CREATE INDEX IF NOT EXISTS idx_season_award_votes_voter
   ON season_award_votes(voter_user_id);
@@ -206,7 +216,7 @@ AS $$
 DECLARE
   c_awards CONSTANT TEXT[] := ARRAY[
     'award_offense', 'award_defense', 'award_fun', 'award_community',
-    'award_improved', 'award_rookie', 'award_guest'];
+    'award_improved', 'award_rookie'];
   v_voter     UUID := auth.uid();
   v_my_player UUID;
 BEGIN

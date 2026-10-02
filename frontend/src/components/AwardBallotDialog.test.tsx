@@ -107,7 +107,7 @@ const card = (group: HTMLElement, name: string) =>
 describe("AwardBallotDialog", () => {
   it("has one card group per award", () => {
     setup();
-    expect(screen.getAllByRole("group")).toHaveLength(7);
+    expect(screen.getAllByRole("group")).toHaveLength(6);
   });
 
   it("offers only eligible nominees as cards, never yourself", () => {
@@ -115,15 +115,19 @@ describe("AwardBallotDialog", () => {
     expect(nomineeNames(award(/Best Offensive Player/))).toEqual(["Ben", "Dario"]);
   });
 
-  it("limits the rookie and guest awards to their nominees", () => {
+  it("limits the rookie award to first-time ranked players", () => {
     setup();
     expect(nomineeNames(award(/Rookie of the Season/))).toEqual(["Ben"]);
-    expect(nomineeNames(award(/Special Guest/))).toEqual(["Carla"]);
+  });
+
+  it("leaves out players too new to be ranked", () => {
+    setup();
+    expect(screen.queryByRole("button", { name: /^Carla/ })).toBeNull();
   });
 
   it("shows each nominee's season Elo and games", () => {
     setup();
-    expect(card(award(/Special Guest/), "Carla")).toHaveTextContent("1500 Elo · 1 game");
+    expect(card(award(/Best Offensive Player/), "Ben")).toHaveTextContent("1500 Elo · 3 games");
     expect(card(award(/Best Offensive Player/), "Dario")).toHaveTextContent("1500 Elo · 4 games");
   });
 
@@ -133,7 +137,7 @@ describe("AwardBallotDialog", () => {
     await user.click(ben);
     expect(onCast).toHaveBeenCalledWith("award_offense", "p2");
     expect(ben).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByText("1/7 picked")).toBeInTheDocument();
+    expect(screen.getByText("1/6 picked")).toBeInTheDocument();
   });
 
   it("clears a pick when its card is clicked again", async () => {
@@ -156,8 +160,9 @@ describe("AwardBallotDialog", () => {
   });
 
   it("keeps a pick who no longer qualifies visible, with a warning", () => {
-    setup({ votes: [vote("award_guest", "p4")] });
-    const dario = card(award(/Special Guest/), "Dario");
+    // Dario was ranked in S4 too, so he's no rookie.
+    setup({ votes: [vote("award_rookie", "p4")] });
+    const dario = card(award(/Rookie of the Season/), "Dario");
     expect(dario).toHaveAttribute("aria-pressed", "true");
     expect(dario).toHaveClass("is-stale");
     expect(
@@ -166,10 +171,11 @@ describe("AwardBallotDialog", () => {
   });
 
   it("says so when nobody qualifies for an award yet", () => {
-    setup({ seasonStats: STATS.filter((s) => s.player_id !== "p3") });
-    const guest = award(/Special Guest/);
-    expect(nomineeNames(guest)).toEqual([]);
-    expect(within(guest).getByText("Nobody is eligible yet.")).toBeInTheDocument();
+    // Ben is the only rookie besides you.
+    setup({ seasonStats: STATS.filter((s) => s.player_id !== "p2") });
+    const rookie = award(/Rookie of the Season/);
+    expect(nomineeNames(rookie)).toEqual([]);
+    expect(within(rookie).getByText("Nobody is eligible yet.")).toBeInTheDocument();
   });
 
   it("closes on Done", async () => {
