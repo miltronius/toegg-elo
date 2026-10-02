@@ -517,7 +517,7 @@ function App() {
             : // Admin and Timeline are wider by their list of contents'
               // column, so their content keeps the width other tabs have.
               activeTab === "users" || activeTab === "timeline"
-              ? "p-8 max-w-300 xl:max-w-356 mx-auto"
+              ? "p-8 max-w-300 xl:max-w-380 mx-auto"
               : "p-8 max-w-300 mx-auto"
         }`}
       >

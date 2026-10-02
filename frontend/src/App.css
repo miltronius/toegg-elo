@@ -2148,15 +2148,17 @@ button.award-nudge:hover {
   color: var(--color-text-light);
 }
 /* ── List of contents (SectionNav): Admin tab, Timeline ───────── */
-/* Only where there's a spare column for it (xl, matching main's xl:max-w-356
-   in App.tsx); below that the content takes the full width, as before. */
+/* Only where there's a spare column for it (xl, matching main's xl:max-w-380
+   in App.tsx); below that the content takes the full width, as before. The
+   column is as wide as its longest entry (fit-content), so season names stay
+   on one line - up to a cap, past which a very long name wraps. */
 .section-nav {
   display: none;
 }
 @media (min-width: 1280px) {
   .with-section-nav {
     display: grid;
-    grid-template-columns: 12rem minmax(0, 1fr);
+    grid-template-columns: fit-content(22rem) minmax(0, 1fr);
     gap: 2rem;
     align-items: start;
   }
@@ -2189,6 +2191,7 @@ button.award-nudge:hover {
 }
 .section-nav-label {
   display: block;
+  overflow-wrap: anywhere;
 }
 .section-nav-detail {
   display: block;
