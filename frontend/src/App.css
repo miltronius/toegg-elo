@@ -3090,8 +3090,9 @@ button.award-nudge:hover {
 [data-theme="dark"] .streak-badge.you {
   color: #93c5fd;
 }
+/* The tab bar; not the list of contents, which sits on the page background. */
 [data-theme="dark"] header,
-[data-theme="dark"] nav {
+[data-theme="dark"] nav:not(.section-nav) {
   background: #1f2937 !important;
 }
 [data-theme="dark"] .btn-secondary {
@@ -3168,7 +3169,7 @@ button.award-nudge:hover {
 }
 
 [data-theme="win95"] header,
-[data-theme="win95"] nav {
+[data-theme="win95"] nav:not(.section-nav) {
   background: #d4d0c8 !important;
   border-color: #808080 !important;
   box-shadow: none !important;
@@ -3405,9 +3406,48 @@ button.award-nudge:hover {
 }
 
 /* Win95's content fills the whole window, so there is no margin to hang the
-   list of contents in; it would land outside the window and be clipped. */
+   list of contents in: here it's an ordinary left column instead, from 1280px,
+   sticky inside the window's scroll area. Below that it stays hidden. */
 [data-theme="win95"] .section-nav {
   display: none;
+}
+@media (min-width: 1280px) {
+  [data-theme="win95"] .with-section-nav {
+    position: static;
+    display: grid;
+    grid-template-columns: fit-content(16rem) minmax(0, 1fr);
+    gap: 1.5rem;
+    align-items: start;
+  }
+  [data-theme="win95"] .section-nav {
+    display: block;
+    position: sticky;
+    top: 1rem;
+    /* Undo the margin placement's offsets, which sticky would treat as insets. */
+    right: auto;
+    bottom: auto;
+    width: auto;
+    max-width: none;
+    margin-right: 0;
+  }
+  [data-theme="win95"] .section-nav ul {
+    position: static;
+  }
+}
+[data-theme="win95"] .section-nav ul {
+  border-left: none;
+}
+[data-theme="win95"] .section-nav-link {
+  margin-left: 0;
+  border-left: none;
+  color: #000000;
+}
+[data-theme="win95"] .section-nav-link[aria-current="location"] {
+  background: #000080;
+  color: #ffffff;
+}
+[data-theme="win95"] .section-nav-link[aria-current="location"] .section-nav-detail {
+  color: #c0c0c0;
 }
 
 /* Timeline season band: a title-bar strip. */
