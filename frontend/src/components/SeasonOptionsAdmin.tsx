@@ -7,7 +7,7 @@ import {
   updateSeasonVotingSchedule,
   type Season,
 } from "../lib/supabase";
-import { awardVotingStatus, nextSeasonOf } from "../lib/seasonAwards";
+import { nextSeasonOf } from "../lib/seasonAwards";
 import { SeasonScheduleAdmin } from "./SeasonScheduleAdmin";
 
 interface SeasonOptionsAdminProps {
@@ -23,10 +23,10 @@ const TICK_MS = 60_000;
 
 /**
  * The Admin tab's "Season options" card: one SeasonScheduleAdmin block for the
- * running season (planned end, award voting), plus one for the previous season
- * until its votes are counted - while its ballot is open (it runs into the
- * first two weeks of the next), and after it closes, so "Count votes" (or a
- * later closing date) has somewhere to live.
+ * running season (planned end, award voting) and one for the previous season,
+ * always - its ballot runs into the first two weeks of the next, "Count votes"
+ * needs somewhere to live once it closes, and afterwards the block still says
+ * where it stands ("Results are final", collapsed).
  */
 export function SeasonOptionsAdmin({ seasons, onChanged, now: fixedNow }: SeasonOptionsAdminProps) {
   const { t } = useTranslation();
@@ -40,9 +40,7 @@ export function SeasonOptionsAdmin({ seasons, onChanged, now: fixedNow }: Season
   const active = seasons.find((s) => s.is_active) ?? null;
   const previous = active ? (seasons.find((s) => s.number === active.number - 1) ?? null) : null;
   const managed = [
-    ...(previous && ["open", "closed"].includes(awardVotingStatus(previous, active, now))
-      ? [previous]
-      : []),
+    ...(previous ? [previous] : []),
     ...(active ? [active] : []),
   ];
 

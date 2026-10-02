@@ -62,10 +62,13 @@ describe("SeasonOptionsAdmin", () => {
     expect(headings()[0]).toContain("S4 · Summer");
   });
 
-  it("drops the previous season once it's counted", () => {
+  it("keeps the previous season once it's counted, collapsed and final", () => {
     const done = { ...S4, voting_closes_at: iso(T0 - 1000), awards_finalized_at: iso(T0 - 500) };
     render(<SeasonOptionsAdmin seasons={[S5, done]} onChanged={() => {}} now={T0} />);
-    expect(headings()).toEqual([expect.stringContaining("S5 · Autumn")]);
+    expect(headings()[0]).toContain("S4 · Summer");
+    const block = screen.getAllByRole("heading", { level: 3 })[0].closest("details")!;
+    expect(block).not.toHaveAttribute("open");
+    expect(block).toHaveTextContent("Results are final");
   });
 
   it("has nothing to manage without a running season", () => {
