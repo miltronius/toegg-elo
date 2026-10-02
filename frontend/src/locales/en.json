@@ -389,6 +389,9 @@
     "gamesTooltip": "Games",
     "dailyActivity": "Daily Activity Heatmap"
   },
+  "admin": {
+    "contents": "On this page"
+  },
   "seasonAwards": {
     "awards": {
       "award_offense": "Best Offensive Player",
@@ -427,9 +430,9 @@
       "votes_one": "{{count}} vote cast",
       "votes_other": "{{count}} votes cast",
       "title": "Season Awards · {{season}}",
-      "intro": "Pick one player per award, or skip any. Picks save as you go and can be changed until voting closes; click a pick again to clear it.",
+      "intro": "Pick one player per award. Picks save as you go and can be changed until voting closes; click a pick again to clear it.",
       "closes": "Voting closes on {{date}}.",
-      "secret": "Your ballot is secret: nobody else can see it, admins included.",
+      "secret": "Your ballot is secret: nobody else can see it.",
       "recheck": "Who qualifies is checked again when voting closes, and a vote for someone who no longer does is dropped.",
       "cardMeta_one": "{{elo}} Elo · {{count}} game",
       "cardMeta_other": "{{elo}} Elo · {{count}} games",

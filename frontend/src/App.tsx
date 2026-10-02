@@ -40,6 +40,7 @@ import { PlayerDetail } from "./components/PlayerDetail";
 import { UserManagement } from "./components/UserManagement";
 import { BannerAdmin } from "./components/BannerAdmin";
 import { AwardVotingAdmin } from "./components/AwardVotingAdmin";
+import { SectionNav } from "./components/SectionNav";
 import { MessageBanner } from "./components/MessageBanner";
 import { ChangelogDialog } from "./components/ChangelogDialog";
 import { APP_VERSION, RELEASES } from "./lib/appChangelog";
@@ -136,6 +137,15 @@ const EMPTY_SEASONS: Season[] = [];
 const EMPTY_SEASON_STATS: PlayerSeasonStats[] = [];
 const EMPTY_BANNERS: Banner[] = [];
 const EMPTY_AWARD_VOTES: AwardVote[] = [];
+
+// The Admin tab's sections, for its list of contents. Labelled with each
+// card's own heading key; a module constant so SectionNav's scroll spy
+// doesn't re-attach every render.
+const ADMIN_SECTIONS = [
+  { id: "admin-users", labelKey: "userManagement.title" },
+  { id: "admin-voting", labelKey: "seasonDialog.votingAdminCardTitle" },
+  { id: "admin-banners", labelKey: "bannerAdmin.title" },
+] as const;
 const EMPTY_ELO_HISTORY = new Map<string, EloHistory[]>();
 
 function App() {
@@ -503,7 +513,13 @@ function App() {
           max-width column every other tab uses. */}
       <main
         className={`flex-1 w-full ${
-          activeTab === "relationships" ? "p-4" : "p-8 max-w-300 mx-auto"
+          activeTab === "relationships"
+            ? "p-4"
+            : // Admin is wider by its list of contents' column, so its cards
+              // keep the width every other tab's content has.
+              activeTab === "users"
+              ? "p-8 max-w-300 xl:max-w-356 mx-auto"
+              : "p-8 max-w-300 mx-auto"
         }`}
       >
         {activeTab === "leaderboard" && (
@@ -603,20 +619,29 @@ function App() {
           />
         )}
         {activeTab === "users" && isAdmin && (
-          <>
-            <UserManagement
-              players={players}
-              onRecomputed={refresh}
-              onLinksChanged={refresh}
-            />
-            <AwardVotingAdmin seasons={seasons} onChanged={refresh} />
-            <BannerAdmin
-              banners={banners}
-              seasons={seasons}
-              onChanged={refresh}
-              appVersion={APP_VERSION}
-            />
-          </>
+          <div className="admin-layout">
+            <SectionNav entries={ADMIN_SECTIONS} labelKey="admin.contents" />
+            <div className="admin-sections">
+              <section id="admin-users" tabIndex={-1} className="admin-section">
+                <UserManagement
+                  players={players}
+                  onRecomputed={refresh}
+                  onLinksChanged={refresh}
+                />
+              </section>
+              <section id="admin-voting" tabIndex={-1} className="admin-section">
+                <AwardVotingAdmin seasons={seasons} onChanged={refresh} />
+              </section>
+              <section id="admin-banners" tabIndex={-1} className="admin-section">
+                <BannerAdmin
+                  banners={banners}
+                  seasons={seasons}
+                  onChanged={refresh}
+                  appVersion={APP_VERSION}
+                />
+              </section>
+            </div>
+          </div>
         )}
       </main>
       {canEdit && (

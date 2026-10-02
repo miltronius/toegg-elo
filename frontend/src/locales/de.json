@@ -389,6 +389,9 @@
     "gamesTooltip": "Spiele",
     "dailyActivity": "Tägliche Aktivitäts-Heatmap"
   },
+  "admin": {
+    "contents": "Auf dieser Seite"
+  },
   "seasonAwards": {
     "awards": {
       "award_offense": "Bester Stürmer",
