@@ -1756,6 +1756,7 @@ td.winrate {
 }
 .cat-badge {
   --cat: var(--color-text-light);
+  cursor: pointer;
   position: relative;
   display: inline-flex;
   align-items: center;
