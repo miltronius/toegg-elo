@@ -2148,22 +2148,32 @@ button.award-nudge:hover {
   color: var(--color-text-light);
 }
 /* ── List of contents (SectionNav): Admin tab, Timeline ───────── */
-/* Only where there's a spare column for it (xl, matching main's xl:max-w-380
-   in App.tsx); below that the content takes the full width, as before. The
-   column is as wide as its longest entry (fit-content), so season names stay
-   on one line - up to a cap, past which a very long name wraps. */
+/* The content stays centred at the width every tab has (main's max-w-300 =
+   75rem); the list hangs in the empty margin to its left. It's as wide as its
+   longest entry, so season names stay on one line, but never wider than that
+   margin - past it a long name wraps. Shown only once the margin holds at least
+   12rem: 75rem of content + 2 x (12rem + 1rem gap + 1rem edge) = 101rem; the
+   main padding (2rem) is inside the 75rem. Below that it's hidden rather than
+   pushing the content off-centre. */
 .section-nav {
   display: none;
 }
-@media (min-width: 1280px) {
+@media (min-width: 101rem) {
   .with-section-nav {
-    display: grid;
-    grid-template-columns: fit-content(22rem) minmax(0, 1fr);
-    gap: 2rem;
-    align-items: start;
+    position: relative;
   }
   .section-nav {
     display: block;
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    right: 100%;
+    margin-right: 2rem;
+    width: max-content;
+    max-width: calc((100vw - 75rem) / 2 - 1rem);
+  }
+  /* Sticky inside the full-height column, so it follows the scroll. */
+  .section-nav ul {
     position: sticky;
     top: 1.5rem;
   }
@@ -3333,6 +3343,12 @@ button.award-nudge:hover {
     inset 1px 1px 0 0 #868a8e,
     inset -0.5px -0.5px 0 0.5px #ffffff,
     inset 1px 1px 0 1px #000000;
+}
+
+/* Win95's content fills the whole window, so there is no margin to hang the
+   list of contents in; it would land outside the window and be clipped. */
+[data-theme="win95"] .section-nav {
+  display: none;
 }
 
 /* Timeline season band: a title-bar strip. */

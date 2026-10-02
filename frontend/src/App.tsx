@@ -514,11 +514,7 @@ function App() {
         className={`flex-1 w-full ${
           activeTab === "relationships"
             ? "p-4"
-            : // Admin and Timeline are wider by their list of contents'
-              // column, so their content keeps the width other tabs have.
-              activeTab === "users" || activeTab === "timeline"
-              ? "p-8 max-w-300 xl:max-w-380 mx-auto"
-              : "p-8 max-w-300 mx-auto"
+            : "p-8 max-w-300 mx-auto"
         }`}
       >
         {activeTab === "leaderboard" && (
