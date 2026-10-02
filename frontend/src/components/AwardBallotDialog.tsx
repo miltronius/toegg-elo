@@ -7,6 +7,7 @@ import { DATE_LOCALE } from "../lib/i18n";
 import { RANKED_MIN_GAMES } from "../lib/rosterFilter";
 import { sortPlayersByName } from "../lib/playerSearch";
 import { NomineeCard } from "./NomineeCard";
+import { AwardCard } from "./AwardCard";
 import {
   SEASON_AWARDS,
   awardErrorKey,
@@ -14,7 +15,9 @@ import {
   eligibleNomineeIds,
   nextSeasonOf,
   picksForSeason,
+  turnoutRatio,
   type AwardId,
+  type AwardTurnout,
   type AwardVote,
 } from "../lib/seasonAwards";
 
@@ -26,6 +29,8 @@ interface AwardBallotDialogProps {
   seasonStats: PlayerSeasonStats[];
   /** The voter's own votes (any season); read once, when the dialog opens. */
   votes: AwardVote[];
+  /** Counts only (award_turnout); null while loading or if it failed. */
+  turnout: AwardTurnout | null;
   /** Saves one pick; null clears it. A rejection reverts the pick and says why. */
   onCast: (awardId: AwardId, nomineeId: string | null) => Promise<void>;
   onClose: () => void;
@@ -39,8 +44,10 @@ const formatDate = (ms: number) =>
   });
 
 /**
- * The Season Awards ballot: one grid of nominee cards per award (NomineeCard),
- * limited to who qualifies right now, your own player never offered. Each pick
+ * The Season Awards ballot: an overview of award cards (AwardCard, with your
+ * pick and the votes cast so far), and below it the open award's nominee cards
+ * (NomineeCard), limited to who qualifies right now, your own player never
+ * offered. It opens on the first award you haven't picked in. Each pick
  * is saved as it's made (cast_award_vote), so there's nothing to submit and any
  * award can be skipped; clicking the picked card again clears it. A pick who
  * stopped qualifying stays visible with a warning - blanking it would hide
@@ -54,6 +61,7 @@ export function AwardBallotDialog({
   players,
   seasonStats,
   votes,
+  turnout,
   onCast,
   onClose,
 }: AwardBallotDialogProps) {
@@ -62,6 +70,9 @@ export function AwardBallotDialog({
   const [picks, setPicks] = useState(() => picksForSeason(votes, season.id));
   const [saving, setSaving] = useState<Partial<Record<AwardId, boolean>>>({});
   const [errors, setErrors] = useState<Partial<Record<AwardId, string>>>({});
+  const [active, setActive] = useState<AwardId>(
+    () => (SEASON_AWARDS.find((a) => !picks[a.id]) ?? SEASON_AWARDS[0]).id,
+  );
 
   const eligible = useMemo(
     () =>
@@ -124,11 +135,34 @@ export function AwardBallotDialog({
           {t("seasonAwards.ballot.intro")}
           {closesAt !== null && ` ${t("seasonAwards.ballot.closes", { date: formatDate(closesAt) })}`}
         </p>
-        <p className="text-sm text-text-light mb-4">
+        <p className="text-sm text-text-light mb-3">
           {t("seasonAwards.ballot.secret")} {t("seasonAwards.ballot.recheck")}
         </p>
+        {turnout && (
+          <p className="award-turnout">
+            🗳️ {t("seasonAwards.ballot.turnout", turnoutRatio(turnout))}
+          </p>
+        )}
 
-        {SEASON_AWARDS.map((award) => {
+        <div className="award-card-grid">
+          {SEASON_AWARDS.map((award) => {
+            const pickId = picks[award.id];
+            return (
+              <AwardCard
+                key={award.id}
+                icon={award.icon}
+                name={t(`seasonAwards.awards.${award.id}`)}
+                pickName={pickId ? (playerById.get(pickId)?.name ?? "?") : null}
+                votes={turnout ? (turnout.awards[award.id] ?? 0) : null}
+                active={award.id === active}
+                panelId="award-ballot-panel"
+                onClick={() => setActive(award.id)}
+              />
+            );
+          })}
+        </div>
+
+        {SEASON_AWARDS.filter((award) => award.id === active).map((award) => {
           const ids = eligible.get(award.id) ?? new Set<string>();
           const current = picks[award.id] ?? "";
           const nominees = sortedPlayers.filter(
@@ -138,6 +172,7 @@ export function AwardBallotDialog({
           return (
             <section
               key={award.id}
+              id="award-ballot-panel"
               className="award-section"
               role="group"
               aria-labelledby={headingId}

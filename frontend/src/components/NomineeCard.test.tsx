@@ -41,6 +41,6 @@ describe("NomineeCard", () => {
   it("marks a stale pick", () => {
     const { button } = renderCard({ picked: true, stale: true });
     expect(button).toHaveClass("is-stale");
-    expect(button.querySelector(".nominee-check")).toHaveTextContent("!");
+    expect(button.querySelector(".shiny-check")).toHaveTextContent("!");
   });
 });

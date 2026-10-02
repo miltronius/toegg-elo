@@ -409,6 +409,7 @@
       "unknown": "Etwas ist schiefgelaufen. Bitte versuch es nochmals."
     },
     "nudge": {
+      "turnout": "{{voters}}/{{eligible}} haben abgestimmt",
       "title": "Stimm für die Saison-Awards ab",
       "picked": "{{picked}}/{{total}} gewählt",
       "closes": "endet am {{date}}",
@@ -420,6 +421,11 @@
       "rookie": "Diese Saison zum ersten Mal gewertet"
     },
     "ballot": {
+      "turnout": "{{voters}} von {{eligible}} Spielern haben bisher abgestimmt.",
+      "yourPick": "Deine Wahl: {{name}}",
+      "notPickedYet": "Noch nicht gewählt",
+      "votes_one": "{{count}} Stimme abgegeben",
+      "votes_other": "{{count}} Stimmen abgegeben",
       "title": "Saison-Awards · {{season}}",
       "intro": "Wähle pro Award einen Spieler oder lass einen aus. Deine Wahl wird sofort gespeichert und lässt sich bis zum Ende der Abstimmung ändern; ein zweiter Klick auf deine Wahl hebt sie auf.",
       "closes": "Die Abstimmung endet am {{date}}.",

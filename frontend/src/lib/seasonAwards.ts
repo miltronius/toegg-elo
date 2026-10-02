@@ -63,6 +63,25 @@ export type AwardVote = {
   updated_at: string;
 };
 
+/**
+ * How many have voted, overall and per award (award_turnout) - never for whom.
+ * `eligible` is the linked user/admin accounts right now.
+ */
+export type AwardTurnout = {
+  voters: number;
+  eligible: number;
+  awards: Partial<Record<AwardId, number>>;
+};
+
+/**
+ * "voters of eligible" for display. A voter demoted or unlinked after voting
+ * still counts as a voter but no longer as eligible, so eligible is clamped up
+ * rather than showing "9 of 8".
+ */
+export function turnoutRatio(turnout: AwardTurnout): { voters: number; eligible: number } {
+  return { voters: turnout.voters, eligible: Math.max(turnout.eligible, turnout.voters) };
+}
+
 /** The season fields the window reads. `awards_finalized_at` arrives with #122. */
 export type AwardSeason = Pick<
   Season,

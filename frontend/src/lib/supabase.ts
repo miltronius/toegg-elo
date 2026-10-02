@@ -2,7 +2,7 @@ import { createClient } from "@supabase/supabase-js";
 import { recomputeAllAchievements } from "./achievements";
 import { didLose, didWin } from "./eloHistory";
 import { releaseBannerMessage, releaseBannerWindow } from "./banners";
-import type { AwardId, AwardVote } from "./seasonAwards";
+import type { AwardId, AwardTurnout, AwardVote } from "./seasonAwards";
 
 // The anon key is also known as the publishable key in Supabase
 // Both refer to the same public key found in your project settings
@@ -567,7 +567,7 @@ export async function openAwardVoting(seasonId: string): Promise<void> {
 // Season Awards voting
 // ---------------------------------------------------------------------------
 
-export type { AwardVote } from "./seasonAwards";
+export type { AwardTurnout, AwardVote } from "./seasonAwards";
 
 /**
  * The caller's own votes, every season. RLS returns nobody else's - admins
@@ -579,6 +579,14 @@ export async function getMyAwardVotes(): Promise<AwardVote[]> {
     .select("season_id, award_id, voter_user_id, nominee_player_id, updated_at");
   if (error) throw error;
   return (data ?? []) as AwardVote[];
+}
+
+/** Turnout for one season's ballot: counts only (award_turnout). */
+export async function getAwardTurnout(seasonId: string): Promise<AwardTurnout> {
+  const { data, error } = await supabase.rpc("award_turnout", { p_season_id: seasonId });
+  if (error) throw error;
+  const raw = (data ?? {}) as Partial<AwardTurnout>;
+  return { voters: raw.voters ?? 0, eligible: raw.eligible ?? 0, awards: raw.awards ?? {} };
 }
 
 /**

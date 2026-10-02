@@ -1,13 +1,8 @@
-import { useRef, type PointerEvent, type ReactNode } from "react";
-import { tiltFromPointer } from "../lib/tilt";
+import type { ReactNode } from "react";
+import { useTilt } from "../hooks/useTilt";
 
 // Enough to read as 3D, little enough that the name stays legible mid-tilt.
 const MAX_TILT_DEG = 12;
-const TILT_VARS = ["--rx", "--ry", "--mx", "--my"] as const;
-
-const reducedMotion = () =>
-  typeof window !== "undefined" &&
-  (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false);
 
 interface NomineeCardProps {
   name: string;
@@ -29,47 +24,21 @@ function initials(name: string): string {
 
 /**
  * One nominee on the Season Awards ballot: a toggle button (`aria-pressed`)
- * dressed as a shiny card. With a mouse it turns to face the cursor, and a
- * shine plus a border glow follow it. The picked card gets an animated
- * rainbow border (App.css, `.nominee-card`).
- *
- * The tilt is written to CSS variables on the element, never to React state,
- * so moving the mouse costs no re-render. Touch and reduced motion get a flat
- * card; Win95 flattens it in CSS.
+ * dressed as a `.shiny-card` (useTilt). The picked card gets the spinning
+ * rainbow border; a stale pick (no longer eligible) a warning one instead.
  */
 export function NomineeCard({ name, meta, picked, stale, disabled, onClick }: NomineeCardProps) {
-  // Measured on enter, while the card is still flat: measuring on every move
-  // would read the tilted box and make the tilt chase itself.
-  const rect = useRef<DOMRect | null>(null);
-
-  const onPointerEnter = (e: PointerEvent<HTMLButtonElement>) => {
-    rect.current = e.currentTarget.getBoundingClientRect();
-  };
-  const onPointerMove = (e: PointerEvent<HTMLButtonElement>) => {
-    const r = rect.current;
-    if (!r || e.pointerType !== "mouse" || reducedMotion()) return;
-    const t = tiltFromPointer(e.clientX - r.left, e.clientY - r.top, r.width, r.height, MAX_TILT_DEG);
-    const style = e.currentTarget.style;
-    style.setProperty("--rx", `${t.rx}deg`);
-    style.setProperty("--ry", `${t.ry}deg`);
-    style.setProperty("--mx", `${t.mx}%`);
-    style.setProperty("--my", `${t.my}%`);
-  };
-  const onPointerLeave = (e: PointerEvent<HTMLButtonElement>) => {
-    rect.current = null;
-    for (const v of TILT_VARS) e.currentTarget.style.removeProperty(v);
-  };
+  const tilt = useTilt<HTMLButtonElement>(MAX_TILT_DEG);
+  const glowing = picked && !stale;
 
   return (
     <button
       type="button"
-      className={`nominee-card${stale ? " is-stale" : ""}`}
+      className={`shiny-card nominee-card${glowing ? " is-glowing" : ""}${stale ? " is-stale" : ""}`}
       aria-pressed={picked}
       disabled={disabled}
       onClick={onClick}
-      onPointerEnter={onPointerEnter}
-      onPointerMove={onPointerMove}
-      onPointerLeave={onPointerLeave}
+      {...tilt}
     >
       <span className="nominee-avatar" aria-hidden="true">
         {initials(name)}
@@ -77,7 +46,7 @@ export function NomineeCard({ name, meta, picked, stale, disabled, onClick }: No
       <span className="nominee-name">{name}</span>
       <span className="nominee-meta">{meta}</span>
       {picked && (
-        <span className="nominee-check" aria-hidden="true">
+        <span className="shiny-check" aria-hidden="true">
           {stale ? "!" : "✓"}
         </span>
       )}

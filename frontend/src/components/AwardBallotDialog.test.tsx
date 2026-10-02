@@ -89,6 +89,7 @@ function setup(over: Partial<React.ComponentProps<typeof AwardBallotDialog>> = {
       players={PLAYERS}
       seasonStats={STATS}
       votes={[]}
+      turnout={null}
       onCast={onCast}
       onClose={onClose}
       {...over}
@@ -103,11 +104,45 @@ const nomineeNames = (group: HTMLElement) =>
     .map((b) => b.querySelector(".nominee-name")?.textContent);
 const card = (group: HTMLElement, name: string) =>
   within(group).getByRole("button", { name: new RegExp(`^${name}`) });
+const awardCard = (name: RegExp) =>
+  screen
+    .getAllByRole("button", { expanded: true })
+    .concat(screen.queryAllByRole("button", { expanded: false }))
+    .find((b) => name.test(b.textContent ?? ""))!;
 
 describe("AwardBallotDialog", () => {
-  it("has one card group per award", () => {
+  it("shows one award card per award and the open award's nominees", () => {
     setup();
-    expect(screen.getAllByRole("group")).toHaveLength(6);
+    expect(screen.getAllByRole("button", { expanded: false })).toHaveLength(5);
+    expect(screen.getByRole("button", { expanded: true })).toHaveTextContent(
+      "Best Offensive Player",
+    );
+    expect(screen.getAllByRole("group")).toHaveLength(1);
+  });
+
+  it("opens on the first award you haven't picked in", () => {
+    setup({ votes: [vote("award_offense", "p2")] });
+    expect(screen.getByRole("button", { expanded: true })).toHaveTextContent("Best Defender");
+    expect(awardCard(/Best Offensive Player/)).toHaveTextContent("Your pick: Ben");
+  });
+
+  it("switches award when another card is clicked", async () => {
+    const { user } = setup();
+    await user.click(awardCard(/Most Improved/));
+    expect(awardCard(/Most Improved/)).toHaveAttribute("aria-expanded", "true");
+    expect(award(/Most Improved/)).toBeInTheDocument();
+  });
+
+  it("shows turnout, never who voted for whom", () => {
+    setup({ turnout: { voters: 3, eligible: 8, awards: { award_offense: 2 } } });
+    expect(screen.getByText(/3 of 8 players have voted so far/)).toBeInTheDocument();
+    expect(awardCard(/Best Offensive Player/)).toHaveTextContent("2 votes cast");
+    expect(awardCard(/Best Defender/)).toHaveTextContent("0 votes cast");
+  });
+
+  it("leaves turnout out until it has loaded", () => {
+    setup();
+    expect(screen.queryByText(/votes? cast/)).toBeNull();
   });
 
   it("offers only eligible nominees as cards, never yourself", () => {
@@ -115,8 +150,9 @@ describe("AwardBallotDialog", () => {
     expect(nomineeNames(award(/Best Offensive Player/))).toEqual(["Ben", "Dario"]);
   });
 
-  it("limits the rookie award to first-time ranked players", () => {
-    setup();
+  it("limits the rookie award to first-time ranked players", async () => {
+    const { user } = setup();
+    await user.click(awardCard(/Rookie of the Season/));
     expect(nomineeNames(award(/Rookie of the Season/))).toEqual(["Ben"]);
   });
 
@@ -138,10 +174,12 @@ describe("AwardBallotDialog", () => {
     expect(onCast).toHaveBeenCalledWith("award_offense", "p2");
     expect(ben).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByText("1/6 picked")).toBeInTheDocument();
+    expect(awardCard(/Best Offensive Player/)).toHaveTextContent("Your pick: Ben");
   });
 
   it("clears a pick when its card is clicked again", async () => {
     const { user, onCast } = setup({ votes: [vote("award_offense", "p2")] });
+    await user.click(awardCard(/Best Offensive Player/));
     const ben = card(award(/Best Offensive Player/), "Ben");
     expect(ben).toHaveAttribute("aria-pressed", "true");
     await user.click(ben);
@@ -159,9 +197,10 @@ describe("AwardBallotDialog", () => {
     expect(card(award(/Best Offensive Player/), "Ben")).toHaveAttribute("aria-pressed", "false");
   });
 
-  it("keeps a pick who no longer qualifies visible, with a warning", () => {
+  it("keeps a pick who no longer qualifies visible, with a warning", async () => {
     // Dario was ranked in S4 too, so he's no rookie.
-    setup({ votes: [vote("award_rookie", "p4")] });
+    const { user } = setup({ votes: [vote("award_rookie", "p4")] });
+    await user.click(awardCard(/Rookie of the Season/));
     const dario = card(award(/Rookie of the Season/), "Dario");
     expect(dario).toHaveAttribute("aria-pressed", "true");
     expect(dario).toHaveClass("is-stale");
@@ -170,9 +209,10 @@ describe("AwardBallotDialog", () => {
     ).toBeInTheDocument();
   });
 
-  it("says so when nobody qualifies for an award yet", () => {
+  it("says so when nobody qualifies for an award yet", async () => {
     // Ben is the only rookie besides you.
-    setup({ seasonStats: STATS.filter((s) => s.player_id !== "p2") });
+    const { user } = setup({ seasonStats: STATS.filter((s) => s.player_id !== "p2") });
+    await user.click(awardCard(/Rookie of the Season/));
     const rookie = award(/Rookie of the Season/);
     expect(nomineeNames(rookie)).toEqual([]);
     expect(within(rookie).getByText("Nobody is eligible yet.")).toBeInTheDocument();

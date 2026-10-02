@@ -2147,9 +2147,25 @@ button.award-nudge:hover {
   font-size: 0.8rem;
   color: var(--color-text-light);
 }
-/* Ballot: one section per award, nominees as shiny cards (NomineeCard). */
+/* Ballot: award cards on top (AwardCard), the open award's nominees below
+   (NomineeCard). Both are .shiny-card. */
+.award-turnout {
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 0.9rem;
+}
+.award-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 0.8rem;
+  /* Room for a tilted card's corners and its glow, which overflow the cell. */
+  padding: 0.25rem;
+  margin-bottom: 1.25rem;
+}
 .award-section {
-  margin-bottom: 1.4rem;
+  margin-bottom: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--color-border);
 }
 .award-section-head {
   display: flex;
@@ -2167,42 +2183,38 @@ button.award-nudge:hover {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
   gap: 0.75rem;
-  /* Room for a tilted card's corners and its glow, which overflow the cell. */
   padding: 0.25rem;
 }
 
-/* The picked card's border spins; registering the angle is what lets a
+/* ── Shiny card (hooks/useTilt.ts) ───────────────────────────────── */
+/* The glowing card's border spins; registering the angle is what lets a
    gradient animate. Without @property support the border just holds still. */
-@property --nominee-spin {
+@property --shiny-spin {
   syntax: "<angle>";
   inherits: false;
   initial-value: 0deg;
 }
 
-.nominee-card {
-  /* Written by NomineeCard on pointermove (lib/tilt.ts); these are the rest pose. */
+.shiny-card {
+  /* Written by useTilt on pointermove (lib/tilt.ts); these are the rest pose. */
   --rx: 0deg;
   --ry: 0deg;
   --mx: 50%;
   --my: 50%;
   --lift: 0px;
+  /* The border when nothing special is going on; .is-done swaps it. */
+  --rim: var(--color-border);
   position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.3rem;
-  padding: 0.85rem 0.5rem 0.75rem;
   border: 2px solid transparent;
   border-radius: 14px;
   /* Two layers: the face (padding-box) over a border-box glow centred on the
      pointer, which shows through the transparent border as a moving rim. */
   background:
     linear-gradient(var(--card-bg), var(--card-bg)) padding-box,
-    radial-gradient(
-        circle at var(--mx) var(--my),
-        var(--color-primary),
-        var(--color-border) 55%
-      )
+    radial-gradient(circle at var(--mx) var(--my), var(--color-primary), var(--rim) 55%)
       border-box;
   color: var(--color-text);
   font: inherit;
@@ -2220,8 +2232,8 @@ button.award-nudge:hover {
 }
 
 /* Holographic sheen + specular highlight, both following the pointer. */
-.nominee-card::before,
-.nominee-card::after {
+.shiny-card::before,
+.shiny-card::after {
   content: "";
   position: absolute;
   inset: 0;
@@ -2231,7 +2243,7 @@ button.award-nudge:hover {
   transition: opacity 0.3s ease;
   z-index: -1;
 }
-.nominee-card::before {
+.shiny-card::before {
   background: linear-gradient(
     115deg,
     transparent 25%,
@@ -2243,7 +2255,7 @@ button.award-nudge:hover {
   background-size: 250% 250%;
   background-position: var(--mx) var(--my);
 }
-.nominee-card::after {
+.shiny-card::after {
   background: radial-gradient(
     circle at var(--mx) var(--my),
     rgb(255 255 255 / 0.45),
@@ -2253,7 +2265,7 @@ button.award-nudge:hover {
 }
 
 @media (hover: hover) {
-  .nominee-card:hover:not(:disabled) {
+  .shiny-card:hover:not(:disabled) {
     --lift: -3px;
     transition:
       transform 0.08s linear,
@@ -2261,22 +2273,30 @@ button.award-nudge:hover {
       opacity 0.2s ease;
     box-shadow: 0 12px 28px -10px rgb(0 0 0 / 0.35);
   }
-  .nominee-card:hover:not(:disabled)::before,
-  .nominee-card:hover:not(:disabled)::after {
+  .shiny-card:hover:not(:disabled)::before,
+  .shiny-card:hover:not(:disabled)::after {
     opacity: 1;
   }
 }
 
-.nominee-card:focus-visible {
+.shiny-card:focus-visible {
   outline: 2px solid var(--color-primary);
   outline-offset: 3px;
 }
+.shiny-card:disabled {
+  cursor: progress;
+}
 
-.nominee-card[aria-pressed="true"] {
+/* Done (an award you've picked in): a calm green rim. */
+.shiny-card.is-done {
+  --rim: #22c55e;
+}
+/* Glowing (the picked nominee, the open award): a spinning rainbow rim. */
+.shiny-card.is-glowing {
   background:
     linear-gradient(var(--card-bg), var(--card-bg)) padding-box,
     conic-gradient(
-        from var(--nominee-spin),
+        from var(--shiny-spin),
         #f59e0b,
         #ec4899,
         #8b5cf6,
@@ -2285,25 +2305,93 @@ button.award-nudge:hover {
         #f59e0b
       )
       border-box;
-  animation: nominee-spin 3s linear infinite;
+  animation: shiny-spin 3s linear infinite;
   box-shadow: 0 8px 24px -8px rgb(139 92 246 / 0.55);
 }
-.nominee-card[aria-pressed="true"]::before {
+.shiny-card.is-glowing::before {
   opacity: 0.6;
 }
-.nominee-card.is-stale[aria-pressed="true"] {
+.shiny-card.is-stale {
   background:
     linear-gradient(var(--card-bg), var(--card-bg)) padding-box,
     linear-gradient(var(--color-warning), var(--color-warning)) border-box;
-  animation: none;
-  box-shadow: none;
 }
-@keyframes nominee-spin {
+@keyframes shiny-spin {
   to {
-    --nominee-spin: 360deg;
+    --shiny-spin: 360deg;
   }
 }
 
+.shiny-check {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #22c55e;
+  color: #ffffff;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+.shiny-card.is-stale .shiny-check {
+  background: var(--color-warning);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shiny-card,
+  .shiny-card:hover {
+    transform: none;
+    transition: none;
+  }
+  .shiny-card.is-glowing {
+    animation: none;
+  }
+}
+
+/* Award card: the category, your pick, the votes cast. */
+.award-card {
+  gap: 0.25rem;
+  padding: 1rem 0.6rem 0.85rem;
+  min-height: 132px;
+  justify-content: center;
+  text-align: center;
+}
+.award-card-icon {
+  font-size: 2rem;
+  line-height: 1;
+  filter: drop-shadow(0 3px 6px rgb(0 0 0 / 0.2));
+}
+.award-card-name {
+  font-weight: 700;
+  font-size: 0.92rem;
+  line-height: 1.2;
+}
+.award-card-pick {
+  font-size: 0.75rem;
+  color: var(--color-text-light);
+  overflow-wrap: anywhere;
+}
+.award-card.is-done .award-card-pick {
+  color: var(--color-text);
+  font-weight: 600;
+}
+.award-card-votes {
+  margin-top: 0.15rem;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  background: var(--color-bg-light);
+  font-size: 0.7rem;
+  color: var(--color-text-light);
+}
+
+/* Nominee card: who, with their season Elo and games. */
+.nominee-card {
+  gap: 0.3rem;
+  padding: 0.85rem 0.5rem 0.75rem;
+}
 /* Once an award has a pick, the others step back. */
 .nominee-grid.has-pick .nominee-card[aria-pressed="false"] {
   opacity: 0.6;
@@ -2311,10 +2399,6 @@ button.award-nudge:hover {
 .nominee-grid.has-pick .nominee-card[aria-pressed="false"]:hover {
   opacity: 1;
 }
-.nominee-card:disabled {
-  cursor: progress;
-}
-
 .nominee-avatar {
   display: grid;
   place-items: center;
@@ -2339,34 +2423,7 @@ button.award-nudge:hover {
   color: var(--color-text-light);
   text-align: center;
 }
-.nominee-check {
-  position: absolute;
-  top: 6px;
-  right: 6px;
-  display: grid;
-  place-items: center;
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  background: #22c55e;
-  color: #ffffff;
-  font-size: 0.7rem;
-  font-weight: 700;
-}
-.nominee-card.is-stale .nominee-check {
-  background: var(--color-warning);
-}
 
-@media (prefers-reduced-motion: reduce) {
-  .nominee-card,
-  .nominee-card:hover {
-    transform: none;
-    transition: none;
-  }
-  .nominee-card[aria-pressed="true"] {
-    animation: none;
-  }
-}
 .award-ballot-hint {
   font-size: 0.75rem;
   color: var(--color-text-light);
@@ -3117,9 +3174,9 @@ button.award-nudge:hover {
     inset 1px 1px 0 1px #000000;
 }
 
-/* Season Awards nominee cards: plain raised buttons, pressed when picked. */
-[data-theme="win95"] .nominee-card,
-[data-theme="win95"] .nominee-card:hover {
+/* Season Awards shiny cards: plain raised buttons, pressed when picked/open. */
+[data-theme="win95"] .shiny-card,
+[data-theme="win95"] .shiny-card:hover {
   transform: none;
   transition: none;
   border: none;
@@ -3131,11 +3188,12 @@ button.award-nudge:hover {
     inset 0 0 0 1px #868a8e,
     1px 1px 0 0px #000000;
 }
-[data-theme="win95"] .nominee-card::before,
-[data-theme="win95"] .nominee-card::after {
+[data-theme="win95"] .shiny-card::before,
+[data-theme="win95"] .shiny-card::after {
   display: none;
 }
-[data-theme="win95"] .nominee-card[aria-pressed="true"] {
+[data-theme="win95"] .shiny-card.is-glowing,
+[data-theme="win95"] .shiny-card.is-stale {
   background: #c0c0c0;
   box-shadow:
     inset 1px 1px 0 0 #868a8e,
@@ -3143,8 +3201,12 @@ button.award-nudge:hover {
     inset 1px 1px 0 1px #000000;
 }
 [data-theme="win95"] .nominee-avatar,
-[data-theme="win95"] .nominee-check {
+[data-theme="win95"] .shiny-check,
+[data-theme="win95"] .award-card-votes {
   border-radius: 0;
+}
+[data-theme="win95"] .nominee-avatar,
+[data-theme="win95"] .shiny-check {
   background: #000080;
 }
 

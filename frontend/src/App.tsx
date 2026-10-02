@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useTranslation } from "react-i18next";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   getPlayers,
   getMatches,
@@ -12,6 +12,7 @@ import {
   getAllPlayerSeasonStats,
   getBanners,
   getMyAwardVotes,
+  getAwardTurnout,
   castAwardVote,
   deleteMatch,
   Player,
@@ -22,6 +23,7 @@ import {
   PlayerSeasonStats,
   Banner,
   AwardVote,
+  AwardTurnout,
 } from "./lib/supabase";
 import type { PlayerAchievementRow } from "./lib/achievements";
 import { DEFAULT_PARTNER_WEIGHT } from "./lib/elo";
@@ -48,6 +50,7 @@ import { Timeline } from "./components/Timeline";
 import { SeasonDialog } from "./components/SeasonDialog";
 import { AwardVoteNudge } from "./components/AwardVoteNudge";
 import { AwardBallotDialog } from "./components/AwardBallotDialog";
+import { ballotAccess } from "./lib/seasonAwards";
 import { ThemeToggle } from "./components/ThemeToggle";
 import { LanguageSwitcher } from "./components/LanguageSwitcher";
 import { Win95Shell } from "./components/Win95Shell";
@@ -304,6 +307,30 @@ function App() {
     [players, effectiveSeason, playerSeasonStats],
   );
 
+  // Turnout (counts only) for the seasons whose ballot can be open: the
+  // running one and the one before it (open until two weeks into this one).
+  // Picked without the clock, so it stays a pure render; the nudge decides
+  // which of them are actually open. Only for accounts that can vote -
+  // award_turnout refuses anyone else.
+  const turnoutSeasonIds = useMemo(() => {
+    if (ballotAccess({ role, myPlayerId }) !== "vote") return [];
+    const newest = [...seasons].sort((a, b) => b.number - a.number).slice(0, 2);
+    return newest.map((s) => s.id);
+  }, [seasons, role, myPlayerId]);
+  const awardTurnout = useQueries({
+    queries: turnoutSeasonIds.map((id) => ({
+      queryKey: ["awardTurnout", id],
+      queryFn: () => getAwardTurnout(id),
+    })),
+    combine: (results) => {
+      const byId: Partial<Record<string, AwardTurnout>> = {};
+      results.forEach((r, i) => {
+        if (r.data) byId[turnoutSeasonIds[i]] = r.data;
+      });
+      return byId;
+    },
+  });
+
   if (authLoading || isLoading) {
     return <AppSkeleton />;
   }
@@ -319,7 +346,12 @@ function App() {
     ? (seasons.find((s) => s.id === ballotSeasonId) ?? null)
     : null;
   const awardNudge = (
-    <AwardVoteNudge seasons={seasons} votes={awardVotes} onOpenBallot={setBallotSeasonId} />
+    <AwardVoteNudge
+      seasons={seasons}
+      votes={awardVotes}
+      turnout={awardTurnout}
+      onOpenBallot={setBallotSeasonId}
+    />
   );
 
   const appContent = (
@@ -643,9 +675,13 @@ function App() {
           players={players}
           seasonStats={allPlayerSeasonStats}
           votes={awardVotes}
+          turnout={awardTurnout[ballotSeason.id] ?? null}
           onCast={async (awardId, nomineeId) => {
             await castAwardVote(ballotSeason.id, awardId, nomineeId);
-            await queryClient.invalidateQueries({ queryKey: ["awardVotes"] });
+            await Promise.all([
+              queryClient.invalidateQueries({ queryKey: ["awardVotes"] }),
+              queryClient.invalidateQueries({ queryKey: ["awardTurnout", ballotSeason.id] }),
+            ]);
           }}
           onClose={() => setBallotSeasonId(null)}
         />

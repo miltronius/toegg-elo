@@ -15,6 +15,7 @@ import {
   parsePlannedEnd,
   picksForSeason,
   seasonsOpenForVoting,
+  turnoutRatio,
   type AwardId,
   type AwardSeason,
   type AwardVote,
@@ -272,5 +273,15 @@ describe("awardErrorKey", () => {
     expect(awardErrorKey({ message: "self_vote" })).toBe("seasonAwards.errors.self_vote");
     expect(awardErrorKey(new Error("Failed to fetch"))).toBeNull();
     expect(awardErrorKey("self_vote")).toBeNull();
+  });
+});
+
+describe("turnoutRatio", () => {
+  it("reads voters of eligible", () => {
+    expect(turnoutRatio({ voters: 3, eligible: 8, awards: {} })).toEqual({ voters: 3, eligible: 8 });
+  });
+
+  it("never shows more voters than eligible accounts", () => {
+    expect(turnoutRatio({ voters: 5, eligible: 4, awards: {} })).toEqual({ voters: 5, eligible: 5 });
   });
 });

@@ -259,3 +259,38 @@ $$;
 
 REVOKE ALL ON FUNCTION cast_award_vote(UUID, TEXT, UUID) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION cast_award_vote(UUID, TEXT, UUID) TO authenticated;
+
+-- ============================================================
+-- 7. Turnout
+-- ============================================================
+-- How many have voted, overall and per award - never for whom. The ballot and
+-- the vote nudge show it while voting is open; the per-nominee tally waits for
+-- the close (#122), since live standings in a league this small would let a
+-- watcher work out individual ballots by diffing, and invite tactical
+-- switching while picks are still changeable.
+--
+-- `eligible` is the linked user/admin accounts right now, i.e. who could vote.
+-- A demoted voter's votes still count in `voters`, so the UI clamps.
+CREATE OR REPLACE FUNCTION award_turnout(p_season_id UUID)
+RETURNS jsonb LANGUAGE plpgsql STABLE SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  IF COALESCE(get_my_role(), '') NOT IN ('user', 'admin') THEN
+    RAISE EXCEPTION 'not_allowed';
+  END IF;
+  RETURN jsonb_build_object(
+    'voters', (SELECT count(DISTINCT voter_user_id) FROM season_award_votes
+                WHERE season_id = p_season_id),
+    'eligible', (SELECT count(*) FROM player_accounts pa
+                   JOIN profiles pr ON pr.id = pa.user_id
+                  WHERE pr.role IN ('user', 'admin')),
+    'awards', COALESCE((SELECT jsonb_object_agg(award_id, n)
+                          FROM (SELECT award_id, count(*) AS n FROM season_award_votes
+                                 WHERE season_id = p_season_id GROUP BY award_id) t),
+                       '{}'::jsonb));
+END;
+$$;
+
+REVOKE ALL ON FUNCTION award_turnout(UUID) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION award_turnout(UUID) TO authenticated;

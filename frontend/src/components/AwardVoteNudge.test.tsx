@@ -72,6 +72,13 @@ describe("AwardVoteNudge", () => {
     expect(onOpenBallot).toHaveBeenCalledWith("s4");
   });
 
+  it("shows how many have voted, once turnout has loaded", () => {
+    me.role = "user";
+    me.myPlayerId = "p1";
+    renderNudge({ turnout: { s4: { voters: 3, eligible: 9, awards: {} } } });
+    expect(screen.getByRole("button")).toHaveTextContent("3/9 voted");
+  });
+
   it("can't name a closing date while the season is still running", () => {
     me.role = "admin";
     me.myPlayerId = "p1";

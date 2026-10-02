@@ -157,6 +157,31 @@ SELECT pg_temp.expect_count('admin reads only their own votes', 'SELECT count(*)
 SELECT pg_temp.act_as(pg_temp.u(4));
 SELECT pg_temp.expect_count('others read nothing', 'SELECT count(*) FROM season_award_votes', 0);
 
+-- ── Turnout: counts only, for voters' roles only ─────────────
+-- Staging may hold real votes in the running season, so compare against what
+-- the owner counts directly rather than against fixed numbers.
+SELECT pg_temp.act_as(pg_temp.u(3));
+SELECT pg_temp.expect('viewer gets no turnout', $q$SELECT award_turnout(pg_temp.active())$q$, 'not_allowed');
+SELECT pg_temp.act_as(pg_temp.u(1));
+SELECT set_config('vote_check.turnout', award_turnout(pg_temp.active())::text, true);
+RESET ROLE;
+SELECT pg_temp.expect_count('turnout counts voters',
+  $q$SELECT (current_setting('vote_check.turnout')::jsonb->>'voters')::bigint$q$,
+  (SELECT count(DISTINCT voter_user_id) FROM season_award_votes WHERE season_id = pg_temp.active()));
+SELECT pg_temp.expect_count('turnout counts votes per award',
+  $q$SELECT (current_setting('vote_check.turnout')::jsonb->'awards'->>'award_rookie')::bigint$q$,
+  (SELECT count(*) FROM season_award_votes WHERE season_id = pg_temp.active() AND award_id = 'award_rookie'));
+SELECT pg_temp.expect_count('turnout counts linked voters as eligible',
+  $q$SELECT (current_setting('vote_check.turnout')::jsonb->>'eligible')::bigint$q$,
+  (SELECT count(*) FROM player_accounts pa JOIN profiles pr ON pr.id = pa.user_id WHERE pr.role IN ('user', 'admin')));
+SELECT pg_temp.expect_count('turnout names nobody',
+  $q$SELECT count(*) FROM jsonb_object_keys(current_setting('vote_check.turnout')::jsonb)$q$, 3);
+SET LOCAL ROLE anon;
+SELECT pg_temp.act_as(NULL);
+SELECT pg_temp.expect('anon gets no turnout', $q$SELECT award_turnout(pg_temp.active())$q$, 'permission denied for function award_turnout');
+RESET ROLE;
+SET LOCAL ROLE authenticated;
+
 -- ── Window edges (user 1 re-picks the rookie, who stays eligible) ──
 RESET ROLE;
 SELECT pg_temp.shape(NULL, now() + interval '168 hours', NULL, NULL);

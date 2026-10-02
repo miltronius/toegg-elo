@@ -409,6 +409,7 @@
       "unknown": "Something went wrong. Please try again."
     },
     "nudge": {
+      "turnout": "{{voters}}/{{eligible}} voted",
       "title": "Vote for the Season Awards",
       "picked": "{{picked}}/{{total}} picked",
       "closes": "closes {{date}}",
@@ -420,6 +421,11 @@
       "rookie": "Ranked this season for the first time"
     },
     "ballot": {
+      "turnout": "{{voters}} of {{eligible}} players have voted so far.",
+      "yourPick": "Your pick: {{name}}",
+      "notPickedYet": "Not picked yet",
+      "votes_one": "{{count}} vote cast",
+      "votes_other": "{{count}} votes cast",
       "title": "Season Awards · {{season}}",
       "intro": "Pick one player per award, or skip any. Picks save as you go and can be changed until voting closes; click a pick again to clear it.",
       "closes": "Voting closes on {{date}}.",

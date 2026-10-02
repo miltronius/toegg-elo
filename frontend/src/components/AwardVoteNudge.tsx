@@ -10,6 +10,8 @@ import {
   ballotAccess,
   nextSeasonOf,
   seasonsOpenForVoting,
+  turnoutRatio,
+  type AwardTurnout,
   type AwardVote,
 } from "../lib/seasonAwards";
 
@@ -21,6 +23,8 @@ interface AwardVoteNudgeProps {
   /** The signed-in voter's own votes, every season. */
   votes: AwardVote[];
   onOpenBallot: (seasonId: string) => void;
+  /** Turnout per open season (award_turnout), when loaded. */
+  turnout?: Partial<Record<string, AwardTurnout>>;
   /** Fixed clock for tests; live (ticking) when omitted. */
   now?: number;
 }
@@ -38,7 +42,13 @@ const formatDate = (ms: number) =>
  * that can vote: an unlinked user/admin is told to link, everyone else sees
  * nothing.
  */
-export function AwardVoteNudge({ seasons, votes, onOpenBallot, now }: AwardVoteNudgeProps) {
+export function AwardVoteNudge({
+  seasons,
+  votes,
+  onOpenBallot,
+  turnout,
+  now,
+}: AwardVoteNudgeProps) {
   const { t } = useTranslation();
   const me = useMe();
   const [tick, setTick] = useState(() => Date.now());
@@ -73,6 +83,7 @@ export function AwardVoteNudge({ seasons, votes, onOpenBallot, now }: AwardVoteN
           closesAt === null
             ? t("seasonAwards.nudge.closesAfterSeason", { days: AWARD_VOTING_TAIL_DAYS })
             : t("seasonAwards.nudge.closes", { date: formatDate(closesAt) });
+        const seasonTurnout = turnout?.[season.id];
         return (
           <button
             key={season.id}
@@ -85,6 +96,8 @@ export function AwardVoteNudge({ seasons, votes, onOpenBallot, now }: AwardVoteN
               {label} ·{" "}
               {t("seasonAwards.nudge.picked", { picked, total: SEASON_AWARDS.length })} ·{" "}
               {closes}
+              {seasonTurnout &&
+                ` · ${t("seasonAwards.nudge.turnout", turnoutRatio(seasonTurnout))}`}
             </span>
           </button>
         );
