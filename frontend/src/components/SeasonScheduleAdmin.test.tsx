@@ -57,7 +57,7 @@ function setup(over: Partial<React.ComponentProps<typeof SeasonScheduleAdmin>> =
     save: () => screen.getByRole("button", { name: "Save" }),
   };
 }
-const plannedEnd = () => screen.getByLabelText("Planned end");
+const plannedEnd = () => screen.getByLabelText("Planned season end");
 const votingCloses = () => screen.getByLabelText("Voting closes (optional)");
 afterEach(() => vi.restoreAllMocks());
 
@@ -120,7 +120,7 @@ describe("SeasonScheduleAdmin", () => {
     const { user, onCloseVoting } = setup({
       season: season({ voting_opened_at: new Date(T0 - 1000).toISOString() }),
     });
-    expect(screen.getByText("Open until 14 days into the next season")).toBeInTheDocument();
+    expect(screen.getByText(/Open until 14 days into the next season/)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Open voting now" })).toBeNull();
     await user.click(screen.getByRole("button", { name: "Close voting now" }));
     expect(onCloseVoting).toHaveBeenCalledOnce();
@@ -129,10 +129,10 @@ describe("SeasonScheduleAdmin", () => {
   it("manages an ended season's open ballot without planned end or opening", () => {
     setup({ season: S4, nextSeason: S5_STARTED });
     expect(screen.getByRole("heading")).toHaveTextContent("S4 · Summer");
-    expect(screen.queryByLabelText("Planned end")).toBeNull();
+    expect(screen.queryByLabelText("Planned season end")).toBeNull();
     expect(screen.queryByRole("button", { name: "Open voting now" })).toBeNull();
     expect(screen.getByRole("button", { name: "Close voting now" })).toBeInTheDocument();
-    expect(screen.getByText(/^Open until \d{2}\.\d{2}\.2026/)).toBeInTheDocument();
+    expect(screen.getByText(/Open until \d{2}\.\d{2}\.2026/)).toBeInTheDocument();
   });
 
   it("says when a closed vote closed, and offers neither button", () => {
@@ -142,23 +142,41 @@ describe("SeasonScheduleAdmin", () => {
         voting_closes_at: new Date(T0 - DAY).toISOString(),
       }),
     });
-    expect(screen.getByText(/^Closed 30\.09\.2026/)).toBeInTheDocument();
+    expect(screen.getByText(/Closed 30\.09\.2026/)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /voting now/ })).toBeNull();
   });
 
   it("collapses, starting open only while the ballot is open", async () => {
     const { user } = setup();
-    const block = screen.getByRole("group");
+    const block = screen.getByRole("heading").closest("details")!;
     expect(block).not.toHaveAttribute("open");
     // The summary still says where voting stands.
-    expect(screen.getByText("Opens when the season ends")).toBeInTheDocument();
+    expect(screen.getByText(/Opens when the season ends/)).toBeInTheDocument();
     await user.click(screen.getByRole("heading"));
     expect(block).toHaveAttribute("open");
   });
 
   it("starts open while the vote is open", () => {
     setup({ season: season({ voting_opened_at: new Date(T0 - 1000).toISOString() }) });
-    expect(screen.getByRole("group")).toHaveAttribute("open");
+    expect(screen.getByRole("heading").closest("details")).toHaveAttribute("open");
+  });
+
+  it("previews when voting opens from the planned end as it's typed", async () => {
+    const { user } = setup();
+    expect(
+      screen.getByText(/Without a planned end, award voting opens when the season ends/),
+    ).toBeInTheDocument();
+    await user.type(plannedEnd(), "301120261800");
+    expect(screen.getByText(/Award voting opens 23\.11\.2026, 18:00, 7 days before/)).toBeInTheDocument();
+    await user.clear(plannedEnd());
+    await user.type(plannedEnd(), "05102026");
+    expect(screen.getByText(/opens as soon as you save/)).toBeInTheDocument();
+  });
+
+  it("keeps the season and voting fields in their own groups", () => {
+    setup();
+    expect(screen.getByRole("group", { name: "Season" })).toContainElement(plannedEnd());
+    expect(screen.getByRole("group", { name: /Award voting/ })).toContainElement(votingCloses());
   });
 
   it("explains a refusal", async () => {

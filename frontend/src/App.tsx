@@ -39,7 +39,7 @@ import { MatchHistory } from "./components/MatchHistory";
 import { PlayerDetail } from "./components/PlayerDetail";
 import { UserManagement } from "./components/UserManagement";
 import { BannerAdmin } from "./components/BannerAdmin";
-import { AwardVotingAdmin } from "./components/AwardVotingAdmin";
+import { SeasonOptionsAdmin } from "./components/SeasonOptionsAdmin";
 import { SectionNav } from "./components/SectionNav";
 import { MessageBanner } from "./components/MessageBanner";
 import { ChangelogDialog } from "./components/ChangelogDialog";
@@ -143,7 +143,7 @@ const EMPTY_AWARD_VOTES: AwardVote[] = [];
 // doesn't re-attach every render.
 const ADMIN_SECTIONS = [
   { id: "admin-users", labelKey: "userManagement.title" },
-  { id: "admin-voting", labelKey: "seasonDialog.votingAdminCardTitle" },
+  { id: "admin-seasons", labelKey: "seasonDialog.seasonOptionsTitle" },
   { id: "admin-banners", labelKey: "bannerAdmin.title" },
 ] as const;
 const EMPTY_ELO_HISTORY = new Map<string, EloHistory[]>();
@@ -629,8 +629,8 @@ function App() {
                   onLinksChanged={refresh}
                 />
               </section>
-              <section id="admin-voting" tabIndex={-1} className="admin-section">
-                <AwardVotingAdmin seasons={seasons} onChanged={refresh} />
+              <section id="admin-seasons" tabIndex={-1} className="admin-section">
+                <SeasonOptionsAdmin seasons={seasons} onChanged={refresh} />
               </section>
               <section id="admin-banners" tabIndex={-1} className="admin-section">
                 <BannerAdmin

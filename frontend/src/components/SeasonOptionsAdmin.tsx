@@ -9,7 +9,7 @@ import {
 import { awardVotingStatus, nextSeasonOf } from "../lib/seasonAwards";
 import { SeasonScheduleAdmin } from "./SeasonScheduleAdmin";
 
-interface AwardVotingAdminProps {
+interface SeasonOptionsAdminProps {
   seasons: Season[];
   /** Refetch after a change, so every view sees the new window. */
   onChanged: () => void;
@@ -21,11 +21,11 @@ interface AwardVotingAdminProps {
 const TICK_MS = 60_000;
 
 /**
- * Admin tab card for Season Awards voting: one SeasonScheduleAdmin block for
- * the running season, plus one for the previous season while its ballot is
- * still open (it runs into the first two weeks of the next).
+ * The Admin tab's "Season options" card: one SeasonScheduleAdmin block for the
+ * running season (planned end, award voting), plus one for the previous season
+ * while its ballot is still open (it runs into the first two weeks of the next).
  */
-export function AwardVotingAdmin({ seasons, onChanged, now: fixedNow }: AwardVotingAdminProps) {
+export function SeasonOptionsAdmin({ seasons, onChanged, now: fixedNow }: SeasonOptionsAdminProps) {
   const { t } = useTranslation();
   const [tick, setTick] = useState(() => Date.now());
   useEffect(() => {
@@ -43,9 +43,9 @@ export function AwardVotingAdmin({ seasons, onChanged, now: fixedNow }: AwardVot
 
   return (
     <div className="card mt-6">
-      <h2>{t("seasonDialog.votingAdminCardTitle")}</h2>
+      <h2>{t("seasonDialog.seasonOptionsTitle")}</h2>
       <p className="text-text-light text-[0.85rem] mt-1 mb-4">
-        {t("seasonDialog.votingAdminHint")}
+        {t("seasonDialog.seasonOptionsHint")}
       </p>
       {managed.length === 0 ? (
         <p className="text-text-light text-[0.85rem]">{t("seasonDialog.noSeason")}</p>

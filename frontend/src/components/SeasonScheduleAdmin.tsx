@@ -8,6 +8,7 @@ import {
   AWARD_VOTING_TAIL_DAYS,
   awardErrorKey,
   awardVotingStatus,
+  awardVotingWindow,
   parseSeasonDate,
   votingStatusLabel,
 } from "../lib/seasonAwards";
@@ -33,15 +34,17 @@ export const formatDateTime = (ms: number) =>
   });
 
 /**
- * Admin-only, in SeasonDialog's info view: one season's award voting. For the
- * running season that's its planned end (voting opens a lead week before) and
- * "Open voting now"; for any season with an open ballot - usually the previous
- * one, during the first two weeks of the next - the closing date and "Close
- * voting now". Opening is one-way (open_award_voting keeps the first moment);
- * closing isn't, since a later closing date reopens. Both confirm.
+ * Admin-only, one season's block in the Admin tab's "Season options" card
+ * (SeasonOptionsAdmin), in two groups. "Season": the running season's planned
+ * end, with a live preview of when award voting opens from it (a lead week
+ * before). "Award voting": the closing date, plus "Open voting now" (running
+ * season, before it opens; one-way - open_award_voting keeps the first moment)
+ * and "Close voting now" (while open; a later closing date reopens). Both
+ * confirm. A season with an open ballot that has ended - usually the previous
+ * one, during the first two weeks of the next - only gets the voting group.
  *
- * Collapsible (<details>): the summary keeps the title and status, so a closed
- * block still says where voting stands. It starts open only while the ballot
+ * Collapsible (<details>): the summary keeps the season and the voting status,
+ * so a closed block still says where voting stands. It starts open only while the ballot
  * is open - the state an admin is most likely to act on.
  */
 export function SeasonScheduleAdmin({
@@ -70,6 +73,23 @@ export function SeasonScheduleAdmin({
   });
   const startedAt = Date.parse(season.started_at);
   const dirty = planned !== initialPlanned || closes !== initialCloses;
+
+  // When voting would open from the planned end as typed - only worth saying
+  // while it hasn't opened yet. Reuses the window logic, so it can't disagree.
+  const opensPreview = (() => {
+    if (!running || status !== "not_open") return null;
+    const parsed = parseSeasonDate(planned, startedAt);
+    if (parsed.kind === "empty") return t("seasonDialog.votingOpensPreviewNone");
+    if (parsed.kind !== "ok") return null;
+    const { opensAt } = awardVotingWindow({ ...season, planned_end_at: parsed.iso }, nextSeason);
+    if (opensAt === null) return null;
+    return opensAt <= now
+      ? t("seasonDialog.votingOpensPreviewNow", { days: AWARD_VOTING_LEAD_DAYS })
+      : t("seasonDialog.votingOpensPreview", {
+          date: formatDateTime(opensAt),
+          days: AWARD_VOTING_LEAD_DAYS,
+        });
+  })();
 
   const save = async () => {
     const schedule: SeasonVotingSchedule = {};
@@ -126,51 +146,53 @@ export function SeasonScheduleAdmin({
   return (
     <details className="season-schedule-admin" open={status === "open"}>
       <summary className="season-schedule-summary">
-        <h3 className="season-schedule-title">
-          🗳️ {t("seasonDialog.votingAdminTitle", { season: label })}
-        </h3>
-        <span className="season-schedule-status">{statusText}</span>
+        <h3 className="season-schedule-title">{label}</h3>
+        <span className="season-schedule-status">🗳️ {statusText}</span>
       </summary>
 
       {running && (
+        <fieldset className="season-options-group">
+          <legend>{t("seasonDialog.seasonGroup")}</legend>
+          <div className="form-group">
+            <label htmlFor={fieldId("planned-end")}>{t("seasonDialog.plannedSeasonEnd")}</label>
+            <input
+              id={fieldId("planned-end")}
+              type="text"
+              inputMode="numeric"
+              value={planned}
+              placeholder={SWISS_DATETIME_FORMAT}
+              onChange={(e) => setPlanned(maskSwissDateTime(e.target.value))}
+              disabled={busy}
+            />
+            <span className="block text-[0.78rem] text-text-light mt-1">
+              {t("seasonDialog.plannedSeasonEndHint", { format: SWISS_DATETIME_FORMAT })}
+            </span>
+            {opensPreview && <span className="season-options-preview">🗳️ {opensPreview}</span>}
+          </div>
+        </fieldset>
+      )}
+
+      <fieldset className="season-options-group">
+        <legend>🗳️ {t("seasonDialog.awardVoting")}</legend>
         <div className="form-group">
-          <label htmlFor={fieldId("planned-end")}>{t("seasonDialog.plannedEnd")}</label>
+          <label htmlFor={fieldId("voting-closes")}>{t("seasonDialog.votingCloses")}</label>
           <input
-            id={fieldId("planned-end")}
+            id={fieldId("voting-closes")}
             type="text"
             inputMode="numeric"
-            value={planned}
+            value={closes}
             placeholder={SWISS_DATETIME_FORMAT}
-            onChange={(e) => setPlanned(maskSwissDateTime(e.target.value))}
+            onChange={(e) => setCloses(maskSwissDateTime(e.target.value))}
             disabled={busy}
           />
           <span className="block text-[0.78rem] text-text-light mt-1">
-            {t("seasonDialog.plannedEndHint", {
+            {t("seasonDialog.votingClosesHint", {
               format: SWISS_DATETIME_FORMAT,
-              days: AWARD_VOTING_LEAD_DAYS,
+              days: AWARD_VOTING_TAIL_DAYS,
             })}
           </span>
         </div>
-      )}
-
-      <div className="form-group">
-        <label htmlFor={fieldId("voting-closes")}>{t("seasonDialog.votingCloses")}</label>
-        <input
-          id={fieldId("voting-closes")}
-          type="text"
-          inputMode="numeric"
-          value={closes}
-          placeholder={SWISS_DATETIME_FORMAT}
-          onChange={(e) => setCloses(maskSwissDateTime(e.target.value))}
-          disabled={busy}
-        />
-        <span className="block text-[0.78rem] text-text-light mt-1">
-          {t("seasonDialog.votingClosesHint", {
-            format: SWISS_DATETIME_FORMAT,
-            days: AWARD_VOTING_TAIL_DAYS,
-          })}
-        </span>
-      </div>
+      </fieldset>
 
       <div className="flex flex-wrap gap-2">
         <button className="btn-secondary" onClick={save} disabled={busy || !dirty}>

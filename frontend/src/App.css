@@ -2540,6 +2540,26 @@ button.award-nudge:hover {
   font-size: 0.85rem;
   color: var(--color-text-light);
 }
+.season-options-group {
+  border: none;
+  margin: 0 0 0.5rem;
+  padding: 0;
+}
+.season-options-group > legend {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-light);
+  margin-bottom: 0.4rem;
+  padding: 0;
+}
+.season-options-preview {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
 .season-schedule-admin[open] > .season-schedule-summary {
   margin-bottom: 0.75rem;
 }

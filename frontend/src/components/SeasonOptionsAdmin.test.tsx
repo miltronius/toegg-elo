@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
-import { AwardVotingAdmin } from "./AwardVotingAdmin";
+import { SeasonOptionsAdmin } from "./SeasonOptionsAdmin";
 import type { Season } from "../lib/supabase";
 
 vi.mock("../lib/supabase", () => ({
@@ -41,9 +41,9 @@ const S4 = season({
 
 const headings = () => screen.getAllByRole("heading", { level: 3 }).map((h) => h.textContent);
 
-describe("AwardVotingAdmin", () => {
+describe("SeasonOptionsAdmin", () => {
   it("manages the previous season while its ballot is open, then the running one", () => {
-    render(<AwardVotingAdmin seasons={[S5, S4]} onChanged={() => {}} now={T0} />);
+    render(<SeasonOptionsAdmin seasons={[S5, S4]} onChanged={() => {}} now={T0} />);
     expect(headings()).toEqual([
       expect.stringContaining("S4 · Summer"),
       expect.stringContaining("S5 · Autumn"),
@@ -51,12 +51,12 @@ describe("AwardVotingAdmin", () => {
   });
 
   it("drops the previous season once its ballot has closed", () => {
-    render(<AwardVotingAdmin seasons={[S5, S4]} onChanged={() => {}} now={T0 + 14 * DAY} />);
+    render(<SeasonOptionsAdmin seasons={[S5, S4]} onChanged={() => {}} now={T0 + 14 * DAY} />);
     expect(headings()).toEqual([expect.stringContaining("S5 · Autumn")]);
   });
 
   it("has nothing to manage without a running season", () => {
-    render(<AwardVotingAdmin seasons={[]} onChanged={() => {}} now={T0} />);
+    render(<SeasonOptionsAdmin seasons={[]} onChanged={() => {}} now={T0} />);
     expect(screen.queryAllByRole("heading", { level: 3 })).toEqual([]);
   });
 });
