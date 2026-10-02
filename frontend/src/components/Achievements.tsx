@@ -11,11 +11,33 @@ import {
   rarityColorForTier,
   rarityTierForPercent,
   RARITY_TIERS,
+  ACHIEVEMENT_CATEGORIES,
+  inCategories,
+  categoryCounts,
+  type AchievementCategory,
   type PlayerAchievementRow,
   type AchievementStatus,
 } from "../lib/achievements";
 import type { Player, Match, EloHistory, Season } from "../lib/supabase";
 import { DATE_LOCALE } from "../lib/i18n";
+import {
+  AchievementCategoryFilter,
+  CategoryBadge,
+} from "./AchievementCategoryFilter";
+
+// Totals per category for the filter, where nothing is per-player.
+const CATEGORY_TOTALS = categoryCounts(
+  ACHIEVEMENT_DEFINITIONS.map((definition) => ({
+    definition,
+    unlocked: false,
+  })),
+);
+const totalsOnly = Object.fromEntries(
+  ACHIEVEMENT_CATEGORIES.map((c) => [
+    c.id,
+    { total: CATEGORY_TOTALS[c.id].total },
+  ]),
+);
 
 interface AchievementsProps {
   players: Player[];
@@ -34,7 +56,10 @@ export function Achievements({
 }: AchievementsProps) {
   const { t } = useTranslation();
   const [view, setView] = useState<"overview" | "players">("overview");
-  const total = ACHIEVEMENT_DEFINITIONS.length;
+  const [categories, setCategories] = useState<AchievementCategory[]>([]);
+  const total = ACHIEVEMENT_DEFINITIONS.filter((d) =>
+    inCategories(d, categories),
+  ).length;
 
   // Build per-player row data sorted by badge count desc
   const rows = players
@@ -46,7 +71,7 @@ export function Achievements({
         matches,
         allAchievementRows,
         eloHistory,
-      );
+      ).filter((s) => inCategories(s.definition, categories));
       const unlockedCount = statuses.filter((s) => s.unlocked).length;
       return { player, statuses, unlockedCount };
     })
@@ -56,19 +81,29 @@ export function Achievements({
     <div className="card">
       <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
         <h2 className="m-0">{t("achievements.title")}</h2>
-        <div className="lb-toggle">
-          <button
-            className={`lb-toggle-btn${view === "overview" ? " active" : ""}`}
-            onClick={() => setView("overview")}
-          >
-            {t("achievements.overview")}
-          </button>
-          <button
-            className={`lb-toggle-btn${view === "players" ? " active" : ""}`}
-            onClick={() => setView("players")}
-          >
-            {t("achievements.players")}
-          </button>
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* The overview has it atop its Category column instead. */}
+          {view === "players" && (
+            <AchievementCategoryFilter
+              selected={categories}
+              onChange={setCategories}
+              counts={totalsOnly}
+            />
+          )}
+          <div className="lb-toggle">
+            <button
+              className={`lb-toggle-btn${view === "overview" ? " active" : ""}`}
+              onClick={() => setView("overview")}
+            >
+              {t("achievements.overview")}
+            </button>
+            <button
+              className={`lb-toggle-btn${view === "players" ? " active" : ""}`}
+              onClick={() => setView("players")}
+            >
+              {t("achievements.players")}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -78,6 +113,8 @@ export function Achievements({
           matches={matches}
           allAchievementRows={allAchievementRows}
           eloHistory={eloHistory}
+          categories={categories}
+          onCategoriesChange={setCategories}
         />
       ) : (
         <table className="leaderboard-table achievements-table">
@@ -209,6 +246,8 @@ interface AchievementsOverviewProps {
   matches: Match[];
   allAchievementRows: PlayerAchievementRow[];
   eloHistory: EloHistory[];
+  categories: AchievementCategory[];
+  onCategoriesChange: (categories: AchievementCategory[]) => void;
 }
 
 function AchievementsOverview({
@@ -216,6 +255,8 @@ function AchievementsOverview({
   matches,
   allAchievementRows,
   eloHistory,
+  categories,
+  onCategoriesChange,
 }: AchievementsOverviewProps) {
   const { t } = useTranslation();
   const rarityMap =
@@ -267,7 +308,9 @@ function AchievementsOverview({
     tier: ReturnType<typeof rarityTierForPercent> | "none";
   };
 
-  const items: Item[] = ACHIEVEMENT_DEFINITIONS.map((def) => {
+  const items: Item[] = ACHIEVEMENT_DEFINITIONS.filter((def) =>
+    inCategories(def, categories),
+  ).map((def) => {
     const percent = rarityMap.get(def.id);
     const tier =
       percent !== undefined && percent > 0
@@ -286,6 +329,15 @@ function AchievementsOverview({
 
   return (
     <div className="flex flex-col gap-4">
+      <div className="achievements-overview-head">
+        <AchievementCategoryFilter
+          selected={categories}
+          onChange={onCategoriesChange}
+          counts={totalsOnly}
+          maxBadges={1}
+          alignStart
+        />
+      </div>
       {groups.map(({ tier, items: groupItems }) => {
         const isNone = tier === "none";
         const tierInfo = isNone
@@ -340,6 +392,9 @@ function AchievementsOverview({
                         def.description,
                       )}
                     </div>
+                  </div>
+                  <div className="achievements-overview-cat">
+                    <CategoryBadge id={def.category} />
                   </div>
                   <div>
                     <div className="achievements-progress-bar achievements-overview-bar">
@@ -451,9 +506,12 @@ export function AchievementGallery({
 }: AchievementGalleryProps) {
   const { t } = useTranslation();
   const [sortMode, setSortMode] = useState<"rarity" | "date">("rarity");
+  const [categories, setCategories] = useState<AchievementCategory[]>([]);
   const playerMap = new Map(players.map((p) => [p.id, p]));
+  const counts = categoryCounts(statuses);
+  const shown = statuses.filter((s) => inCategories(s.definition, categories));
 
-  const unlocked = statuses
+  const unlocked = shown
     .filter((s) => s.unlocked)
     .sort((a, b) => {
       if (sortMode === "rarity") {
@@ -469,19 +527,36 @@ export function AchievementGallery({
       }
     });
 
-  const locked = statuses.filter((s) => !s.unlocked);
+  const locked = shown.filter((s) => !s.unlocked);
 
-  const unlockedIds = new Set(unlocked.map((s) => s.definition.id));
+  // Progress is judged against everything unlocked, whatever the filter shows.
+  const unlockedIds = new Set(
+    statuses.filter((s) => s.unlocked).map((s) => s.definition.id),
+  );
   const nextUp = computeAchievementProgress(
     playerId,
     matches,
     unlockedIds,
     players,
     eloHistory,
-  ).slice(0, 2);
+  )
+    .filter((p) =>
+      inCategories(
+        ACHIEVEMENT_DEFINITIONS.find((d) => d.id === p.achievementId)!,
+        categories,
+      ),
+    )
+    .slice(0, 2);
 
   return (
     <div className="flex flex-col gap-6">
+      <div className="flex justify-end">
+        <AchievementCategoryFilter
+          selected={categories}
+          onChange={setCategories}
+          counts={counts}
+        />
+      </div>
       {nextUp.length > 0 && (
         <section>
           <div className="achievement-section-heading">
@@ -560,21 +635,23 @@ export function AchievementGallery({
           </div>
         </section>
       )}
-      <section>
-        <div className="achievement-section-heading">
-          {t("achievements.locked", { count: locked.length })}
-        </div>
-        <div className="achievement-grid">
-          {locked.map((s) => (
-            <AchievementCard
-              key={s.definition.id}
-              status={s}
-              playerMap={playerMap}
-              locked
-            />
-          ))}
-        </div>
-      </section>
+      {locked.length > 0 && (
+        <section>
+          <div className="achievement-section-heading">
+            {t("achievements.locked", { count: locked.length })}
+          </div>
+          <div className="achievement-grid">
+            {locked.map((s) => (
+              <AchievementCard
+                key={s.definition.id}
+                status={s}
+                playerMap={playerMap}
+                locked
+              />
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   );
 }

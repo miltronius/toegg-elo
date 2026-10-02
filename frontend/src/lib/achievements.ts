@@ -74,8 +74,65 @@ export type AchievementId =
 
 export type RarityTier = "legendary" | "epic" | "rare" | "uncommon" | "common";
 
+/**
+ * Display-only grouping for the Achievements filter (#126); nothing stores it.
+ * Every definition has exactly one. Colours live in CSS (`--cat-<id>`).
+ */
+export type AchievementCategory =
+  | "record"
+  | "activity"
+  | "streaks"
+  | "social"
+  | "elo"
+  | "goals"
+  | "season"
+  | "awards"
+  | "meta";
+
+/** Filter order. Names are translated under `achievementCategories.<id>`. */
+export const ACHIEVEMENT_CATEGORIES: readonly {
+  id: AchievementCategory;
+  icon: string;
+}[] = [
+  { id: "record", icon: "📊" },
+  { id: "activity", icon: "📅" },
+  { id: "streaks", icon: "🔥" },
+  { id: "social", icon: "🤝" },
+  { id: "elo", icon: "📈" },
+  { id: "goals", icon: "⚽" },
+  { id: "season", icon: "🗓️" },
+  { id: "awards", icon: "🏆" },
+  { id: "meta", icon: "🎖️" },
+];
+
+/** Whether a definition passes the category filter; none selected passes all. */
+export function inCategories(
+  def: { category: AchievementCategory },
+  selected: readonly AchievementCategory[],
+): boolean {
+  return selected.length === 0 || selected.includes(def.category);
+}
+
+/** Per category: how many definitions, and how many of them are unlocked. */
+export function categoryCounts(
+  statuses: readonly {
+    definition: { category: AchievementCategory };
+    unlocked: boolean;
+  }[],
+): Record<AchievementCategory, { total: number; unlocked: number }> {
+  const counts = Object.fromEntries(
+    ACHIEVEMENT_CATEGORIES.map((c) => [c.id, { total: 0, unlocked: 0 }]),
+  ) as Record<AchievementCategory, { total: number; unlocked: number }>;
+  for (const s of statuses) {
+    counts[s.definition.category].total++;
+    if (s.unlocked) counts[s.definition.category].unlocked++;
+  }
+  return counts;
+}
+
 export interface AchievementDefinition {
   id: AchievementId;
+  category: AchievementCategory;
   icon: string;
   name: string;
   description: string;
@@ -119,390 +176,455 @@ export interface PlayerAchievementRow {
 export const ACHIEVEMENT_DEFINITIONS: AchievementDefinition[] = [
   {
     id: "win_1",
+    category: "record",
     icon: "🥇",
     name: "First Victory",
     description: "Win your first match",
   },
   {
     id: "win_5",
+    category: "record",
     icon: "🎯",
     name: "Five-Win Club",
     description: "Win 5 matches over your career",
   },
   {
     id: "win_10",
+    category: "record",
     icon: "🏆",
     name: "Ten Wins",
     description: "Win 10 matches",
   },
   {
     id: "win_20",
+    category: "record",
     icon: "🌟",
     name: "Twenty Wins",
     description: "Win 20 matches",
   },
   {
     id: "win_50",
+    category: "record",
     icon: "👑",
     name: "Champion",
     description: "Win 50 matches",
   },
   {
     id: "lose_1",
+    category: "record",
     icon: "😅",
     name: "First Defeat",
     description: "Lose your first match",
   },
   {
     id: "lose_5",
+    category: "record",
     icon: "💀",
     name: "Battle-Hardened",
     description: "Lose 5 matches - every champion knows defeat",
   },
   {
     id: "lose_10",
+    category: "record",
     icon: "😤",
     name: "Resilient",
     description: "Lose 10 matches",
   },
   {
     id: "lose_20",
+    category: "record",
     icon: "💪",
     name: "Never Give Up",
     description: "Lose 20 matches",
   },
   {
     id: "lose_50",
+    category: "record",
     icon: "🧱",
     name: "Iron Will",
     description: "Lose 50 matches - still standing",
   },
   {
     id: "play_10",
+    category: "activity",
     icon: "🎮",
     name: "Getting Started",
     description: "Play 10 total matches",
   },
   {
     id: "play_20",
+    category: "activity",
     icon: "🕹️",
     name: "Committed Player",
     description: "Play 20 total matches",
   },
   {
     id: "play_50",
+    category: "activity",
     icon: "🎰",
     name: "Dedicated",
     description: "Play 50 total matches",
   },
   {
     id: "play_100",
+    category: "activity",
     icon: "💯",
     name: "Centurion",
     description: "Play 100 total matches",
   },
   {
     id: "play_200",
+    category: "activity",
     icon: "🚀",
     name: "Legend",
     description: "Play 200 total matches",
   },
   {
     id: "all_weekdays",
+    category: "activity",
     icon: "📅",
     name: "Week Warrior",
     description: "Play at least one match on every workday (Monday to Friday)",
   },
   {
     id: "triple_day",
+    category: "activity",
     icon: "⚡",
     name: "Hattrick Day",
     description: "Play 3 or more matches in a single calendar day",
   },
   {
     id: "triple_win_day",
+    category: "record",
     icon: "🔥",
     name: "Dominant Day",
     description: "Win 3 or more matches in a single calendar day",
   },
   {
     id: "best_friend",
+    category: "social",
     icon: "🤝",
     name: "Best Friend",
     description: "Play 10+ matches on the same team as one partner",
   },
   {
     id: "bff",
+    category: "social",
     icon: "💞",
     name: "BFF",
     description: "Play 20+ matches on the same team as one partner",
   },
   {
     id: "sworn_enemies",
+    category: "social",
     icon: "⚔️",
     name: "Sworn Enemies",
     description: "Face the same opponent in 10+ matches",
   },
   {
     id: "arch_nemesis",
+    category: "social",
     icon: "💀⚔️",
     name: "Arch Nemesis",
     description: "Face the same opponent in 20+ matches",
   },
   {
     id: "achievement_hunter",
+    category: "meta",
     icon: "🎖️",
     name: "Achievement Hunter",
     description: "Unlock 10 achievements",
   },
   {
     id: "streak_win_3",
+    category: "streaks",
     icon: "🌪️",
     name: "Unstoppable",
     description: "Win 3 matches in a row",
   },
   {
     id: "streak_win_5",
+    category: "streaks",
     icon: "🚂",
     name: "Can't Stop Winning",
     description: "Win 5 matches in a row",
   },
   {
     id: "streak_win_7",
+    category: "streaks",
     icon: "🛡️",
     name: "Invincible",
     description: "Win 7 matches in a row",
   },
   {
     id: "streak_win_10",
+    category: "streaks",
     icon: "🔱",
     name: "Godlike",
     description: "Win 10 matches in a row",
   },
   {
     id: "streak_loss_3",
+    category: "streaks",
     icon: "🌧️",
     name: "Rough Patch",
     description: "Lose 3 matches in a row",
   },
   {
     id: "streak_loss_5",
+    category: "streaks",
     icon: "⛓️",
     name: "Masochist",
     description: "Lose 5 matches in a row",
   },
   {
     id: "comeback_kid",
+    category: "streaks",
     icon: "🔄",
     name: "Comeback Kid",
     description: "Win a match that ends a losing streak of 3 or more",
   },
   {
     id: "punching_bag",
+    category: "streaks",
     icon: "🥊",
     name: "Punching Bag",
     description: "Beat the same opponent in 3 consecutive matches",
   },
   {
     id: "teams_1",
+    category: "social",
     icon: "👥",
     name: "Pairing Up",
     description: "Play 2+ matches with the same partner to form a team",
   },
   {
     id: "teams_3",
+    category: "social",
     icon: "🧑‍🤝‍🧑",
     name: "Team Player",
     description: "Form a team with 3 different partners",
   },
   {
     id: "teams_10",
+    category: "social",
     icon: "🌐",
     name: "Friends with Everyone",
     description: "Form a team with 10 different partners",
   },
   {
     id: "world_tour",
+    category: "social",
     icon: "🌍",
     name: "World Tour",
     description: "Play against every other registered player",
   },
   {
     id: "nemesis_of_all",
+    category: "social",
     icon: "😈",
     name: "Nemesis of All",
     description: "Beat every other registered player at least once",
   },
   {
     id: "to_the_moon",
+    category: "elo",
     icon: "🌝",
     name: "To The Moon",
     description: "Gain +100 ELO in a single day",
   },
   {
     id: "rock_bottom",
+    category: "elo",
     icon: "📉",
     name: "Rock Bottom",
     description: "Lose 75 ELO in a single day",
   },
   {
     id: "carrying_hard",
+    category: "elo",
     icon: "🏋️",
     name: "Carrying Hard",
     description: "Win with a partner rated 200+ ELO below you",
   },
   {
     id: "deadweight",
+    category: "elo",
     icon: "🪨",
     name: "Deadweight",
     description: "Win with a partner rated 200+ ELO above you",
   },
   {
     id: "party_pooper",
+    category: "streaks",
     icon: "🛑",
     name: "Party Pooper",
     description: "End an opponent's win streak of 3 or more",
   },
   {
     id: "flawless_victory",
+    category: "goals",
     icon: "🏅",
     name: "Flawless Victory",
     description: "Win a game 10:0 (both scores entered)",
   },
   {
     id: "fatality",
+    category: "goals",
     icon: "☠️",
     name: "Fatality",
     description: "Lose a game 0:10 (both scores entered)",
   },
   {
     id: "goals_200",
+    category: "goals",
     icon: "⚽",
     name: "Goal Getter",
     description: "Score 200 goals over your career",
   },
   {
     id: "goals_1000",
+    category: "goals",
     icon: "🏭",
     name: "Goal Machine",
     description: "Score 1,000 goals over your career",
   },
   {
     id: "goals_10000",
+    category: "goals",
     icon: "🌋",
     name: "Ten Thousand Club",
     description: "Score 10,000 goals over your career",
   },
   {
     id: "pair_goals_100",
+    category: "goals",
     icon: "👯",
     name: "Dynamic Duo",
     description: "Score 100 goals with one partner",
   },
   {
     id: "pair_goals_500",
+    category: "goals",
     icon: "⚙️",
     name: "Well-Oiled Machine",
     description: "Score 500 goals with one partner",
   },
   {
     id: "pair_goals_1000",
+    category: "goals",
     icon: "🐉",
     name: "Two-Headed Monster",
     description: "Score 1,000 goals with one partner",
   },
   {
     id: "season_participated",
+    category: "season",
     icon: "📋",
     name: "On the Board",
     description: "Play 3 games in a season",
   },
   {
     id: "season_top_1",
+    category: "season",
     icon: "🏆",
     name: "Season Champion",
     description: "Finish a season in 1st place",
   },
   {
     id: "season_top_2",
+    category: "season",
     icon: "🥈",
     name: "Runner-Up",
     description: "Finish a season in 2nd place",
   },
   {
     id: "season_top_3",
+    category: "season",
     icon: "🥉",
     name: "Podium",
     description: "Finish a season in 3rd place",
   },
   {
     id: "season_top_5",
+    category: "season",
     icon: "🖐️",
     name: "High Five",
     description: "Finish a season in the top 5",
   },
   {
     id: "season_top_10",
+    category: "season",
     icon: "🔟",
     name: "Top Ten",
     description: "Finish a season in the top 10",
   },
   {
     id: "season_net_positive",
+    category: "season",
     icon: "💹",
     name: "In the Green",
     description: "Finish a season ranked, above 1500",
   },
   {
     id: "award_offense",
+    category: "awards",
     icon: "⚔️",
     name: "Best Offensive Player",
     description: "Win the “Best Offensive Player” Season Award",
   },
   {
     id: "award_defense",
+    category: "awards",
     icon: "🛡️",
     name: "Best Defender - The Wall",
     description: "Win the “Best Defender - The Wall” Season Award",
   },
   {
     id: "award_fun",
+    category: "awards",
     icon: "🎉",
     name: "Most Fun to Play With",
     description: "Win the “Most Fun to Play With” Season Award",
   },
   {
     id: "award_community",
+    category: "awards",
     icon: "🤝",
     name: "Community Award",
     description: "Win the “Community Award” Season Award",
   },
   {
     id: "award_improved",
+    category: "awards",
     icon: "🚀",
     name: "Most Improved",
     description: "Win the “Most Improved” Season Award",
   },
   {
     id: "award_rookie",
+    category: "awards",
     icon: "🌱",
     name: "Rookie of the Season",
     description: "Win the “Rookie of the Season” Season Award",
   },
   {
     id: "linked_account",
+    category: "meta",
     icon: "🪪",
     name: "That's Me!",
     description: "Link your account to your player",
   },
   {
     id: "completionist",
+    category: "meta",
     icon: "💎",
     name: "Completionist",
     description: "Unlock 20 achievements",
   },
   {
     id: "completionist_30",
+    category: "meta",
     icon: "🏵️",
     name: "True Completionist",
     description: "Unlock 30 achievements",
@@ -766,8 +888,7 @@ export function computeSeasonPlacements(
     if (!season.ended_at) continue;
     const unlockedAt = new Date(season.ended_at);
     const ranked = stats.filter(
-      (s) =>
-        s.season_id === season.id && s.wins + s.losses >= RANKED_MIN_GAMES,
+      (s) => s.season_id === season.id && s.wins + s.losses >= RANKED_MIN_GAMES,
     );
     for (const s of ranked) {
       if (s.current_season_elo >= 1501) {
@@ -835,7 +956,8 @@ export function computeAwardWins(
 ): Map<string, UnlockedAchievement[]> {
   const countedAt = new Map<string, Date>();
   for (const s of seasons) {
-    if (s.awards_finalized_at) countedAt.set(s.id, new Date(s.awards_finalized_at));
+    if (s.awards_finalized_at)
+      countedAt.set(s.id, new Date(s.awards_finalized_at));
   }
   const byPlayer = new Map<string, UnlockedAchievement[]>();
   for (const r of results) {
@@ -2091,7 +2213,10 @@ export async function recomputeAllAchievements(
       players,
       history,
       linkedAt.get(player.id) ?? null,
-      [...(placements.get(player.id) ?? []), ...(awardWins.get(player.id) ?? [])],
+      [
+        ...(placements.get(player.id) ?? []),
+        ...(awardWins.get(player.id) ?? []),
+      ],
     );
     for (const u of unlocked) {
       rows.push({

@@ -350,7 +350,22 @@
     "withPartner": "with {{name}}",
     "vsOpponent": "vs {{name}}",
     "ofPlayers": " · {{percent}}% of players",
-    "seasonLabel": "Season {{number}}"
+    "seasonLabel": "Season {{number}}",
+    "categoryFilter": "Filter by category",
+    "allCategories": "All categories",
+    "moreCategories": "+{{count}}",
+    "clearCategories": "Clear category filter"
+  },
+  "achievementCategories": {
+    "record": "Wins & Losses",
+    "activity": "Activity",
+    "streaks": "Streaks",
+    "social": "Social",
+    "elo": "Elo",
+    "goals": "Goals",
+    "season": "Season",
+    "awards": "Awards",
+    "meta": "Meta"
   },
   "timeline": {
     "title": "Timeline",
