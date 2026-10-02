@@ -360,7 +360,11 @@
     "movedUp": " stieg auf von ",
     "dropped": " fiel von ",
     "to": " auf ",
-    "loadingOlder": "Ältere Einträge werden geladen…"
+    "loadingOlder": "Ältere Einträge werden geladen…",
+    "contents": "Saisons",
+    "seasonSince": "Seit {{start}}",
+    "seasonPlannedEnd": "geplantes Ende {{date}}",
+    "seasonRange": "{{start}} – {{end}}"
   },
   "seasonStats": {
     "title": "📊 Statistik",

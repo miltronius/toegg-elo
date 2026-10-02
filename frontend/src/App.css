@@ -2147,14 +2147,14 @@ button.award-nudge:hover {
   font-size: 0.8rem;
   color: var(--color-text-light);
 }
-/* ── Admin tab: list of contents (SectionNav) ──────────────────── */
-/* Only where there's a spare column for it (xl, matching main's max-xl-356
-   in App.tsx); below that the cards take the full width, as before. */
+/* ── List of contents (SectionNav): Admin tab, Timeline ───────── */
+/* Only where there's a spare column for it (xl, matching main's xl:max-w-356
+   in App.tsx); below that the content takes the full width, as before. */
 .section-nav {
   display: none;
 }
 @media (min-width: 1280px) {
-  .admin-layout {
+  .with-section-nav {
     display: grid;
     grid-template-columns: 12rem minmax(0, 1fr);
     gap: 2rem;
@@ -2187,6 +2187,15 @@ button.award-nudge:hover {
 .section-nav-link:hover {
   color: var(--color-text);
 }
+.section-nav-label {
+  display: block;
+}
+.section-nav-detail {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 400;
+  color: var(--color-text-light);
+}
 .section-nav-link[aria-current="location"] {
   border-left-color: var(--color-primary);
   color: var(--color-primary);
@@ -2197,13 +2206,37 @@ button.award-nudge:hover {
   outline-offset: 2px;
 }
 /* Land a little below the top edge rather than flush against it. */
-.admin-section {
+.nav-section {
   scroll-margin-top: 1.5rem;
 }
 /* Focus moves here after a jump, for keyboard and screen reader users; no ring
    for that programmatic focus. */
-.admin-section:focus {
+.nav-section:focus {
   outline: none;
+}
+
+/* Timeline: a band above each season's days, with its start and end. */
+.timeline-season-band {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+  margin: 1.25rem 0 0.75rem;
+  padding: 0.6rem 0.9rem;
+  border-radius: 8px;
+  background: linear-gradient(90deg, var(--banner-bg-from), var(--banner-bg-to));
+  color: var(--banner-fg);
+}
+.timeline-season-band:first-child {
+  margin-top: 0.25rem;
+}
+.timeline-season-band-name {
+  font-weight: 700;
+}
+.timeline-season-band-dates {
+  font-size: 0.82rem;
+  opacity: 0.9;
 }
 
 /* Ballot: award cards on top (AwardCard), the open award's nominees below
@@ -3297,6 +3330,13 @@ button.award-nudge:hover {
     inset 1px 1px 0 0 #868a8e,
     inset -0.5px -0.5px 0 0.5px #ffffff,
     inset 1px 1px 0 1px #000000;
+}
+
+/* Timeline season band: a title-bar strip. */
+[data-theme="win95"] .timeline-season-band {
+  border-radius: 0;
+  background: linear-gradient(90deg, #000080, #1084d0);
+  color: #ffffff;
 }
 
 /* Season Awards shiny cards: plain raised buttons, pressed when picked/open. */

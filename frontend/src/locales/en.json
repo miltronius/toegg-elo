@@ -360,7 +360,11 @@
     "movedUp": " moved up from ",
     "dropped": " dropped from ",
     "to": " to ",
-    "loadingOlder": "Loading older entries…"
+    "loadingOlder": "Loading older entries…",
+    "contents": "Seasons",
+    "seasonSince": "Since {{start}}",
+    "seasonPlannedEnd": "planned end {{date}}",
+    "seasonRange": "{{start}} – {{end}}"
   },
   "seasonStats": {
     "title": "📊 Statistics",

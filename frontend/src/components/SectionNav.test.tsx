@@ -1,17 +1,18 @@
+import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { SectionNav } from "./SectionNav";
 
 const ENTRIES = [
-  { id: "sec-a", labelKey: "userManagement.title" },
-  { id: "sec-b", labelKey: "bannerAdmin.title" },
-] as const;
+  { id: "sec-a", label: "User Management" },
+  { id: "sec-b", label: "Message Banner", detail: "and more" },
+];
 
 function renderPage() {
   render(
     <>
-      <SectionNav entries={ENTRIES} labelKey="admin.contents" />
+      <SectionNav entries={ENTRIES} label="On this page" />
       <section id="sec-a" tabIndex={-1}>
         A
       </section>
@@ -39,13 +40,41 @@ describe("SectionNav", () => {
     const scroll = vi.fn();
     Element.prototype.scrollIntoView = scroll;
     renderPage();
-    await userEvent.click(screen.getByRole("link", { name: "Message Banner" }));
+    await userEvent.click(screen.getByRole("link", { name: /^Message Banner/ }));
     expect(scroll).toHaveBeenCalledWith({ behavior: "smooth", block: "start" });
     expect(scroll.mock.contexts[0]).toBe(document.getElementById("sec-b"));
     expect(document.getElementById("sec-b")).toHaveFocus();
-    expect(screen.getByRole("link", { name: "Message Banner" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: /^Message Banner/ })).toHaveAttribute(
       "aria-current",
       "location",
     );
+  });
+});
+
+describe("SectionNav with lazily rendered sections", () => {
+  it("asks the page to render a missing section, then scrolls to it", async () => {
+    const scroll = vi.fn();
+    Element.prototype.scrollIntoView = scroll;
+    function Page() {
+      const [shown, setShown] = useState(false);
+      return (
+        <>
+          <SectionNav
+            entries={[{ id: "late", label: "Late" }]}
+            label="Seasons"
+            onReveal={() => setShown(true)}
+          />
+          {shown && (
+            <section id="late" tabIndex={-1}>
+              Late
+            </section>
+          )}
+        </>
+      );
+    }
+    render(<Page />);
+    await userEvent.click(screen.getByRole("link", { name: "Late" }));
+    expect(scroll.mock.contexts[0]).toBe(document.getElementById("late"));
+    expect(document.getElementById("late")).toHaveFocus();
   });
 });

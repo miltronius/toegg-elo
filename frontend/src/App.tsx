@@ -138,9 +138,8 @@ const EMPTY_SEASON_STATS: PlayerSeasonStats[] = [];
 const EMPTY_BANNERS: Banner[] = [];
 const EMPTY_AWARD_VOTES: AwardVote[] = [];
 
-// The Admin tab's sections, for its list of contents. Labelled with each
-// card's own heading key; a module constant so SectionNav's scroll spy
-// doesn't re-attach every render.
+// The Admin tab's sections, for its list of contents, labelled with each
+// card's own heading key.
 const ADMIN_SECTIONS = [
   { id: "admin-users", labelKey: "userManagement.title" },
   { id: "admin-seasons", labelKey: "seasonDialog.seasonOptionsTitle" },
@@ -515,9 +514,9 @@ function App() {
         className={`flex-1 w-full ${
           activeTab === "relationships"
             ? "p-4"
-            : // Admin is wider by its list of contents' column, so its cards
-              // keep the width every other tab's content has.
-              activeTab === "users"
+            : // Admin and Timeline are wider by their list of contents'
+              // column, so their content keeps the width other tabs have.
+              activeTab === "users" || activeTab === "timeline"
               ? "p-8 max-w-300 xl:max-w-356 mx-auto"
               : "p-8 max-w-300 mx-auto"
         }`}
@@ -619,20 +618,23 @@ function App() {
           />
         )}
         {activeTab === "users" && isAdmin && (
-          <div className="admin-layout">
-            <SectionNav entries={ADMIN_SECTIONS} labelKey="admin.contents" />
+          <div className="with-section-nav">
+            <SectionNav
+              entries={ADMIN_SECTIONS.map((s) => ({ id: s.id, label: t(s.labelKey) }))}
+              label={t("admin.contents")}
+            />
             <div className="admin-sections">
-              <section id="admin-users" tabIndex={-1} className="admin-section">
+              <section id="admin-users" tabIndex={-1} className="nav-section">
                 <UserManagement
                   players={players}
                   onRecomputed={refresh}
                   onLinksChanged={refresh}
                 />
               </section>
-              <section id="admin-seasons" tabIndex={-1} className="admin-section">
+              <section id="admin-seasons" tabIndex={-1} className="nav-section">
                 <SeasonOptionsAdmin seasons={seasons} onChanged={refresh} />
               </section>
-              <section id="admin-banners" tabIndex={-1} className="admin-section">
+              <section id="admin-banners" tabIndex={-1} className="nav-section">
                 <BannerAdmin
                   banners={banners}
                   seasons={seasons}
