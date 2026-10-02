@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { AwardBallotDialog } from "./AwardBallotDialog";
 import type { Player, PlayerSeasonStats, Season } from "../lib/supabase";
@@ -96,72 +96,80 @@ function setup(over: Partial<React.ComponentProps<typeof AwardBallotDialog>> = {
   );
   return { onCast, onClose, user: userEvent.setup() };
 }
-const picker = (name: RegExp) => screen.getByRole("combobox", { name });
-const optionNames = () =>
-  screen
-    .getAllByRole("option")
-    .map((o) => o.querySelector(".player-ac-name")?.textContent ?? o.textContent);
+const award = (name: RegExp) => screen.getByRole("group", { name });
+const nomineeNames = (group: HTMLElement) =>
+  within(group)
+    .queryAllByRole("button")
+    .map((b) => b.querySelector(".nominee-name")?.textContent);
+const card = (group: HTMLElement, name: string) =>
+  within(group).getByRole("button", { name: new RegExp(`^${name}`) });
 
 describe("AwardBallotDialog", () => {
-  it("has one picker per award", () => {
+  it("has one card group per award", () => {
     setup();
-    expect(screen.getAllByRole("combobox")).toHaveLength(7);
+    expect(screen.getAllByRole("group")).toHaveLength(7);
   });
 
-  it("offers only eligible nominees, never yourself", async () => {
-    const { user } = setup();
-    await user.click(picker(/Best Offensive Player/));
-    expect(optionNames()).toEqual(["No pick", "Ben", "Dario"]);
+  it("offers only eligible nominees as cards, never yourself", () => {
+    setup();
+    expect(nomineeNames(award(/Best Offensive Player/))).toEqual(["Ben", "Dario"]);
   });
 
-  it("limits the rookie and guest awards to their nominees", async () => {
-    const { user } = setup();
-    await user.click(picker(/Rookie of the Season/));
-    expect(optionNames()).toEqual(["No pick", "Ben"]);
-    await user.keyboard("{Escape}");
-    await user.click(picker(/Special Guest/));
-    expect(optionNames()).toEqual(["No pick", "Carla"]);
+  it("limits the rookie and guest awards to their nominees", () => {
+    setup();
+    expect(nomineeNames(award(/Rookie of the Season/))).toEqual(["Ben"]);
+    expect(nomineeNames(award(/Special Guest/))).toEqual(["Carla"]);
   });
 
-  it("saves a pick as soon as it's made", async () => {
+  it("shows each nominee's season Elo and games", () => {
+    setup();
+    expect(card(award(/Special Guest/), "Carla")).toHaveTextContent("1500 Elo · 1 game");
+    expect(card(award(/Best Offensive Player/), "Dario")).toHaveTextContent("1500 Elo · 4 games");
+  });
+
+  it("saves a pick as soon as a card is clicked", async () => {
     const { user, onCast } = setup();
-    await user.click(picker(/Best Offensive Player/));
-    await user.click(screen.getByRole("option", { name: /Ben/ }));
+    const ben = card(award(/Best Offensive Player/), "Ben");
+    await user.click(ben);
     expect(onCast).toHaveBeenCalledWith("award_offense", "p2");
+    expect(ben).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByText("1/7 picked")).toBeInTheDocument();
   });
 
-  it("clears a pick with No pick", async () => {
+  it("clears a pick when its card is clicked again", async () => {
     const { user, onCast } = setup({ votes: [vote("award_offense", "p2")] });
-    expect(picker(/Best Offensive Player/)).toHaveValue("Ben");
-    await user.click(picker(/Best Offensive Player/));
-    await user.click(screen.getByRole("option", { name: "No pick" }));
+    const ben = card(award(/Best Offensive Player/), "Ben");
+    expect(ben).toHaveAttribute("aria-pressed", "true");
+    await user.click(ben);
     expect(onCast).toHaveBeenCalledWith("award_offense", null);
+    expect(ben).toHaveAttribute("aria-pressed", "false");
   });
 
   it("puts a refused pick back and says why", async () => {
     const onCast = vi.fn().mockRejectedValue({ message: "voting_not_open" });
     const { user } = setup({ onCast });
-    await user.click(picker(/Best Offensive Player/));
-    await user.click(screen.getByRole("option", { name: /Ben/ }));
+    await user.click(card(award(/Best Offensive Player/), "Ben"));
     await waitFor(() =>
       expect(screen.getByRole("alert")).toHaveTextContent("Voting isn't open for this season."),
     );
-    expect(picker(/Best Offensive Player/)).toHaveValue("");
+    expect(card(award(/Best Offensive Player/), "Ben")).toHaveAttribute("aria-pressed", "false");
   });
 
   it("keeps a pick who no longer qualifies visible, with a warning", () => {
     setup({ votes: [vote("award_guest", "p4")] });
-    expect(picker(/Special Guest/)).toHaveValue("Dario");
+    const dario = card(award(/Special Guest/), "Dario");
+    expect(dario).toHaveAttribute("aria-pressed", "true");
+    expect(dario).toHaveClass("is-stale");
     expect(
       screen.getByText(/Dario doesn't qualify for this award right now/),
     ).toBeInTheDocument();
   });
 
-  it("disables an award nobody qualifies for yet", () => {
+  it("says so when nobody qualifies for an award yet", () => {
     setup({ seasonStats: STATS.filter((s) => s.player_id !== "p3") });
-    expect(picker(/Special Guest/)).toBeDisabled();
-    expect(picker(/Special Guest/)).toHaveAttribute("placeholder", "Nobody is eligible yet.");
+    const guest = award(/Special Guest/);
+    expect(nomineeNames(guest)).toEqual([]);
+    expect(within(guest).getByText("Nobody is eligible yet.")).toBeInTheDocument();
   });
 
   it("closes on Done", async () => {

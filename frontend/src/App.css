@@ -2147,11 +2147,225 @@ button.award-nudge:hover {
   font-size: 0.8rem;
   color: var(--color-text-light);
 }
-.award-ballot-row {
-  margin-bottom: 0.9rem;
+/* Ballot: one section per award, nominees as shiny cards (NomineeCard). */
+.award-section {
+  margin-bottom: 1.4rem;
 }
-.award-ballot-row .form-group {
-  margin-bottom: 0.2rem;
+.award-section-head {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.6rem;
+  margin-bottom: 0.6rem;
+}
+.award-section-title {
+  font-size: 1rem;
+  font-weight: 700;
+  margin: 0;
+}
+.nominee-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
+  gap: 0.75rem;
+  /* Room for a tilted card's corners and its glow, which overflow the cell. */
+  padding: 0.25rem;
+}
+
+/* The picked card's border spins; registering the angle is what lets a
+   gradient animate. Without @property support the border just holds still. */
+@property --nominee-spin {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+
+.nominee-card {
+  /* Written by NomineeCard on pointermove (lib/tilt.ts); these are the rest pose. */
+  --rx: 0deg;
+  --ry: 0deg;
+  --mx: 50%;
+  --my: 50%;
+  --lift: 0px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.85rem 0.5rem 0.75rem;
+  border: 2px solid transparent;
+  border-radius: 14px;
+  /* Two layers: the face (padding-box) over a border-box glow centred on the
+     pointer, which shows through the transparent border as a moving rim. */
+  background:
+    linear-gradient(var(--card-bg), var(--card-bg)) padding-box,
+    radial-gradient(
+        circle at var(--mx) var(--my),
+        var(--color-primary),
+        var(--color-border) 55%
+      )
+      border-box;
+  color: var(--color-text);
+  font: inherit;
+  cursor: pointer;
+  overflow: hidden;
+  isolation: isolate;
+  transform: perspective(700px) rotateX(var(--rx)) rotateY(var(--ry))
+    translateY(var(--lift));
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.08);
+  /* Slow ease back to rest on leave; :hover below makes tracking snappy. */
+  transition:
+    transform 0.45s cubic-bezier(0.2, 0.8, 0.2, 1),
+    box-shadow 0.25s ease,
+    opacity 0.2s ease;
+}
+
+/* Holographic sheen + specular highlight, both following the pointer. */
+.nominee-card::before,
+.nominee-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  z-index: -1;
+}
+.nominee-card::before {
+  background: linear-gradient(
+    115deg,
+    transparent 25%,
+    rgb(56 189 248 / 0.22) 38%,
+    rgb(192 132 252 / 0.22) 50%,
+    rgb(250 204 21 / 0.22) 62%,
+    transparent 75%
+  );
+  background-size: 250% 250%;
+  background-position: var(--mx) var(--my);
+}
+.nominee-card::after {
+  background: radial-gradient(
+    circle at var(--mx) var(--my),
+    rgb(255 255 255 / 0.45),
+    transparent 55%
+  );
+  mix-blend-mode: soft-light;
+}
+
+@media (hover: hover) {
+  .nominee-card:hover:not(:disabled) {
+    --lift: -3px;
+    transition:
+      transform 0.08s linear,
+      box-shadow 0.25s ease,
+      opacity 0.2s ease;
+    box-shadow: 0 12px 28px -10px rgb(0 0 0 / 0.35);
+  }
+  .nominee-card:hover:not(:disabled)::before,
+  .nominee-card:hover:not(:disabled)::after {
+    opacity: 1;
+  }
+}
+
+.nominee-card:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 3px;
+}
+
+.nominee-card[aria-pressed="true"] {
+  background:
+    linear-gradient(var(--card-bg), var(--card-bg)) padding-box,
+    conic-gradient(
+        from var(--nominee-spin),
+        #f59e0b,
+        #ec4899,
+        #8b5cf6,
+        #06b6d4,
+        #22c55e,
+        #f59e0b
+      )
+      border-box;
+  animation: nominee-spin 3s linear infinite;
+  box-shadow: 0 8px 24px -8px rgb(139 92 246 / 0.55);
+}
+.nominee-card[aria-pressed="true"]::before {
+  opacity: 0.6;
+}
+.nominee-card.is-stale[aria-pressed="true"] {
+  background:
+    linear-gradient(var(--card-bg), var(--card-bg)) padding-box,
+    linear-gradient(var(--color-warning), var(--color-warning)) border-box;
+  animation: none;
+  box-shadow: none;
+}
+@keyframes nominee-spin {
+  to {
+    --nominee-spin: 360deg;
+  }
+}
+
+/* Once an award has a pick, the others step back. */
+.nominee-grid.has-pick .nominee-card[aria-pressed="false"] {
+  opacity: 0.6;
+}
+.nominee-grid.has-pick .nominee-card[aria-pressed="false"]:hover {
+  opacity: 1;
+}
+.nominee-card:disabled {
+  cursor: progress;
+}
+
+.nominee-avatar {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--color-primary), var(--banner-bg-to));
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 0.85rem;
+  letter-spacing: 0.02em;
+}
+.nominee-name {
+  font-weight: 600;
+  font-size: 0.9rem;
+  line-height: 1.2;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+.nominee-meta {
+  font-size: 0.72rem;
+  color: var(--color-text-light);
+  text-align: center;
+}
+.nominee-check {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #22c55e;
+  color: #ffffff;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+.nominee-card.is-stale .nominee-check {
+  background: var(--color-warning);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nominee-card,
+  .nominee-card:hover {
+    transform: none;
+    transition: none;
+  }
+  .nominee-card[aria-pressed="true"] {
+    animation: none;
+  }
 }
 .award-ballot-hint {
   font-size: 0.75rem;
@@ -2901,6 +3115,37 @@ button.award-nudge:hover {
     inset 1px 1px 0 0 #868a8e,
     inset -0.5px -0.5px 0 0.5px #ffffff,
     inset 1px 1px 0 1px #000000;
+}
+
+/* Season Awards nominee cards: plain raised buttons, pressed when picked. */
+[data-theme="win95"] .nominee-card,
+[data-theme="win95"] .nominee-card:hover {
+  transform: none;
+  transition: none;
+  border: none;
+  border-radius: 0;
+  background: #d4d0c8;
+  animation: none;
+  box-shadow:
+    inset 0.5px 0.5px 0px 0.5px #ffffff,
+    inset 0 0 0 1px #868a8e,
+    1px 1px 0 0px #000000;
+}
+[data-theme="win95"] .nominee-card::before,
+[data-theme="win95"] .nominee-card::after {
+  display: none;
+}
+[data-theme="win95"] .nominee-card[aria-pressed="true"] {
+  background: #c0c0c0;
+  box-shadow:
+    inset 1px 1px 0 0 #868a8e,
+    inset -0.5px -0.5px 0 0.5px #ffffff,
+    inset 1px 1px 0 1px #000000;
+}
+[data-theme="win95"] .nominee-avatar,
+[data-theme="win95"] .nominee-check {
+  border-radius: 0;
+  background: #000080;
 }
 
 [data-theme="win95"] .season-select {

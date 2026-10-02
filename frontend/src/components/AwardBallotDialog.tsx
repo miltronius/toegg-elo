@@ -5,7 +5,8 @@ import type { Player, PlayerSeasonStats, Season } from "../lib/supabase";
 import { useMe } from "../contexts/AuthContext";
 import { DATE_LOCALE } from "../lib/i18n";
 import { RANKED_MIN_GAMES } from "../lib/rosterFilter";
-import { PlayerAutocomplete } from "./PlayerAutocomplete";
+import { sortPlayersByName } from "../lib/playerSearch";
+import { NomineeCard } from "./NomineeCard";
 import {
   SEASON_AWARDS,
   awardErrorKey,
@@ -38,11 +39,12 @@ const formatDate = (ms: number) =>
   });
 
 /**
- * The Season Awards ballot: one picker per award, limited to who qualifies
- * right now, your own player never offered. Each pick is saved as it's made
- * (cast_award_vote), so there's nothing to submit and any award can be
- * skipped. A pick who stopped qualifying stays visible with a warning -
- * blanking it would hide that the vote is at risk.
+ * The Season Awards ballot: one grid of nominee cards per award (NomineeCard),
+ * limited to who qualifies right now, your own player never offered. Each pick
+ * is saved as it's made (cast_award_vote), so there's nothing to submit and any
+ * award can be skipped; clicking the picked card again clears it. A pick who
+ * stopped qualifying stays visible with a warning - blanking it would hide
+ * that the vote is at risk.
  *
  * Portalled to <body> above SeasonDialog (z-[1000]), which it can open from.
  */
@@ -72,6 +74,14 @@ export function AwardBallotDialog({
     [season, seasons, seasonStats],
   );
   const playerById = useMemo(() => new Map(players.map((p) => [p.id, p])), [players]);
+  const statsById = useMemo(
+    () =>
+      new Map(
+        seasonStats.filter((s) => s.season_id === season.id).map((s) => [s.player_id, s]),
+      ),
+    [seasonStats, season.id],
+  );
+  const sortedPlayers = useMemo(() => sortPlayersByName(players), [players]);
 
   const { closesAt } = awardVotingWindow(season, nextSeasonOf(season, seasons));
   const pickedCount = Object.values(picks).filter(Boolean).length;
@@ -101,7 +111,7 @@ export function AwardBallotDialog({
       onClick={onClose}
     >
       <div
-        className="modal-panel bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-6"
+        className="modal-panel bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto p-6"
         role="dialog"
         aria-modal="true"
         aria-labelledby="award-ballot-title"
@@ -121,32 +131,53 @@ export function AwardBallotDialog({
         {SEASON_AWARDS.map((award) => {
           const ids = eligible.get(award.id) ?? new Set<string>();
           const current = picks[award.id] ?? "";
-          const options = players.filter(
+          const nominees = sortedPlayers.filter(
             (p) => p.id !== myPlayerId && (ids.has(p.id) || p.id === current),
           );
-          const nobody = options.length === 0;
+          const headingId = `award-${award.id}`;
           return (
-            <div key={award.id} className="award-ballot-row">
-              <PlayerAutocomplete
-                label={`${award.icon} ${t(`seasonAwards.awards.${award.id}`)}`}
-                players={options}
-                value={current}
-                onChange={(id) => void pick(award.id, id)}
-                emptyLabel={t("seasonAwards.ballot.noPick")}
-                placeholder={
-                  nobody
-                    ? t("seasonAwards.ballot.nobodyEligible")
-                    : t("seasonAwards.ballot.choose")
-                }
-                disabled={nobody || saving[award.id]}
-              />
-              <p className="award-ballot-hint">
-                {t(`seasonAwards.nominees.${award.nominees}`, {
-                  min: RANKED_MIN_GAMES,
-                  max: RANKED_MIN_GAMES - 1,
-                })}
-                {saving[award.id] && ` · ${t("seasonAwards.ballot.saving")}`}
-              </p>
+            <section
+              key={award.id}
+              className="award-section"
+              role="group"
+              aria-labelledby={headingId}
+              aria-busy={saving[award.id] || undefined}
+            >
+              <div className="award-section-head">
+                <h3 id={headingId} className="award-section-title">
+                  {award.icon} {t(`seasonAwards.awards.${award.id}`)}
+                </h3>
+                <span className="award-ballot-hint">
+                  {t(`seasonAwards.nominees.${award.nominees}`, {
+                    min: RANKED_MIN_GAMES,
+                    max: RANKED_MIN_GAMES - 1,
+                  })}
+                  {saving[award.id] && ` · ${t("seasonAwards.ballot.saving")}`}
+                </span>
+              </div>
+              {nominees.length === 0 ? (
+                <p className="award-ballot-hint">{t("seasonAwards.ballot.nobodyEligible")}</p>
+              ) : (
+                <div className={`nominee-grid${current ? " has-pick" : ""}`}>
+                  {nominees.map((p) => {
+                    const stats = statsById.get(p.id);
+                    return (
+                      <NomineeCard
+                        key={p.id}
+                        name={p.name}
+                        meta={t("seasonAwards.ballot.cardMeta", {
+                          elo: Math.round(stats?.current_season_elo ?? 1500),
+                          count: stats ? stats.wins + stats.losses : 0,
+                        })}
+                        picked={p.id === current}
+                        stale={p.id === current && !ids.has(p.id)}
+                        disabled={saving[award.id]}
+                        onClick={() => void pick(award.id, p.id === current ? "" : p.id)}
+                      />
+                    );
+                  })}
+                </div>
+              )}
               {current && !ids.has(current) && (
                 <p className="award-ballot-warning">
                   {t("seasonAwards.ballot.noLongerEligible", {
@@ -159,7 +190,7 @@ export function AwardBallotDialog({
                   {errors[award.id]}
                 </p>
               )}
-            </div>
+            </section>
           );
         })}
 
