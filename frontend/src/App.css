@@ -2438,10 +2438,10 @@ button.award-nudge:hover {
   color: var(--color-error);
   margin-top: 0.2rem;
 }
-.season-schedule-admin {
+.season-schedule-admin + .season-schedule-admin {
   border-top: 1px solid var(--color-border);
-  padding-top: 1rem;
-  margin-bottom: 1rem;
+  margin-top: 1.25rem;
+  padding-top: 1.25rem;
 }
 .season-schedule-title {
   font-size: 0.95rem;

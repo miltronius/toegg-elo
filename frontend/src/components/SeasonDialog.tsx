@@ -3,9 +3,6 @@ import { useTranslation, Trans } from "react-i18next";
 import {
   Season,
   endSeasonAndStartNew,
-  closeAwardVoting,
-  openAwardVoting,
-  updateSeasonVotingSchedule,
   type Match,
   type Player,
   type EloHistory,
@@ -17,13 +14,12 @@ import { SWISS_DATETIME_FORMAT, maskSwissDateTime } from "../lib/banners";
 import {
   AWARD_VOTING_LEAD_DAYS,
   AWARD_VOTING_TAIL_DAYS,
-  awardVotingStatus,
   nextSeasonOf,
   parseSeasonDate,
   votingStatusLabel,
 } from "../lib/seasonAwards";
 import { SeasonStats } from "./SeasonStats";
-import { SeasonScheduleAdmin, formatDateTime } from "./SeasonScheduleAdmin";
+import { formatDateTime } from "./SeasonScheduleAdmin";
 
 interface SeasonDialogProps {
   activeSeason: Season | null;
@@ -129,19 +125,6 @@ export function SeasonDialog({
     });
   };
 
-  // Admin voting controls: the running season, plus the previous one while
-  // its ballot is still open (it runs into the first two weeks of this one).
-  const previousSeason = activeSeason
-    ? (seasons.find((s) => s.number === activeSeason.number - 1) ?? null)
-    : null;
-  const adminVotingSeasons = [
-    ...(previousSeason &&
-    awardVotingStatus(previousSeason, activeSeason, Date.now()) === "open"
-      ? [previousSeason]
-      : []),
-    ...(activeSeason ? [activeSeason] : []),
-  ];
-
   return (
     <>
       <button
@@ -227,28 +210,6 @@ export function SeasonDialog({
                   <dd className="m-0">{activeSeason ? votingText(activeSeason) : "-"}</dd>
                 </dl>
 
-                {isAdmin &&
-                  adminVotingSeasons.map((season) => (
-                    <SeasonScheduleAdmin
-                      // Keyed on the stored dates too, so the fields pick up a
-                      // change (e.g. Close voting now) once seasons refetch.
-                      key={`${season.id}-${season.planned_end_at}-${season.voting_closes_at}`}
-                      season={season}
-                      nextSeason={nextSeasonOf(season, seasons)}
-                      onSave={async (schedule) => {
-                        await updateSeasonVotingSchedule(season.id, schedule);
-                        onSeasonChanged();
-                      }}
-                      onOpenVoting={async () => {
-                        await openAwardVoting(season.id);
-                        onSeasonChanged();
-                      }}
-                      onCloseVoting={async () => {
-                        await closeAwardVoting(season.id);
-                        onSeasonChanged();
-                      }}
-                    />
-                  ))}
 
                 <SeasonStats
                   activeSeason={activeSeason}

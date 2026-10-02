@@ -39,6 +39,7 @@ import { MatchHistory } from "./components/MatchHistory";
 import { PlayerDetail } from "./components/PlayerDetail";
 import { UserManagement } from "./components/UserManagement";
 import { BannerAdmin } from "./components/BannerAdmin";
+import { AwardVotingAdmin } from "./components/AwardVotingAdmin";
 import { MessageBanner } from "./components/MessageBanner";
 import { ChangelogDialog } from "./components/ChangelogDialog";
 import { APP_VERSION, RELEASES } from "./lib/appChangelog";
@@ -608,6 +609,7 @@ function App() {
               onRecomputed={refresh}
               onLinksChanged={refresh}
             />
+            <AwardVotingAdmin seasons={seasons} onChanged={refresh} />
             <BannerAdmin
               banners={banners}
               seasons={seasons}

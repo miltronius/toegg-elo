@@ -574,6 +574,8 @@
     "openVoting": "Open voting now",
     "openVotingConfirm": "Open Season Awards voting now? This can't be undone.",
     "scheduleError": "Couldn't save. Please try again.",
+    "votingAdminCardTitle": "Season Awards voting",
+    "votingAdminHint": "When voting opens and closes for the running season, and for the previous one while its ballot is still open. Voters see the status in the season details.",
     "votingAdminTitle": "Award voting · {{season}}",
     "votingCloses": "Voting closes (optional)",
     "votingClosesHint": "Format {{format}}. Replaces the default; left empty, voting closes {{days}} days into the next season.",

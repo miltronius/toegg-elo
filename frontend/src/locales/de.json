@@ -574,6 +574,8 @@
     "openVoting": "Abstimmung jetzt öffnen",
     "openVotingConfirm": "Die Abstimmung für die Saison-Awards jetzt öffnen? Das lässt sich nicht rückgängig machen.",
     "scheduleError": "Speichern fehlgeschlagen. Bitte versuch es nochmals.",
+    "votingAdminCardTitle": "Abstimmung Saison-Awards",
+    "votingAdminHint": "Wann die Abstimmung für die laufende Saison beginnt und endet, und für die vorherige, solange deren Abstimmung noch läuft. Wer abstimmt, sieht den Stand in den Saisondetails.",
     "votingAdminTitle": "Award-Abstimmung · {{season}}",
     "votingCloses": "Abstimmung endet (optional)",
     "votingClosesHint": "Format {{format}}. Ersetzt das Standarddatum; leer gelassen endet die Abstimmung {{days}} Tage nach dem Start der nächsten Saison.",
