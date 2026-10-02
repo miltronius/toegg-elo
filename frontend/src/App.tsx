@@ -11,6 +11,7 @@ import {
   getSeasons,
   getAllPlayerSeasonStats,
   getBanners,
+  getSeasonAwardResults,
   getMyAwardVotes,
   getAwardTurnout,
   castAwardVote,
@@ -24,6 +25,7 @@ import {
   Banner,
   AwardVote,
   AwardTurnout,
+  AwardResult,
 } from "./lib/supabase";
 import type { PlayerAchievementRow } from "./lib/achievements";
 import { DEFAULT_PARTNER_WEIGHT } from "./lib/elo";
@@ -74,6 +76,7 @@ interface AppData {
   seasons: Season[];
   allPlayerSeasonStats: PlayerSeasonStats[];
   banners: Banner[];
+  awardResults: AwardResult[];
 }
 
 // Single parallel fetch for everything the dashboard needs. Replaces the old
@@ -91,6 +94,7 @@ async function fetchAppData(): Promise<AppData> {
     allPlayerSeasonStats,
     allHistory,
     banners,
+    awardResults,
   ] = await Promise.all([
     getPlayers(),
     getMatches(),
@@ -101,6 +105,12 @@ async function fetchAppData(): Promise<AppData> {
     getAllPlayerSeasonStats(),
     getAllEloHistory(),
     getBanners(),
+    // Like the banners, a missing table (frontend deployed before the #122
+    // migration) shouldn't take the whole dashboard down.
+    getSeasonAwardResults().catch((e: Error) => {
+      console.warn("Could not load award results:", e.message);
+      return [] as AwardResult[];
+    }),
   ]);
 
   // Group the flat history by player. Pre-seed every known player so each has
@@ -125,6 +135,7 @@ async function fetchAppData(): Promise<AppData> {
     seasons,
     allPlayerSeasonStats,
     banners,
+    awardResults,
   };
 }
 
@@ -136,6 +147,7 @@ const EMPTY_ACHIEVEMENTS: PlayerAchievementRow[] = [];
 const EMPTY_SEASONS: Season[] = [];
 const EMPTY_SEASON_STATS: PlayerSeasonStats[] = [];
 const EMPTY_BANNERS: Banner[] = [];
+const EMPTY_AWARD_RESULTS: AwardResult[] = [];
 const EMPTY_AWARD_VOTES: AwardVote[] = [];
 
 // The Admin tab's sections, for its list of contents, labelled with each
@@ -216,6 +228,7 @@ function App() {
   const seasons = data?.seasons ?? EMPTY_SEASONS;
   const allPlayerSeasonStats = data?.allPlayerSeasonStats ?? EMPTY_SEASON_STATS;
   const banners = data?.banners ?? EMPTY_BANNERS;
+  const awardResults = data?.awardResults ?? EMPTY_AWARD_RESULTS;
 
   // `undefined` means "no explicit choice yet" → fall back to the active
   // season. A user choice (including `null` = all seasons) overrides it. This
@@ -394,6 +407,7 @@ function App() {
           history={allEloHistory}
           players={players}
           achievements={allAchievementRows}
+          awardResults={awardResults}
           awardNudge={awardNudge}
         />
         <div className="flex items-center gap-3">

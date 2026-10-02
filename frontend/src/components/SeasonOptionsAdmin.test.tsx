@@ -5,6 +5,7 @@ import type { Season } from "../lib/supabase";
 
 vi.mock("../lib/supabase", () => ({
   closeAwardVoting: vi.fn(),
+  finalizeSeasonAwards: vi.fn(),
   openAwardVoting: vi.fn(),
   updateSeasonVotingSchedule: vi.fn(),
 }));
@@ -50,8 +51,20 @@ describe("SeasonOptionsAdmin", () => {
     ]);
   });
 
-  it("drops the previous season once its ballot has closed", () => {
+  it("keeps the previous season after its default close, until counted", () => {
     render(<SeasonOptionsAdmin seasons={[S5, S4]} onChanged={() => {}} now={T0 + 14 * DAY} />);
+    expect(headings()[0]).toContain("S4 · Summer");
+  });
+
+  it("keeps a closed but uncounted previous season, so it can be counted", () => {
+    const closed = { ...S4, voting_closes_at: iso(T0 - 1000) };
+    render(<SeasonOptionsAdmin seasons={[S5, closed]} onChanged={() => {}} now={T0} />);
+    expect(headings()[0]).toContain("S4 · Summer");
+  });
+
+  it("drops the previous season once it's counted", () => {
+    const done = { ...S4, voting_closes_at: iso(T0 - 1000), awards_finalized_at: iso(T0 - 500) };
+    render(<SeasonOptionsAdmin seasons={[S5, done]} onChanged={() => {}} now={T0} />);
     expect(headings()).toEqual([expect.stringContaining("S5 · Autumn")]);
   });
 

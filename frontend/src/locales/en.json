@@ -434,6 +434,14 @@
       "ranked": "Ranked players ({{min}}+ games this season)",
       "rookie": "Ranked this season for the first time"
     },
+    "results": {
+      "title": "Season Awards",
+      "pending": "Voting has closed. The results follow once an admin counts the votes.",
+      "noVotes": "No votes",
+      "notAwarded": "Not awarded (fewer than {{min}} votes)",
+      "votes_one": "{{count}} vote",
+      "votes_other": "{{count}} votes"
+    },
     "ballot": {
       "turnout": "{{voters}} of {{eligible}} players have voted so far.",
       "yourPick": "Your pick: {{name}}",
@@ -602,6 +610,11 @@
     "votingClosesBeforeStart": "The closing date has to be after the season starts.",
     "closeVoting": "Close voting now",
     "closeVotingConfirm": "Close Season Awards voting for {{season}} now? Picks are frozen. You can reopen it by setting a later closing date.",
+    "closeAndCount": "Close voting and count",
+    "countVotes": "Count votes",
+    "closeAndCountConfirm": "Close Season Awards voting for {{season}} and count the votes now? Counting is final: the ballots are deleted and only the totals are kept.",
+    "countConfirm": "Count the Season Awards votes for {{season}} now? Counting is final: the ballots are deleted and only the totals are kept.",
+    "countedHint": "The votes are counted and the results are final. See them in Season Stats.",
     "votingOpenUntil": "Open until {{date}}",
     "votingOpenUntilNext": "Open until {{days}} days into the next season",
     "votingClosed": "Closed {{date}}",

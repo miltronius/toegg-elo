@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   closeAwardVoting,
+  finalizeSeasonAwards,
   openAwardVoting,
   updateSeasonVotingSchedule,
   type Season,
@@ -23,7 +24,9 @@ const TICK_MS = 60_000;
 /**
  * The Admin tab's "Season options" card: one SeasonScheduleAdmin block for the
  * running season (planned end, award voting), plus one for the previous season
- * while its ballot is still open (it runs into the first two weeks of the next).
+ * until its votes are counted - while its ballot is open (it runs into the
+ * first two weeks of the next), and after it closes, so "Count votes" (or a
+ * later closing date) has somewhere to live.
  */
 export function SeasonOptionsAdmin({ seasons, onChanged, now: fixedNow }: SeasonOptionsAdminProps) {
   const { t } = useTranslation();
@@ -37,7 +40,9 @@ export function SeasonOptionsAdmin({ seasons, onChanged, now: fixedNow }: Season
   const active = seasons.find((s) => s.is_active) ?? null;
   const previous = active ? (seasons.find((s) => s.number === active.number - 1) ?? null) : null;
   const managed = [
-    ...(previous && awardVotingStatus(previous, active, now) === "open" ? [previous] : []),
+    ...(previous && ["open", "closed"].includes(awardVotingStatus(previous, active, now))
+      ? [previous]
+      : []),
     ...(active ? [active] : []),
   ];
 
@@ -68,6 +73,10 @@ export function SeasonOptionsAdmin({ seasons, onChanged, now: fixedNow }: Season
             }}
             onCloseVoting={async () => {
               await closeAwardVoting(season.id);
+              onChanged();
+            }}
+            onCount={async () => {
+              await finalizeSeasonAwards(season.id);
               onChanged();
             }}
           />

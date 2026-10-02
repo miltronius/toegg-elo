@@ -434,6 +434,14 @@
       "ranked": "Gewertete Spieler (ab {{min}} Spielen diese Saison)",
       "rookie": "Diese Saison zum ersten Mal gewertet"
     },
+    "results": {
+      "title": "Saison-Awards",
+      "pending": "Die Abstimmung ist beendet. Das Ergebnis folgt, sobald ein Admin die Stimmen auszählt.",
+      "noVotes": "Keine Stimmen",
+      "notAwarded": "Nicht vergeben (weniger als {{min}} Stimmen)",
+      "votes_one": "{{count}} Stimme",
+      "votes_other": "{{count}} Stimmen"
+    },
     "ballot": {
       "turnout": "{{voters}} von {{eligible}} Spielern haben bisher abgestimmt.",
       "yourPick": "Deine Wahl: {{name}}",
@@ -602,6 +610,11 @@
     "votingClosesBeforeStart": "Das Enddatum der Abstimmung muss nach dem Saisonstart liegen.",
     "closeVoting": "Abstimmung jetzt beenden",
     "closeVotingConfirm": "Die Abstimmung für die Saison-Awards von {{season}} jetzt beenden? Die Stimmen werden eingefroren. Mit einem späteren Enddatum lässt sie sich wieder öffnen.",
+    "closeAndCount": "Abstimmung beenden und auszählen",
+    "countVotes": "Stimmen auszählen",
+    "closeAndCountConfirm": "Die Abstimmung für die Saison-Awards von {{season}} jetzt beenden und auszählen? Das Auszählen ist endgültig: Die Stimmzettel werden gelöscht, nur die Ergebnisse bleiben.",
+    "countConfirm": "Die Stimmen für die Saison-Awards von {{season}} jetzt auszählen? Das Auszählen ist endgültig: Die Stimmzettel werden gelöscht, nur die Ergebnisse bleiben.",
+    "countedHint": "Die Stimmen sind ausgezählt, das Ergebnis steht fest. Du findest es in der Saisonstatistik.",
     "votingOpenUntil": "Läuft bis {{date}}",
     "votingOpenUntilNext": "Läuft bis {{days}} Tage nach dem Start der nächsten Saison",
     "votingClosed": "Beendet am {{date}}",

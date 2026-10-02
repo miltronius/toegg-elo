@@ -35,6 +35,14 @@ export const SEASON_BANNER_DAYS = 14;
 export const RELEASE_BANNER_DAYS = 14;
 
 /**
+ * How long a Season Awards results banner runs. Descriptive only, like
+ * SEASON_BANNER_DAYS: the real window is written on the row by
+ * finalize_season_awards (20261002_season_award_results.sql) - keep in sync.
+ * Season Stats also opens on a season counted within this many days.
+ */
+export const RESULTS_BANNER_DAYS = 14;
+
+/**
  * Who an announcement is addressed to. `members` covers every signed-in role,
  * viewer included - the split is logged-in vs the public landing view, not a
  * permission tier. RLS already withholds `members` rows from anonymous callers;

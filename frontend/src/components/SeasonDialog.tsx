@@ -17,6 +17,7 @@ import {
   nextSeasonOf,
   parseSeasonDate,
   votingStatusLabel,
+  type AwardResult,
 } from "../lib/seasonAwards";
 import { SeasonStats } from "./SeasonStats";
 import { formatDateTime } from "./SeasonScheduleAdmin";
@@ -30,6 +31,8 @@ interface SeasonDialogProps {
   history: EloHistory[];
   players: Player[];
   achievements: PlayerAchievementRow[];
+  /** Counted Season Awards, forwarded to Season Stats. */
+  awardResults?: AwardResult[];
   /** Season Awards vote nudge, shown at the top of the info view. */
   awardNudge?: ReactNode;
 }
@@ -43,6 +46,7 @@ export function SeasonDialog({
   history,
   players,
   achievements,
+  awardResults,
   awardNudge,
 }: SeasonDialogProps) {
   const { t } = useTranslation();
@@ -218,6 +222,7 @@ export function SeasonDialog({
                   history={history}
                   players={players}
                   achievements={achievements}
+                  awardResults={awardResults}
                 />
 
                 <div className="flex gap-4 justify-end mt-6">

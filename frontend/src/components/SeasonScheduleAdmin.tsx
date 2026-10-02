@@ -21,6 +21,8 @@ interface SeasonScheduleAdminProps {
   onSave: (schedule: SeasonVotingSchedule) => Promise<void>;
   onOpenVoting: () => Promise<void>;
   onCloseVoting: () => Promise<void>;
+  /** Counts the votes (finalize_season_awards), closing an open ballot first. */
+  onCount: () => Promise<void>;
   now?: number;
 }
 
@@ -53,6 +55,7 @@ export function SeasonScheduleAdmin({
   onSave,
   onOpenVoting,
   onCloseVoting,
+  onCount,
   now = Date.now(),
 }: SeasonScheduleAdminProps) {
   const { t } = useTranslation();
@@ -140,6 +143,12 @@ export function SeasonScheduleAdmin({
   const closeNow = () => {
     if (confirm(t("seasonDialog.closeVotingConfirm", { season: label }))) void run(onCloseVoting);
   };
+  // Counting is the one step that can't be undone: the ballots are deleted.
+  const count = () => {
+    const key = status === "open" ? "closeAndCountConfirm" : "countConfirm";
+    if (confirm(t(`seasonDialog.${key}`, { season: label }))) void run(onCount);
+  };
+  const counted = status === "finalized";
 
   const fieldId = (name: string) => `season-${name}-${season.id}`;
 
@@ -174,24 +183,29 @@ export function SeasonScheduleAdmin({
 
       <fieldset className="season-options-group">
         <legend>🗳️ {t("seasonDialog.awardVoting")}</legend>
-        <div className="form-group">
-          <label htmlFor={fieldId("voting-closes")}>{t("seasonDialog.votingCloses")}</label>
-          <input
-            id={fieldId("voting-closes")}
-            type="text"
-            inputMode="numeric"
-            value={closes}
-            placeholder={SWISS_DATETIME_FORMAT}
-            onChange={(e) => setCloses(maskSwissDateTime(e.target.value))}
-            disabled={busy}
-          />
-          <span className="block text-[0.78rem] text-text-light mt-1">
-            {t("seasonDialog.votingClosesHint", {
-              format: SWISS_DATETIME_FORMAT,
-              days: AWARD_VOTING_TAIL_DAYS,
-            })}
-          </span>
-        </div>
+        {/* Once counted, the ballots are gone: no date can reopen it. */}
+        {counted ? (
+          <p className="text-[0.85rem] text-text-light">{t("seasonDialog.countedHint")}</p>
+        ) : (
+          <div className="form-group">
+            <label htmlFor={fieldId("voting-closes")}>{t("seasonDialog.votingCloses")}</label>
+            <input
+              id={fieldId("voting-closes")}
+              type="text"
+              inputMode="numeric"
+              value={closes}
+              placeholder={SWISS_DATETIME_FORMAT}
+              onChange={(e) => setCloses(maskSwissDateTime(e.target.value))}
+              disabled={busy}
+            />
+            <span className="block text-[0.78rem] text-text-light mt-1">
+              {t("seasonDialog.votingClosesHint", {
+                format: SWISS_DATETIME_FORMAT,
+                days: AWARD_VOTING_TAIL_DAYS,
+              })}
+            </span>
+          </div>
+        )}
       </fieldset>
 
       <div className="flex flex-wrap gap-2">
@@ -206,6 +220,16 @@ export function SeasonScheduleAdmin({
         {status === "open" && (
           <button className="btn-secondary" onClick={closeNow} disabled={busy}>
             {t("seasonDialog.closeVoting")}
+          </button>
+        )}
+        {status === "open" && (
+          <button className="btn-primary" onClick={count} disabled={busy}>
+            {t("seasonDialog.closeAndCount")}
+          </button>
+        )}
+        {status === "closed" && (
+          <button className="btn-primary" onClick={count} disabled={busy}>
+            {t("seasonDialog.countVotes")}
           </button>
         )}
       </div>

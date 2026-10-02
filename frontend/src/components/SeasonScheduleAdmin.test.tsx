@@ -38,6 +38,7 @@ function setup(over: Partial<React.ComponentProps<typeof SeasonScheduleAdmin>> =
   const onSave = vi.fn().mockResolvedValue(undefined);
   const onOpenVoting = vi.fn().mockResolvedValue(undefined);
   const onCloseVoting = vi.fn().mockResolvedValue(undefined);
+  const onCount = vi.fn().mockResolvedValue(undefined);
   render(
     <SeasonScheduleAdmin
       season={season()}
@@ -45,6 +46,7 @@ function setup(over: Partial<React.ComponentProps<typeof SeasonScheduleAdmin>> =
       onSave={onSave}
       onOpenVoting={onOpenVoting}
       onCloseVoting={onCloseVoting}
+      onCount={onCount}
       now={T0}
       {...over}
     />,
@@ -53,6 +55,7 @@ function setup(over: Partial<React.ComponentProps<typeof SeasonScheduleAdmin>> =
     onSave,
     onOpenVoting,
     onCloseVoting,
+    onCount,
     user: userEvent.setup(),
     save: () => screen.getByRole("button", { name: "Save" }),
   };
@@ -144,6 +147,7 @@ describe("SeasonScheduleAdmin", () => {
     });
     expect(screen.getByText(/Closed 30\.09\.2026/)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /voting now/ })).toBeNull();
+    expect(screen.getByRole("button", { name: "Count votes" })).toBeInTheDocument();
   });
 
   it("collapses, starting open only while the ballot is open", async () => {
@@ -177,6 +181,44 @@ describe("SeasonScheduleAdmin", () => {
     setup();
     expect(screen.getByRole("group", { name: "Season" })).toContainElement(plannedEnd());
     expect(screen.getByRole("group", { name: /Award voting/ })).toContainElement(votingCloses());
+  });
+
+  it("closes and counts an open vote in one step, after a confirm", async () => {
+    const confirm = vi.spyOn(window, "confirm").mockReturnValueOnce(false).mockReturnValue(true);
+    const { user, onCount } = setup({
+      season: season({ voting_opened_at: new Date(T0 - 1000).toISOString() }),
+    });
+    await user.click(screen.getByRole("button", { name: "Close voting and count" }));
+    expect(onCount).not.toHaveBeenCalled();
+    expect(confirm.mock.calls[0][0]).toMatch(/Counting is final/);
+    await user.click(screen.getByRole("button", { name: "Close voting and count" }));
+    expect(onCount).toHaveBeenCalledOnce();
+  });
+
+  it("offers Count votes once a vote has closed", async () => {
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    const { user, onCount } = setup({
+      season: season({
+        voting_opened_at: new Date(T0 - 2 * DAY).toISOString(),
+        voting_closes_at: new Date(T0 - DAY).toISOString(),
+      }),
+    });
+    expect(screen.queryByRole("button", { name: "Close voting and count" })).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Count votes" }));
+    expect(onCount).toHaveBeenCalledOnce();
+  });
+
+  it("leaves nothing to change once counted", () => {
+    setup({
+      season: season({
+        voting_opened_at: new Date(T0 - 2 * DAY).toISOString(),
+        voting_closes_at: new Date(T0 - DAY).toISOString(),
+        awards_finalized_at: new Date(T0 - DAY / 2).toISOString(),
+      }),
+    });
+    expect(screen.getByText(/Results are final/)).toBeInTheDocument();
+    expect(screen.queryByLabelText("Voting closes (optional)")).toBeNull();
+    expect(screen.queryByRole("button", { name: /count|voting now/i })).toBeNull();
   });
 
   it("explains a refusal", async () => {
