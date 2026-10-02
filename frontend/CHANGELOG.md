@@ -1,5 +1,12 @@
 # toegg-elo-frontend
 
+## 1.13.0 (2026-10-02)
+
+### Minor Changes
+
+- Add Achievement categories
+- Add Season Awards
+
 ## 1.12.0 (2026-09-30)
 
 ### Minor Changes
