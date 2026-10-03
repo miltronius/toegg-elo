@@ -6,6 +6,7 @@
 
 - Add Achievement categories
 - Add Season Awards
+- Add a table of contents to the Timeline
 
 ## 1.12.0 (2026-09-30)
 
