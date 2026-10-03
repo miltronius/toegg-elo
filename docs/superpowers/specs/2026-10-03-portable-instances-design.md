@@ -47,14 +47,15 @@ today** - this is the issue's "get the DB schema". Built in two steps:
 1. Apply the 24 old files to an empty local Supabase, dump prod's schema, diff the two.
    Every difference is drift (e.g. the open delete policies found in September) and is
    resolved explicitly, never copied blindly.
-2. Add by hand what a `public`-schema dump drops:
+2. Add by hand what a `public`-schema dump drops or gets wrong:
+   - a REVOKE before the dumped grants, so they come out exactly as on prod (see
+     Findings - without it the restore re-opens locked functions to `anon`),
    - the `on_auth_user_created` trigger on `auth.users`,
-   - the `supabase_realtime` publication membership (`matches`, `players`, `seasons`,
-     `team_names`, `banners`),
-   - a seed: insert Season 1 when `seasons` is empty (column defaults for `k_factor` /
-     `partner_weight`; the `create_season_banner` trigger then adds its welcome banner),
-   - the inactivity-penalty `cron.schedule` *only if* prod actually has it scheduled
-     (to verify - see Open questions).
+   - a seed: insert Season 1 when `seasons` is empty, on the new-season dialog's
+     defaults (K 48, partner weight 0.25 - the column default for K is still 32); the
+     `create_season_banner` trigger then adds its welcome banner.
+
+   (The realtime publication *is* in the dump; prod has no pg_cron, so no cron job.)
 
 The baseline is **marked as applied** on staging and prod (`supabase migration repair
 --status applied 20261003000000`), never run there. So anything new - including the anon hotfix -
@@ -101,21 +102,28 @@ CLAUDE.md's many references to them stay readable.
 Only the copied `deploy.yml`:
 
 - triggers: daily `schedule` + `workflow_dispatch` ("update now")
-- `uses: miltronius/toegg-elo/.github/workflows/deploy-instance.yml@v1`,
-  `secrets: inherit`
+- `uses: miltronius/toegg-elo/.github/workflows/deploy-instance.yml@v1`, with the
+  variables as inputs and each secret passed explicitly (`secrets: inherit` only works
+  within one GitHub organization)
 - a `concurrency` group so a manual and a scheduled run never overlap
+- the repository should be **private**: GitHub disables scheduled workflows in public
+  repositories after 60 days without activity
 
 | Name | Kind | Purpose |
 |---|---|---|
 | `SUPABASE_ACCESS_TOKEN` | secret | CLI: push migrations, deploy the function, read API keys, Management API |
 | `SUPABASE_DB_PASSWORD` | secret | `db push` connects to Postgres directly |
-| `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` | secrets | Publish to an existing, empty Vercel project |
+| `VERCEL_TOKEN` | secret | Find or create the Vercel project (REST API) and publish to it |
 | `ADMIN_EMAIL` | secret | First admin (Section 3) |
 | `SUPABASE_PROJECT_REF` | variable | Which Supabase project |
+| `VERCEL_PROJECT` | variable | Vercel project name; the first run creates it |
+| `VERCEL_TEAM_ID` | variable | Optional: the Vercel team owning it |
 | `SITE_URL` | variable | Public URL, for auth redirects |
 
-No `VITE_SUPABASE_*` to copy: the URL is `https://<ref>.supabase.co`, the anon key is read
-with `supabase projects api-keys`.
+No `VITE_SUPABASE_*` to copy: the URL is `https://<ref>.supabase.co`, the browser key
+(publishable, else legacy anon) is read from the Management API. No Vercel org/project
+IDs either: the dashboard can only create Git-connected projects, so the workflow
+creates the project by name.
 
 ### A run
 
@@ -123,12 +131,14 @@ with `supabase projects api-keys`.
    `frontend/package.json`.
 2. Read `instance_state` from the instance database. If the recorded SHA equals the
    checkout's, stop - nothing to do. (No table or no recorded deploy = first install.)
-3. **First install only**: set the auth config through the Management API - Site URL and
-   redirect list from `SITE_URL`, "Confirm email" off. Done exactly once, so later runs
-   never overwrite what an adopter changes in the dashboard afterwards (e.g. SMTP).
-4. `supabase db push`.
+3. `supabase db push`.
+4. **First install only**: set the auth config through the Management API - Site URL and
+   redirect list from `SITE_URL`, "Confirm email" off - and record
+   `instance_state.auth_configured_at`. Done exactly once, so later runs (retries after
+   a failed deploy included) never overwrite what an adopter changes in the dashboard
+   afterwards (e.g. SMTP).
 5. `supabase functions deploy calculate-elo`.
-6. `select bootstrap_admin(ADMIN_EMAIL)` (Section 3).
+6. `select bootstrap_admin(ADMIN_EMAIL)` (Section 3) - on every run, deploy or not.
 7. `pnpm build`; write the output in Vercel's Build Output API v3 layout
    (`.vercel/output/static` + `config.json`); `vercel deploy --prebuilt --prod`. Nothing
    is built on Vercel, so the project needs no settings (no root directory, framework or env).
@@ -162,7 +172,8 @@ only get it once tagged.
 
 ### `instance_state` (private)
 
-- One row: `deployed_sha`, `deployed_version`, `deployed_at`, `bootstrap_admin_email`.
+- One row: `deployed_sha`, `deployed_version`, `deployed_at`, `auth_configured_at`,
+  `bootstrap_admin_email`.
 - RLS on, no policies, all privileges revoked from `anon`/`authenticated`. Only the
   workflow, connecting as `postgres`, reads or writes it.
 
@@ -199,7 +210,7 @@ the next run.
 - **README**: the Elo section (K = 32, per-opponent formula) is outdated - corrected to
   the current margin model in brief, pointing at CLAUDE.md for detail. Deployment
   section updated for `db push`.
-- **CLAUDE.md**: instance concept, migration rules 1 and 2, `db push` workflow, the
+- **CLAUDE.md**: instance concept, the migration rules (incl. explicit grants), `db push` workflow, the
   `v1` tag and `TRACK` constant, the new tables and `bootstrap_admin`.
 - **Changeset** (minor): the magic-link switch and self-hosting.
 
@@ -214,21 +225,25 @@ the next run.
     (`db push` would refuse it on every instance).
 - **`supabase/scripts/instance-bootstrap-checks.sql`**: `bootstrap_admin` in all three
   states, the `handle_new_user` promotion, `app_settings` RLS (anon reads, user can't
-  update, admin can), `instance_state` invisible to `anon`/`authenticated`, the anon
-  hotfix (`anon` can't execute either function).
+  update, admin can), `instance_state` invisible to `anon`/`authenticated`.
+- **`supabase/scripts/function-access-checks.sql`**: the anon hotfix, plus an allowlist
+  of the SECURITY DEFINER functions `anon` may execute, so the next one can't land as a
+  public endpoint unnoticed.
 - **Frontend unit tests**: login screen with the switch on/off; the Admin card.
 - **`actionlint`** on the workflow files, in CI.
 - **End-to-end** (needs your accounts, so after your return, before the merge): a test
-  instance repo + a new Vercel project against **staging** Supabase (the free tier allows
-  two active projects; prod + staging use both). That covers the "existing instance
-  updates" path with the real pipeline; fresh install is covered locally and in CI.
+  instance repo against a **fresh** Supabase project - staging can't test this, since it
+  has the legacy keys and old default grants that new projects lack (see Findings). The
+  free tier allows two active projects, so pause staging for it or use a paid slot.
+  Staging then covers the "existing instance updates" path.
 
 ## Rollout
 
 - All work on branch `elo-56-portable-instances`. **Not merged to `main`** until you are
   back and have reviewed it (planned absence: ~3 weeks from 2026-10-03).
-- Before merge: end-to-end run against staging; prod `migration repair` of the baseline
-  and `db push` of the new migrations (with your go-ahead); review the drift resolution.
+- Before merge: end-to-end run against a fresh project; staging and prod
+  `migration repair` of the baseline and `db push` of the new migrations (with your
+  go-ahead), and `calculate-elo` redeployed.
 - After merge: the next release tag creates `v1`; only then can an adopter's
   `deploy.yml` (`@v1`) resolve.
 
@@ -238,10 +253,39 @@ the next run.
   or logo; a separate template repo; backups before migrating (Supabase's own backups
   apply; an artifact dump in a public instance repo would leak data).
 
-## Open questions (verify during implementation)
+## Findings during planning (2026-10-03)
 
-- Is the inactivity-penalty cron job scheduled on prod? The baseline mirrors whatever is true.
-- Exact Management API field names for Site URL, redirect list and email autoconfirm.
-- Whether `supabase db push` needs `config.toml` values beyond `project_id`.
-- Which key `supabase projects api-keys` returns as the anon key on new projects
-  (legacy `anon` vs publishable key); the frontend accepts either.
+Verified against prod (read-only) and a local Supabase; these shaped the plan.
+
+- **No drift.** The 24 old files replayed on an empty database produce prod's schema
+  exactly (`pg_net` aside, a local-image extension). The README's "run them in order"
+  path was broken, though: `20260203_deletion_policies.sql` sorts before
+  `20260203_initial_schema.sql`, which then fails.
+- **A plain dump re-opens locked functions.** pg_dump writes grants relative to
+  Postgres' defaults, but Supabase's default privileges grant every new function and
+  table to `anon` - so prod's dump, restored as-is, makes `link_player_account` and the
+  award helpers callable by `anon` and the read-only tables writable. The baseline
+  REVOKEs before the dumped grants; with that, the round trip equals prod exactly.
+- **New Supabase projects grant nothing on new tables** to `anon`/`authenticated`
+  (default since 2026-05-30, all projects from 2026-10-30). Every new table states its
+  grants explicitly (migration rule 3).
+- **New projects have no legacy `anon`/`service_role` keys.** The frontend gets the
+  publishable key; `calculate-elo` reads `SUPABASE_SECRET_KEYS` with a fallback to
+  `SUPABASE_SERVICE_ROLE_KEY`, and is deployed with `verify_jwt = false` (its own auth
+  check already is the gate).
+- `supabase db push` applies each migration file in one transaction (a failing
+  statement left nothing behind locally). `supabase db dump` cleared `search_path`, so
+  the baseline's own additions set it back.
+- **Prod has no pg_cron** - the inactivity penalties were never scheduled, so the
+  baseline schedules nothing. `apply_inactivity_penalties` is called by nothing and
+  becomes owner-only. `increment_season_stats` has a stale 4-argument overload
+  (SECURITY INVOKER, so harmless) - dropped.
+- Two existing award checks assumed an ended season exists; they now create one.
+- `secrets: inherit` only works within one GitHub organization; the instance file passes
+  each secret. The Vercel dashboard only creates Git-connected projects, so the workflow
+  creates the project via the REST API (`POST /v11/projects`) - adopters need no
+  org/project IDs.
+- With "Confirm email" off, `signUp` returns a session; the login screen now closes
+  instead of asking to confirm the address.
+- Vercel Hobby is for non-commercial use; the guide tells companies to check whether
+  they need Pro.
