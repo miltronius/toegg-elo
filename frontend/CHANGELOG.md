@@ -3,16 +3,12 @@
 ## 1.14.0 (2026-10-31)
 
 ### Minor Changes
-
-- [#139](https://github.com/miltronius/toegg-elo/pull/139) [`0fd3afe`](https://github.com/miltronius/toegg-elo/commit/0fd3afe83cb2740fa165c221614f894ce320b593) Thanks [@miltronius](https://github.com/miltronius)! - Compare your achievements with other players in the Achievements overview
-
-- [#139](https://github.com/miltronius/toegg-elo/pull/139) [`0fd3afe`](https://github.com/miltronius/toegg-elo/commit/0fd3afe83cb2740fa165c221614f894ce320b593) Thanks [@miltronius](https://github.com/miltronius)! - Add the Democracy! achievement
+- Compare your achievements with other players in the Achievements overview
+- Add the Democracy! achievement
 
 ### Patch Changes
-
-- [#139](https://github.com/miltronius/toegg-elo/pull/139) [`0fd3afe`](https://github.com/miltronius/toegg-elo/commit/0fd3afe83cb2740fa165c221614f894ce320b593) Thanks [@miltronius](https://github.com/miltronius)! - Timeline: show achievements earned on days without games
-
-- [#139](https://github.com/miltronius/toegg-elo/pull/139) [`0fd3afe`](https://github.com/miltronius/toegg-elo/commit/0fd3afe83cb2740fa165c221614f894ce320b593) Thanks [@miltronius](https://github.com/miltronius)! - Season Awards: a shinier vote prompt, and awards nobody can be voted for are greyed out
+- Timeline: show achievements earned on days without games
+- Season Awards: a shinier vote prompt
 
 ## 1.13.0 (2026-10-02)
 
