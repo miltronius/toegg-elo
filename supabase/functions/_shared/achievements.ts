@@ -70,6 +70,7 @@ export type AchievementId =
   | "award_community"
   | "award_improved"
   | "award_rookie"
+  | "democracy"
   | "linked_account"
   | "completionist"
   | "completionist_30";
@@ -442,6 +443,34 @@ export function computeAwardWins(
     const list = byPlayer.get(r.player_id) ?? [];
     list.push({ achievementId: id, unlockedAt: at, seasonId: r.season_id });
     byPlayer.set(r.player_id, list);
+  }
+  return byPlayer;
+}
+
+/** A row of season_award_voters: who voted in a season, never for whom. */
+export interface AwardVoterRow {
+  season_id: string;
+  player_id: string;
+  first_voted_at: string;
+}
+
+/**
+ * Democracy! by player: one per season they voted in, dated by their first
+ * pick - the moment cast_award_vote also wrote as unlocked_at. The voters
+ * table outlives the ballots, which the count deletes.
+ */
+export function computeVoterAchievements(
+  voters: AwardVoterRow[],
+): Map<string, UnlockedAchievement[]> {
+  const byPlayer = new Map<string, UnlockedAchievement[]>();
+  for (const v of voters) {
+    const list = byPlayer.get(v.player_id) ?? [];
+    list.push({
+      achievementId: "democracy",
+      unlockedAt: new Date(v.first_voted_at),
+      seasonId: v.season_id,
+    });
+    byPlayer.set(v.player_id, list);
   }
   return byPlayer;
 }
@@ -1127,12 +1156,13 @@ export interface AchievementPreRead {
   seasonStats: SeasonStatRow[];
   /** Winners only (season_award_results). */
   awardResults: AwardResultRow[];
+  awardVoters: AwardVoterRow[];
 }
 
 async function readAchievementInputs(
   supabase: SupabaseClient,
 ): Promise<AchievementPreRead> {
-  const [links, seasons, seasonStats, awardResults] = await Promise.all([
+  const [links, seasons, seasonStats, awardResults, awardVoters] = await Promise.all([
     supabase.from("player_accounts").select("player_id, linked_at"),
     supabase
       .from("seasons")
@@ -1144,10 +1174,13 @@ async function readAchievementInputs(
       .from("season_award_results")
       .select("season_id, award_id, player_id, is_winner")
       .eq("is_winner", true),
+    supabase
+      .from("season_award_voters")
+      .select("season_id, player_id, first_voted_at"),
   ]);
   // Throw rather than skip on a failed read, so no meta-achievement is written
   // with a date that ignores what couldn't be read.
-  for (const r of [links, seasons, seasonStats, awardResults]) {
+  for (const r of [links, seasons, seasonStats, awardResults, awardVoters]) {
     if (r.error) throw r.error;
   }
   return {
@@ -1155,6 +1188,7 @@ async function readAchievementInputs(
     seasons: (seasons.data ?? []) as SeasonRow[],
     seasonStats: (seasonStats.data ?? []) as SeasonStatRow[],
     awardResults: (awardResults.data ?? []) as AwardResultRow[],
+    awardVoters: (awardVoters.data ?? []) as AwardVoterRow[],
   };
 }
 
@@ -1176,13 +1210,14 @@ export async function recomputeAllAchievements(
   const { data: eloHistory } = await supabase.from("elo_history").select("*");
   const history = (eloHistory ?? []) as EloHistory[];
 
-  const { links, seasons, seasonStats, awardResults } =
+  const { links, seasons, seasonStats, awardResults, awardVoters } =
     pre ?? (await readAchievementInputs(supabase));
   const linkedAt = new Map<string, Date>(
     links.map((l) => [l.player_id, new Date(l.linked_at)]),
   );
   const placements = computeSeasonPlacements(seasons, seasonStats);
   const awardWins = computeAwardWins(seasons, awardResults);
+  const voted = computeVoterAchievements(awardVoters);
 
   for (const player of players) {
     const unlocked = computeAchievementsForPlayer(
@@ -1192,7 +1227,11 @@ export async function recomputeAllAchievements(
       players,
       history,
       linkedAt.get(player.id) ?? null,
-      [...(placements.get(player.id) ?? []), ...(awardWins.get(player.id) ?? [])],
+      [
+        ...(placements.get(player.id) ?? []),
+        ...(awardWins.get(player.id) ?? []),
+        ...(voted.get(player.id) ?? []),
+      ],
     );
     for (const u of unlocked) {
       rows.push({

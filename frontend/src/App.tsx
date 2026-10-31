@@ -15,6 +15,7 @@ import {
   getMyAwardVotes,
   getAwardTurnout,
   castAwardVote,
+  recomputeAchievements,
   deleteMatch,
   Player,
   Match,
@@ -54,7 +55,7 @@ import { Timeline } from "./components/Timeline";
 import { SeasonDialog } from "./components/SeasonDialog";
 import { AwardVoteNudge } from "./components/AwardVoteNudge";
 import { AwardBallotDialog } from "./components/AwardBallotDialog";
-import { ballotAccess } from "./lib/seasonAwards";
+import { ballotAccess, isFirstPick } from "./lib/seasonAwards";
 import { ThemeToggle } from "./components/ThemeToggle";
 import { LanguageSwitcher } from "./components/LanguageSwitcher";
 import { Win95Shell } from "./components/Win95Shell";
@@ -372,6 +373,7 @@ function App() {
     <AwardVoteNudge
       seasons={seasons}
       votes={awardVotes}
+      seasonStats={allPlayerSeasonStats}
       turnout={awardTurnout}
       onOpenBallot={setBallotSeasonId}
     />
@@ -720,11 +722,16 @@ function App() {
           votes={awardVotes}
           turnout={awardTurnout[ballotSeason.id] ?? null}
           onCast={async (awardId, nomineeId) => {
+            const firstPick = isFirstPick(awardVotes, ballotSeason.id, nomineeId);
             await castAwardVote(ballotSeason.id, awardId, nomineeId);
             await Promise.all([
               queryClient.invalidateQueries({ queryKey: ["awardVotes"] }),
               queryClient.invalidateQueries({ queryKey: ["awardTurnout", ballotSeason.id] }),
             ]);
+            // The first pick earned Democracy! (the RPC wrote it), and maybe a
+            // meta with it; neither reaches the dashboard until a recompute
+            // and refetch. Not awaited, so the pick doesn't wait on it.
+            if (firstPick) void recomputeAchievements().then(refresh);
           }}
           onClose={() => setBallotSeasonId(null)}
         />

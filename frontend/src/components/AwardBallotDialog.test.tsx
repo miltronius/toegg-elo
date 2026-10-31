@@ -209,13 +209,28 @@ describe("AwardBallotDialog", () => {
     ).toBeInTheDocument();
   });
 
-  it("says so when nobody qualifies for an award yet", async () => {
+  it("disables an award nobody besides you qualifies for", async () => {
     // Ben is the only rookie besides you.
     const { user } = setup({ seasonStats: STATS.filter((s) => s.player_id !== "p2") });
-    await user.click(awardCard(/Rookie of the Season/));
-    const rookie = award(/Rookie of the Season/);
-    expect(nomineeNames(rookie)).toEqual([]);
-    expect(within(rookie).getByText("Nobody is eligible yet.")).toBeInTheDocument();
+    const rookie = awardCard(/Rookie of the Season/);
+    expect(rookie).toBeDisabled();
+    expect(rookie).toHaveTextContent("Nobody qualifies");
+    await user.click(rookie);
+    expect(screen.queryByRole("group", { name: /Rookie of the Season/ })).toBeNull();
+    // ...and the count leaves it out.
+    expect(screen.getByText("0/5 picked")).toBeInTheDocument();
+  });
+
+  it("never opens on an award nobody qualifies for", () => {
+    setup({
+      seasonStats: STATS.filter((s) => s.player_id !== "p2"),
+      votes: (["award_offense", "award_defense", "award_fun", "award_community", "award_improved"] as const)
+        .map((id) => vote(id, "p4")),
+    });
+    expect(screen.getByRole("button", { expanded: true })).toHaveTextContent(
+      "Best Offensive Player",
+    );
+    expect(screen.getByText("5/5 picked")).toBeInTheDocument();
   });
 
   it("closes on Done", async () => {

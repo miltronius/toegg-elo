@@ -11,11 +11,13 @@ import {
   awardVotingWindow,
   ballotAccess,
   eligibleNomineeIds,
+  isFirstPick,
   nextSeasonOf,
   parseSeasonDate,
   picksForSeason,
   seasonsOpenForVoting,
   turnoutRatio,
+  votableAwardIds,
   awardStandings,
   type AwardResult,
   votingStatusLabel,
@@ -267,6 +269,59 @@ describe("picksForSeason", () => {
         "s5",
       ),
     ).toEqual({ award_fun: "p2", award_rookie: "p3" });
+  });
+});
+
+describe("votableAwardIds", () => {
+  const S4 = { id: "s4", number: 4 };
+  const S5 = { id: "s5", number: 5 };
+  const stat = (player_id: string, season_id: string, games: number) => ({
+    player_id,
+    season_id,
+    wins: games,
+    losses: 0,
+  });
+
+  it("is every award someone besides you qualifies for", () => {
+    // p2 is ranked for the first time, so a rookie too.
+    const stats = [stat("p1", "s5", 3), stat("p2", "s5", 3)];
+    expect(votableAwardIds(S5, [S5, S4], stats, "p1", {}).size).toBe(6);
+  });
+
+  it("leaves out an award only you qualify for, or nobody does", () => {
+    // p2 was ranked in S4 already: you are the only rookie.
+    const stats = [stat("p1", "s5", 3), stat("p2", "s5", 3), stat("p2", "s4", 3)];
+    const ids = votableAwardIds(S5, [S5, S4], stats, "p1", {});
+    expect(ids.has("award_rookie")).toBe(false);
+    expect(ids.size).toBe(5);
+    expect(votableAwardIds(S5, [S5, S4], [], "p1", {}).size).toBe(0);
+  });
+
+  it("keeps an award you picked in, even once your pick stops qualifying", () => {
+    expect(votableAwardIds(S5, [S5, S4], [], "p1", { award_rookie: "p2" })).toEqual(
+      new Set(["award_rookie"]),
+    );
+  });
+});
+
+describe("isFirstPick", () => {
+  const vote = (season_id: string): AwardVote => ({
+    season_id,
+    award_id: "award_fun",
+    nominee_player_id: "p2",
+    voter_user_id: "u1",
+    updated_at: iso(T0),
+  });
+
+  it("is a pick in a season the voter hasn't picked in yet", () => {
+    expect(isFirstPick([], "s5", "p2")).toBe(true);
+    // A pick last season doesn't count for this one.
+    expect(isFirstPick([vote("s4")], "s5", "p2")).toBe(true);
+  });
+
+  it("isn't a second pick, or a cleared one", () => {
+    expect(isFirstPick([vote("s5")], "s5", "p3")).toBe(false);
+    expect(isFirstPick([], "s5", null)).toBe(false);
   });
 });
 

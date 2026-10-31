@@ -700,7 +700,13 @@ describe("recomputeAllAchievements with pre-read inputs", () => {
     const client = {
       from: (table: string) => {
         if (
-          ["player_accounts", "seasons", "player_season_stats", "season_award_results"].includes(table)
+          [
+            "player_accounts",
+            "seasons",
+            "player_season_stats",
+            "season_award_results",
+            "season_award_voters",
+          ].includes(table)
         ) {
           throw new Error(`${table} must not be read`);
         }
@@ -740,6 +746,7 @@ describe("recomputeAllAchievements with pre-read inputs", () => {
         losses: 0,
       })),
       awardResults: [{ season_id: "s1", award_id: "award_fun", player_id: "p2", is_winner: true }],
+      awardVoters: [{ season_id: "s1", player_id: "p3", first_voted_at: "2026-08-01T09:00:00Z" }],
     });
 
     expect(conflictTarget).toBe("player_id,achievement_id,season_id");
@@ -765,6 +772,15 @@ describe("recomputeAllAchievements with pre-read inputs", () => {
         achievement_id: "award_fun",
         season_id: "s1",
         unlocked_at: "2026-08-10T12:00:00.000Z",
+      }),
+    );
+    // Democracy!, dated by the first pick - the ballot itself is long gone.
+    expect(upserted).toContainEqual(
+      expect.objectContaining({
+        player_id: "p3",
+        achievement_id: "democracy",
+        season_id: "s1",
+        unlocked_at: "2026-08-01T09:00:00.000Z",
       }),
     );
   });
@@ -814,5 +830,17 @@ describe("repeated per-season achievements", () => {
     expect(win.seasonIds).toEqual([]);
     const locked = statuses.find((s) => s.definition.id === "season_top_2")!;
     expect(locked.count).toBe(0);
+  });
+
+  it("shows Democracy! once per season voted, under Season Awards", () => {
+    const rows = [
+      row("p1", "democracy", "s1", "2026-08-01T09:00:00Z"),
+      row("p1", "democracy", "s2", "2026-10-01T09:00:00Z"),
+    ];
+    const statuses = buildAchievementStatuses("p1", makePlayer("p1"), [makePlayer("p1")], [], rows);
+    const democracy = statuses.find((s) => s.definition.id === "democracy")!;
+    expect(democracy.definition.category).toBe("awards");
+    expect(democracy.count).toBe(2);
+    expect(democracy.seasonIds).toEqual(["s1", "s2"]);
   });
 });

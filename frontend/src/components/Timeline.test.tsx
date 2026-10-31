@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { render, screen, within } from "@testing-library/react";
 import { Timeline } from "./Timeline";
 import type { Match, Player, Season } from "../lib/supabase";
+import type { PlayerAchievementRow } from "../lib/achievements";
 
 const player = (id: string, name: string): Player => ({
   id,
@@ -54,13 +55,13 @@ const match = (id: string, seasonId: string, createdAt: string): Match => ({
   created_at: createdAt,
 });
 
-function renderTimeline() {
+function renderTimeline(allAchievementRows: PlayerAchievementRow[] = []) {
   render(
     <Timeline
       players={PLAYERS}
       matches={[match("m1", "s1", "2026-04-10T12:00:00Z"), match("m2", "s2", "2026-07-01T12:00:00Z")]}
       eloHistory={new Map()}
-      allAchievementRows={[]}
+      allAchievementRows={allAchievementRows}
       seasons={[S1, S2]}
     />,
   );
@@ -94,5 +95,30 @@ describe("Timeline seasons", () => {
       "#timeline-season-1",
     ]);
     expect(links[1]).toHaveTextContent("S1 · Spring04.04.2026 – 01.06.2026");
+  });
+});
+
+describe("Timeline achievements", () => {
+  it("gives an achievement earned on a day without games a day of its own", () => {
+    // Anna voted in S1's Season Awards two weeks into S2, on a day nobody played.
+    renderTimeline([
+      {
+        id: "x1",
+        player_id: "a",
+        achievement_id: "democracy",
+        unlocked_at: "2026-06-15T09:30:00Z",
+        meta: null,
+        season_id: "s1",
+      },
+    ]);
+    const earned = screen.getByText(/Democracy!/);
+    const day = earned.closest(".dashboard-day")!;
+    expect(day.querySelector(".dashboard-day-header")).toHaveTextContent("15. Juni 2026");
+    expect(day).toHaveTextContent("Anna");
+    // Filed under the season running that day.
+    const s2 = document.getElementById("timeline-season-2")!;
+    const s1 = document.getElementById("timeline-season-1")!;
+    expect(s2.compareDocumentPosition(day) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(day.compareDocumentPosition(s1) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 });

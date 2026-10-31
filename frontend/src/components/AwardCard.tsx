@@ -15,6 +15,8 @@ interface AwardCardProps {
   active: boolean;
   /** The element holding the nominees, for aria-controls. */
   panelId: string;
+  /** Nobody besides you qualifies (votableAwardIds): greyed out, flat. */
+  disabled?: boolean;
   onClick: () => void;
 }
 
@@ -24,7 +26,16 @@ interface AwardCardProps {
  * the rainbow border; one you've picked in carries a check and a calm border.
  * Shows how many votes it has, never for whom - the tally waits for the close.
  */
-export function AwardCard({ icon, name, pickName, votes, active, panelId, onClick }: AwardCardProps) {
+export function AwardCard({
+  icon,
+  name,
+  pickName,
+  votes,
+  active,
+  panelId,
+  disabled = false,
+  onClick,
+}: AwardCardProps) {
   const { t } = useTranslation();
   const tilt = useTilt<HTMLButtonElement>(MAX_TILT_DEG);
 
@@ -34,8 +45,9 @@ export function AwardCard({ icon, name, pickName, votes, active, panelId, onClic
       className={`shiny-card award-card${active ? " is-glowing" : ""}${pickName ? " is-done" : ""}`}
       aria-expanded={active}
       aria-controls={panelId}
+      disabled={disabled}
       onClick={onClick}
-      {...tilt}
+      {...(disabled ? {} : tilt)}
     >
       <span className="award-card-icon" aria-hidden="true">
         {icon}
@@ -44,9 +56,11 @@ export function AwardCard({ icon, name, pickName, votes, active, panelId, onClic
       <span className="award-card-pick">
         {pickName
           ? t("seasonAwards.ballot.yourPick", { name: pickName })
-          : t("seasonAwards.ballot.notPickedYet")}
+          : disabled
+            ? t("seasonAwards.ballot.noNominees")
+            : t("seasonAwards.ballot.notPickedYet")}
       </span>
-      {votes !== null && (
+      {votes !== null && !disabled && (
         <span className="award-card-votes">
           {t("seasonAwards.ballot.votes", { count: votes })}
         </span>

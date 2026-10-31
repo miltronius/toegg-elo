@@ -321,6 +321,7 @@
     "award_community": { "name": "Community Award", "description": "Win the “Community Award” Season Award" },
     "award_improved": { "name": "Most Improved", "description": "Win the “Most Improved” Season Award" },
     "award_rookie": { "name": "Rookie of the Season", "description": "Win the “Rookie of the Season” Season Award" },
+    "democracy": { "name": "Democracy!", "description": "Vote in the Season Awards" },
     "linked_account": { "name": "That's Me!", "description": "Link your account to your player" },
     "completionist": { "name": "Completionist", "description": "Unlock 20 achievements" },
     "completionist_30": { "name": "True Completionist", "description": "Unlock 30 achievements" }
@@ -355,7 +356,12 @@
     "allCategories": "All categories",
     "moreCategories": "+{{count}}",
     "clearCategories": "Clear category filter",
-    "filterToCategory": "Show only {{name}}"
+    "filterToCategory": "Show only {{name}}",
+    "compareAdd": "+ Compare with…",
+    "compareMe": "Me",
+    "compareEarned": "{{name}}: earned {{date}}",
+    "compareNotYet": "{{name}}: not yet",
+    "compareRemove": "Remove {{name}} from the comparison"
   },
   "achievementCategories": {
     "record": "Wins & Losses",
@@ -465,6 +471,7 @@
       "turnout": "{{voters}} of {{eligible}} players have voted so far.",
       "yourPick": "Your pick: {{name}}",
       "notPickedYet": "Not picked yet",
+      "noNominees": "Nobody qualifies",
       "votes_one": "{{count}} vote cast",
       "votes_other": "{{count}} votes cast",
       "title": "Season Awards · {{season}}",

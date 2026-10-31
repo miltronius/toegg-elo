@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { AwardVoteNudge } from "./AwardVoteNudge";
-import type { Season } from "../lib/supabase";
+import type { PlayerSeasonStats, Season } from "../lib/supabase";
 import type { AwardId, AwardVote } from "../lib/seasonAwards";
 
 const me = vi.hoisted(() => ({
@@ -45,12 +45,28 @@ const vote = (award_id: AwardId): AwardVote => ({
   updated_at: iso(T0),
 });
 
+const stat = (player_id: string, season_id: string, games: number): PlayerSeasonStats => ({
+  id: `${player_id}-${season_id}`,
+  player_id,
+  season_id,
+  elo_at_start: 1500,
+  current_season_elo: 1500,
+  wins: games,
+  losses: 0,
+  last_match_at: null,
+  created_at: iso(T0),
+});
+// You are p1; p2 is a first-time ranked player in both seasons' terms, so
+// every award has someone to vote for.
+const STATS = [stat("p1", "s4", 3), stat("p2", "s4", 3), stat("p1", "s5", 3), stat("p2", "s5", 3)];
+
 function renderNudge(over: Partial<React.ComponentProps<typeof AwardVoteNudge>> = {}) {
   const onOpenBallot = vi.fn();
   const view = render(
     <AwardVoteNudge
       seasons={[S5, S4]}
       votes={[vote("award_fun"), vote("award_rookie")]}
+      seasonStats={STATS}
       onOpenBallot={onOpenBallot}
       now={T0 + DAY}
       {...over}
@@ -65,11 +81,47 @@ describe("AwardVoteNudge", () => {
     me.myPlayerId = "p1";
     const { onOpenBallot } = renderNudge();
     const nudge = screen.getByRole("button", { name: /Vote for the Season Awards/ });
-    expect(nudge).toHaveTextContent("S4 · Summer");
+    // The season is part of the headline, not the small print.
+    expect(nudge.querySelector(".award-nudge-title")).toHaveTextContent(
+      "Vote for the Season Awards · S4 · Summer",
+    );
+    expect(nudge.querySelector(".award-nudge-meta")).not.toHaveTextContent("Summer");
     expect(nudge).toHaveTextContent("2/6 picked");
     expect(nudge).toHaveTextContent("closes 15.10.2026");
     await userEvent.click(nudge);
     expect(onOpenBallot).toHaveBeenCalledWith("s4");
+  });
+
+  it("counts only the awards you can vote in", () => {
+    me.role = "user";
+    me.myPlayerId = "p1";
+    // p2 ranked in S3 as well: no rookie besides you.
+    renderNudge({
+      seasons: [S5, S4, season({ id: "s3", number: 3, is_active: false })],
+      seasonStats: [...STATS, stat("p2", "s3", 3)],
+      votes: [vote("award_fun")],
+    });
+    expect(screen.getByRole("button")).toHaveTextContent("1/5 picked");
+  });
+
+  it("glows until every award you can vote in is picked", () => {
+    me.role = "user";
+    me.myPlayerId = "p1";
+    const { rerender } = renderNudge();
+    expect(screen.getByRole("button")).toHaveClass("shiny-card", "is-glowing");
+    const all = (["award_offense", "award_defense", "award_fun", "award_community", "award_improved", "award_rookie"] as const).map(vote);
+    rerender(
+      <AwardVoteNudge
+        seasons={[S5, S4]}
+        votes={all}
+        seasonStats={STATS}
+        onOpenBallot={() => {}}
+        now={T0 + DAY}
+      />,
+    );
+    expect(screen.getByRole("button")).toHaveTextContent("6/6 picked");
+    expect(screen.getByRole("button")).toHaveClass("shiny-card", "is-done");
+    expect(screen.getByRole("button")).not.toHaveClass("is-glowing");
   });
 
   it("shows how many have voted, once turnout has loaded", () => {

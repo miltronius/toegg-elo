@@ -16,6 +16,7 @@ import {
   nextSeasonOf,
   picksForSeason,
   turnoutRatio,
+  votableAwardIds,
   type AwardId,
   type AwardTurnout,
   type AwardVote,
@@ -47,7 +48,8 @@ const formatDate = (ms: number) =>
  * The Season Awards ballot: an overview of award cards (AwardCard, with your
  * pick and the votes cast so far), and below it the open award's nominee cards
  * (NomineeCard), limited to who qualifies right now, your own player never
- * offered. It opens on the first award you haven't picked in. Each pick
+ * offered. An award nobody else qualifies for is disabled. It opens on the
+ * first award you can still pick in. Each pick
  * is saved as it's made (cast_award_vote), so there's nothing to submit and any
  * award can be skipped; clicking the picked card again clears it. A pick who
  * stopped qualifying stays visible with a warning - blanking it would hide
@@ -70,8 +72,12 @@ export function AwardBallotDialog({
   const [picks, setPicks] = useState(() => picksForSeason(votes, season.id));
   const [saving, setSaving] = useState<Partial<Record<AwardId, boolean>>>({});
   const [errors, setErrors] = useState<Partial<Record<AwardId, string>>>({});
+  const votable = votableAwardIds(season, seasons, seasonStats, myPlayerId, picks);
   const [active, setActive] = useState<AwardId>(
-    () => (SEASON_AWARDS.find((a) => !picks[a.id]) ?? SEASON_AWARDS[0]).id,
+    () =>
+      (SEASON_AWARDS.find((a) => votable.has(a.id) && !picks[a.id]) ??
+        SEASON_AWARDS.find((a) => votable.has(a.id)) ??
+        SEASON_AWARDS[0]).id,
   );
 
   const eligible = useMemo(
@@ -156,6 +162,7 @@ export function AwardBallotDialog({
                 votes={turnout ? (turnout.awards[award.id] ?? 0) : null}
                 active={award.id === active}
                 panelId="award-ballot-panel"
+                disabled={!votable.has(award.id)}
                 onClick={() => setActive(award.id)}
               />
             );
@@ -231,7 +238,7 @@ export function AwardBallotDialog({
 
         <div className="flex items-center justify-between gap-2 mt-4">
           <span className="text-sm text-text-light">
-            {t("seasonAwards.nudge.picked", { picked: pickedCount, total: SEASON_AWARDS.length })}
+            {t("seasonAwards.nudge.picked", { picked: pickedCount, total: votable.size })}
           </span>
           <button className="btn-primary" onClick={onClose}>
             {t("seasonAwards.ballot.done")}

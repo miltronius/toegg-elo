@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { AchievementGallery, Achievements } from "./Achievements";
@@ -7,6 +7,18 @@ import {
   type PlayerAchievementRow,
 } from "../lib/achievements";
 import type { Player, Season } from "../lib/supabase";
+
+// Nobody by default, as outside an AuthProvider; the comparison tests sign in.
+const me = vi.hoisted(() => ({
+  role: null as string | null,
+  myPlayerId: null as string | null,
+  refreshMyPlayer: async () => {},
+}));
+vi.mock("../contexts/AuthContext", () => ({ useMe: () => me }));
+afterEach(() => {
+  me.role = null;
+  me.myPlayerId = null;
+});
 
 const player: Player = {
   id: "p1",
@@ -197,5 +209,96 @@ describe("Achievements overview - category column", () => {
     expect(
       screen.getByRole("button", { name: "Filter by category" }),
     ).toHaveTextContent("Season");
+  });
+});
+
+describe("Achievements overview - compare players", () => {
+  const named = (id: string, name: string): Player => ({ ...player, id, name });
+  const PLAYERS = [player, named("p2", "Ben"), named("p3", "Carla")];
+  // Anna (p1) was champion twice; Ben won his first match.
+  const ROWS: PlayerAchievementRow[] = [
+    champion("s1", "2026-04-04T00:00:00Z"),
+    champion("s2", "2026-05-30T00:00:00Z"),
+    {
+      id: "w1",
+      player_id: "p2",
+      achievement_id: "win_1",
+      unlocked_at: "2026-03-10T00:00:00Z",
+      meta: null,
+      season_id: null,
+    },
+  ];
+  const renderOverview = () =>
+    render(
+      <Achievements
+        players={PLAYERS}
+        matches={[]}
+        allAchievementRows={ROWS}
+        eloHistory={[]}
+        onSelectPlayer={() => {}}
+      />,
+    );
+  const row = (name: string) =>
+    screen.getByText(name).closest(".achievements-overview-row") as HTMLElement;
+  const addPlayer = async (name: string) => {
+    await userEvent.click(screen.getByPlaceholderText("+ Compare with…"));
+    await userEvent.click(screen.getByRole("option", { name: new RegExp(`^${name}`) }));
+  };
+
+  it("marks what you have earned and what not yet", () => {
+    me.role = "user";
+    me.myPlayerId = "p1";
+    renderOverview();
+    expect(screen.getByText("Me")).toBeInTheDocument();
+    const champ = within(row("Season Champion")).getByRole("img", { name: /^Me: earned/ });
+    expect(champ).toHaveTextContent("×2");
+    expect(champ).toHaveAccessibleName("Me: earned 30.05.2026");
+    expect(
+      within(row("First Victory")).getByRole("img", { name: "Me: not yet" }),
+    ).toBeInTheDocument();
+  });
+
+  it("tints the rows you have earned, whoever else is compared", async () => {
+    me.role = "user";
+    me.myPlayerId = "p1";
+    renderOverview();
+    await addPlayer("Ben");
+    expect(row("Season Champion")).toHaveClass("is-mine");
+    // Ben has it, you don't.
+    expect(row("First Victory")).not.toHaveClass("is-mine");
+  });
+
+  it("adds as many players as you like, and removes them again", async () => {
+    me.role = "user";
+    me.myPlayerId = "p1";
+    renderOverview();
+    await addPlayer("Ben");
+    await addPlayer("Carla");
+    const victory = within(row("First Victory"));
+    expect(victory.getByRole("img", { name: /^Ben: earned/ })).toBeInTheDocument();
+    expect(victory.getByRole("img", { name: "Carla: not yet" })).toBeInTheDocument();
+    // Columns in the order added, after yours.
+    expect(
+      victory.getAllByRole("img").map((c) => c.getAttribute("aria-label")?.split(":")[0]),
+    ).toEqual(["Me", "Ben", "Carla"]);
+
+    // Nobody twice, and never yourself.
+    await userEvent.click(screen.getByPlaceholderText("+ Compare with…"));
+    expect(screen.queryByRole("option")).toBeNull();
+
+    await userEvent.click(screen.getByRole("button", { name: "Remove Ben from the comparison" }));
+    expect(within(row("First Victory")).queryByRole("img", { name: /^Ben/ })).toBeNull();
+    expect(within(row("First Victory")).getByRole("img", { name: "Carla: not yet" })).toBeInTheDocument();
+  });
+
+  it("compares without a Me column when your account has no player", async () => {
+    me.role = "user";
+    renderOverview();
+    expect(screen.queryByText("Me")).toBeNull();
+    expect(within(row("First Victory")).queryByRole("img")).toBeNull();
+    await addPlayer("Anna");
+    expect(
+      within(row("Season Champion")).getByRole("img", { name: /^Anna: earned/ }),
+    ).toBeInTheDocument();
   });
 });
