@@ -1,5 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
-import { recomputeAllAchievements } from "./achievements";
+import { recomputeAllAchievements, type AwardVoterRow } from "./achievements";
 import { didLose, didWin } from "./eloHistory";
 import { releaseBannerMessage, releaseBannerWindow } from "./banners";
 import type { AwardId, AwardResult, AwardTurnout, AwardVote } from "./seasonAwards";
@@ -621,6 +621,18 @@ export async function getSeasonAwardResults(): Promise<AwardResult[]> {
 }
 
 /**
+ * Who voted in which season, never for whom (season_award_voters) - the
+ * record Democracy! is rebuilt from, since the count deletes the ballots.
+ */
+export async function getSeasonAwardVoters(): Promise<AwardVoterRow[]> {
+  const { data, error } = await supabase
+    .from("season_award_voters")
+    .select("season_id, player_id, first_voted_at");
+  if (error) throw error;
+  return (data ?? []) as AwardVoterRow[];
+}
+
+/**
  * Admin-only: closes a still-open ballot and counts it (finalize_season_awards),
  * then recomputes achievements so the meta tiers see the new award wins - the
  * count doesn't go through calculate-elo, like ending a season.
@@ -833,14 +845,16 @@ export async function recomputeAllAchievementsAdmin(): Promise<{
 }> {
   // Read everything the rebuild needs *before* the delete: a failing read
   // afterwards would leave the table empty.
-  const [players, matches, links, seasons, seasonStats, awardResults] = await Promise.all([
-    getPlayers(),
-    getMatches(),
-    getAllPlayerAccounts(),
-    getSeasons(),
-    getAllPlayerSeasonStats(),
-    getSeasonAwardResults(),
-  ]);
+  const [players, matches, links, seasons, seasonStats, awardResults, awardVoters] =
+    await Promise.all([
+      getPlayers(),
+      getMatches(),
+      getAllPlayerAccounts(),
+      getSeasons(),
+      getAllPlayerSeasonStats(),
+      getSeasonAwardResults(),
+      getSeasonAwardVoters(),
+    ]);
 
   // Clear every row first: recomputeAllAchievements upserts with
   // ignoreDuplicates and never deletes, so stale rows must be removed here.
@@ -855,6 +869,7 @@ export async function recomputeAllAchievementsAdmin(): Promise<{
     seasons,
     seasonStats,
     awardResults: awardResults.filter((r) => r.is_winner),
+    awardVoters,
   });
   return { players: players.length, matches: matches.length };
 }

@@ -20,10 +20,12 @@ import {
 } from "../lib/achievements";
 import type { Player, Match, EloHistory, Season } from "../lib/supabase";
 import { DATE_LOCALE } from "../lib/i18n";
+import { useMe } from "../contexts/AuthContext";
 import {
   AchievementCategoryFilter,
   CategoryBadge,
 } from "./AchievementCategoryFilter";
+import { PlayerAutocomplete } from "./PlayerAutocomplete";
 
 // Totals per category for the filter, where nothing is per-player.
 const CATEGORY_TOTALS = categoryCounts(
@@ -57,6 +59,9 @@ export function Achievements({
   const { t } = useTranslation();
   const [view, setView] = useState<"overview" | "players">("overview");
   const [categories, setCategories] = useState<AchievementCategory[]>([]);
+  // Players added to the overview's comparison, in the order added. Kept
+  // while switching views, not across a reload.
+  const [compareIds, setCompareIds] = useState<string[]>([]);
   const total = ACHIEVEMENT_DEFINITIONS.filter((d) =>
     inCategories(d, categories),
   ).length;
@@ -115,6 +120,8 @@ export function Achievements({
           eloHistory={eloHistory}
           categories={categories}
           onCategoriesChange={setCategories}
+          compareIds={compareIds}
+          onCompareChange={setCompareIds}
         />
       ) : (
         <table className="leaderboard-table achievements-table">
@@ -248,6 +255,28 @@ interface AchievementsOverviewProps {
   eloHistory: EloHistory[];
   categories: AchievementCategory[];
   onCategoriesChange: (categories: AchievementCategory[]) => void;
+  /** Players compared beside you, in the order added. */
+  compareIds: string[];
+  onCompareChange: (ids: string[]) => void;
+}
+
+const formatDate = (d: Date) =>
+  d.toLocaleDateString(DATE_LOCALE, {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+
+/**
+ * A comparison column's header on phones: "CB" for "Carla Berg", "DA" for
+ * "Dario". A name that short already fits ("Ben", "Me") stays as it is.
+ */
+function initials(name: string): string {
+  if (name.length <= 3) return name;
+  const words = name.trim().split(/\s+/);
+  const letters =
+    words.length > 1 ? words[0][0] + words[1][0] : words[0].slice(0, 2);
+  return letters.toUpperCase();
 }
 
 function AchievementsOverview({
@@ -257,8 +286,11 @@ function AchievementsOverview({
   eloHistory,
   categories,
   onCategoriesChange,
+  compareIds,
+  onCompareChange,
 }: AchievementsOverviewProps) {
   const { t } = useTranslation();
+  const { myPlayerId } = useMe();
   const rarityMap =
     allAchievementRows.length > 0
       ? computeRarityMap(allAchievementRows, players.length)
@@ -302,6 +334,31 @@ function AchievementsOverview({
     list.sort((a, b) => b.elo - a.elo);
   }
 
+  // Comparison columns: you first (when your account has a player), then
+  // everyone added. Each is that player's own statuses, as in PlayerDetail.
+  const me = myPlayerId ? playerById.get(myPlayerId) : undefined;
+  const columns = [
+    ...(me ? [{ player: me, label: t("achievements.compareMe"), removable: false }] : []),
+    ...compareIds.flatMap((id) => {
+      const p = playerById.get(id);
+      return p ? [{ player: p, label: p.name, removable: true }] : [];
+    }),
+  ].map((c) => ({
+    ...c,
+    statuses: new Map(
+      buildAchievementStatuses(
+        c.player.id,
+        c.player,
+        players,
+        matches,
+        allAchievementRows,
+        eloHistory,
+      ).map((s) => [s.definition.id, s] as const),
+    ),
+  }));
+  // Your own column, when there is one: its rows get a faint green tint.
+  const myStatuses = me ? columns[0].statuses : null;
+
   type Item = {
     def: (typeof ACHIEVEMENT_DEFINITIONS)[number];
     percent: number | undefined;
@@ -328,7 +385,10 @@ function AchievementsOverview({
   })).filter((g) => g.items.length > 0);
 
   return (
-    <div className="flex flex-col gap-4">
+    <div
+      className={`achievements-overview flex flex-col gap-4${columns.length > 0 ? " is-comparing" : ""}`}
+      style={{ "--compare-n": columns.length } as CSSProperties}
+    >
       <div className="achievements-overview-head">
         <AchievementCategoryFilter
           selected={categories}
@@ -337,6 +397,48 @@ function AchievementsOverview({
           maxBadges={3}
           alignStart
         />
+        <div className="achievements-compare-picker">
+          <PlayerAutocomplete
+            compact
+            players={players}
+            value=""
+            onChange={(id) => {
+              if (id) onCompareChange([...compareIds, id]);
+            }}
+            excludeIds={me ? [me.id, ...compareIds] : compareIds}
+            placeholder={t("achievements.compareAdd")}
+          />
+        </div>
+        {columns.map((c, i) => {
+          const short = initials(c.label);
+          return (
+            <div
+              key={c.player.id}
+              className={`achievements-compare-head${i === 0 ? " is-first" : ""}`}
+              title={c.label}
+            >
+              <span className="achievements-compare-name">{c.label}</span>
+              {short !== c.label && (
+                <span className="achievements-compare-initials" aria-hidden="true">
+                  {short}
+                </span>
+              )}
+              {c.removable && (
+                <button
+                  type="button"
+                  className="achievements-compare-remove"
+                  aria-label={t("achievements.compareRemove", { name: c.label })}
+                  title={t("achievements.compareRemove", { name: c.label })}
+                  onClick={() =>
+                    onCompareChange(compareIds.filter((id) => id !== c.player.id))
+                  }
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+          );
+        })}
       </div>
       {groups.map(({ tier, items: groupItems }) => {
         const isNone = tier === "none";
@@ -372,7 +474,7 @@ function AchievementsOverview({
               return (
                 <div
                   key={def.id}
-                  className="achievements-overview-row"
+                  className={`achievements-overview-row${myStatuses?.get(def.id)?.unlocked ? " is-mine" : ""}`}
                   style={
                     !isNone
                       ? ({ "--ach-color": groupColor } as CSSProperties)
@@ -405,7 +507,7 @@ function AchievementsOverview({
                       <CategoryBadge id={def.category} />
                     </button>
                   </div>
-                  <div>
+                  <div className="achievements-overview-barcell">
                     <div className="achievements-progress-bar achievements-overview-bar">
                       <div
                         className="achievements-progress-fill"
@@ -424,6 +526,29 @@ function AchievementsOverview({
                       ? `${percent.toFixed(0)}%`
                       : "-"}
                   </div>
+                  {columns.map((c) => {
+                    const s = c.statuses.get(def.id);
+                    const label = s?.unlocked
+                      ? t("achievements.compareEarned", {
+                          name: c.label,
+                          date: s.unlockedAt ? formatDate(s.unlockedAt) : "",
+                        }).trim()
+                      : t("achievements.compareNotYet", { name: c.label });
+                    return (
+                      <span
+                        key={c.player.id}
+                        role="img"
+                        className={`achievements-compare-cell${s?.unlocked ? " is-earned" : ""}`}
+                        aria-label={label}
+                        title={label}
+                      >
+                        {s?.unlocked ? "✓" : "✗"}
+                        {s?.unlocked && s.count > 1 && (
+                          <span className="achievements-compare-count">×{s.count}</span>
+                        )}
+                      </span>
+                    );
+                  })}
                   <div className="achievements-overview-tooltip" role="tooltip">
                     <div className="achievements-overview-tooltip-title">
                       {achievers.length === 0

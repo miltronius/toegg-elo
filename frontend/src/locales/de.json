@@ -321,6 +321,7 @@
     "award_community": { "name": "Community-Preis", "description": "Gewinne den Saison-Award «Community-Preis»" },
     "award_improved": { "name": "Grösster Fortschritt", "description": "Gewinne den Saison-Award «Grösster Fortschritt»" },
     "award_rookie": { "name": "Rookie der Saison", "description": "Gewinne den Saison-Award «Rookie der Saison»" },
+    "democracy": { "name": "Demokratie!", "description": "Stimme bei den Saison-Awards ab" },
     "linked_account": { "name": "Das bin ich!", "description": "Verknüpfe dein Konto mit deinem Spieler" },
     "completionist": { "name": "Vervollständiger", "description": "Schalte 20 Erfolge frei" },
     "completionist_30": { "name": "Wahrer Vervollständiger", "description": "Schalte 30 Erfolge frei" }
@@ -355,7 +356,12 @@
     "allCategories": "Alle Kategorien",
     "moreCategories": "+{{count}}",
     "clearCategories": "Kategoriefilter zurücksetzen",
-    "filterToCategory": "Nur {{name}} anzeigen"
+    "filterToCategory": "Nur {{name}} anzeigen",
+    "compareAdd": "+ Vergleichen mit…",
+    "compareMe": "Ich",
+    "compareEarned": "{{name}}: erreicht am {{date}}",
+    "compareNotYet": "{{name}}: noch nicht",
+    "compareRemove": "{{name}} aus dem Vergleich entfernen"
   },
   "achievementCategories": {
     "record": "Siege & Niederlagen",
@@ -465,6 +471,7 @@
       "turnout": "{{voters}} von {{eligible}} Spielern haben bisher abgestimmt.",
       "yourPick": "Deine Wahl: {{name}}",
       "notPickedYet": "Noch nicht gewählt",
+      "noNominees": "Niemand kommt in Frage",
       "votes_one": "{{count}} Stimme abgegeben",
       "votes_other": "{{count}} Stimmen abgegeben",
       "title": "Saison-Awards · {{season}}",

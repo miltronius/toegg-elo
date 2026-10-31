@@ -250,6 +250,42 @@ export function picksForSeason(
 }
 
 /**
+ * The awards the voter can pick in: someone besides themselves qualifies, or
+ * they've picked in it already (a pick who stopped qualifying stays visible,
+ * with a warning, and can be cleared). In a season where every ranked player
+ * was ranked before, that leaves out the rookie award - the ballot disables it
+ * and "x/N picked" doesn't wait for it.
+ */
+export function votableAwardIds(
+  season: Pick<Season, "id" | "number">,
+  seasons: Pick<Season, "id" | "number">[],
+  seasonStats: StatsRow[],
+  myPlayerId: string | null,
+  picks: Partial<Record<AwardId, string>>,
+): Set<AwardId> {
+  const ids = new Set<AwardId>();
+  for (const award of SEASON_AWARDS) {
+    const nominees = eligibleNomineeIds(award, season, seasons, seasonStats);
+    if (myPlayerId) nominees.delete(myPlayerId);
+    if (nominees.size > 0 || picks[award.id]) ids.add(award.id);
+  }
+  return ids;
+}
+
+/**
+ * Whether this pick is the voter's first in the season - the one that earns
+ * Democracy!. A ballot cleared and picked in again reads as a first pick too;
+ * the server keeps the original date either way.
+ */
+export function isFirstPick(
+  votes: AwardVote[],
+  seasonId: string,
+  nomineePlayerId: string | null,
+): boolean {
+  return nomineePlayerId !== null && !votes.some((v) => v.season_id === seasonId);
+}
+
+/**
  * A season date typed as Swiss text - the planned end or the voting close -
  * which must come after the season's start (the seasons CHECKs).
  */

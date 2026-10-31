@@ -295,9 +295,15 @@ function buildTimeline(
       }));
   }
 
-  // Collect all dates: match days + season transition and start days
+  // Collect all dates: match days, season transition and start days, and days
+  // something was earned without a game (Democracy!, That's Me!, award wins).
   const allDates = [
-    ...new Set([...activeDates, ...transitionByDate.keys(), ...startByDate.keys()]),
+    ...new Set([
+      ...activeDates,
+      ...transitionByDate.keys(),
+      ...startByDate.keys(),
+      ...achievementsByDate.keys(),
+    ]),
   ].sort();
 
   // Build day sections (newest first)

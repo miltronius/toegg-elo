@@ -1,6 +1,7 @@
 import { assertEquals } from "@std/assert";
 import {
   type AwardResultRow,
+  type AwardVoterRow,
   computeAchievementsForPlayer,
   computeAwardWins,
   computeGoalAchievements,
@@ -10,6 +11,7 @@ import {
   type MatchGame,
   type SeasonRow,
   type SeasonStatRow,
+  computeVoterAchievements,
   teamGoals,
 } from "../_shared/achievements.ts";
 
@@ -490,5 +492,47 @@ Deno.test("award wins count toward the meta achievements", () => {
   assertEquals(
     withAward.some((u) => u.achievementId === "achievement_hunter"),
     true,
+  );
+});
+
+// --- Democracy! (voting in the Season Awards) ---
+
+const voter = (player_id: string, first_voted_at: string, season_id = "s1"): AwardVoterRow => ({
+  season_id,
+  player_id,
+  first_voted_at,
+});
+
+Deno.test("democracy: one per season voted, dated by the first pick", () => {
+  const got = computeVoterAchievements([
+    voter("p1", "2026-08-01T09:00:00.000Z"),
+    voter("p2", "2026-08-02T09:00:00.000Z"),
+  ]);
+  assertEquals(got.get("p1"), [
+    { achievementId: "democracy", unlockedAt: new Date("2026-08-01T09:00:00.000Z"), seasonId: "s1" },
+  ]);
+  assertEquals(got.get("p2")?.length, 1);
+});
+
+Deno.test("democracy: voting again next season is a second row", () => {
+  const got = computeVoterAchievements([
+    voter("p1", "2026-08-01T09:00:00.000Z"),
+    voter("p1", "2026-10-01T09:00:00.000Z", "s2"),
+  ]);
+  assertEquals(got.get("p1")?.map((u) => u.seasonId), ["s1", "s2"]);
+});
+
+Deno.test("democracy counts toward the meta achievements", () => {
+  // Nine one-time achievements of play plus Democracy! reach 10 distinct ids.
+  const got = computeAchievementsForPlayer("p1", { id: "p1" } as never, [], [], [], null, [
+    ...Array.from({ length: 9 }, (_, i) => ({
+      achievementId: (["win_1", "win_5", "win_10", "win_20", "win_50", "play_10", "play_20", "play_50", "streak_win_3"] as const)[i],
+      unlockedAt: new Date(Date.UTC(2026, 0, 1 + i)),
+    })),
+    ...(computeVoterAchievements([voter("p1", "2026-08-01T09:00:00.000Z")]).get("p1") ?? []),
+  ]);
+  assertEquals(
+    got.find((u) => u.achievementId === "achievement_hunter")?.unlockedAt,
+    new Date("2026-08-01T09:00:00.000Z"),
   );
 });
