@@ -1,5 +1,15 @@
 # toegg-elo-frontend
 
+## 1.14.0 (2026-10-31)
+
+### Minor Changes
+- Compare your achievements with other players in the Achievements overview
+- Add the Democracy! achievement
+
+### Patch Changes
+- Timeline: show achievements earned on days without games
+- Season Awards: a shinier vote prompt
+
 ## 1.13.0 (2026-10-02)
 
 ### Minor Changes
