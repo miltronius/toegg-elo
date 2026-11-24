@@ -1,6 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { recomputeAllAchievements } from "../_shared/achievements.ts";
 import { authorizeRecorder } from "./auth.ts";
+import { fetchAllRows } from "../_shared/fetchAll.ts";
 import {
   DEFAULT_PARTNER_WEIGHT,
   MAX_SERIES_GAMES,
@@ -426,8 +427,12 @@ Deno.serve(async (req) => {
     // Recompute achievements for all players (non-fatal)
     try {
       const { data: allPlayers } = await supabase.from("players").select("*");
-      const { data: allMatches } = await supabase.from("matches").select("*");
-      if (allPlayers && allMatches) {
+      // Paged: a bare select stops at 1000 rows and drops the newest.
+      const allMatches = await fetchAllRows((from, to) =>
+        supabase.from("matches").select("*").order("created_at").order("id")
+          .range(from, to)
+      );
+      if (allPlayers) {
         await recomputeAllAchievements(supabase, allPlayers, allMatches);
       }
     } catch (err) {

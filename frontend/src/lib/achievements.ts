@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Player, Match, EloHistory } from "./supabase";
+import { fetchAllRows } from "./fetchAll";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -2235,8 +2236,11 @@ export async function recomputeAllAchievements(
   const rows: Omit<PlayerAchievementRow, "id">[] = [];
 
   // ELO history feeds the day-swing and partner-gap achievements.
-  const { data: eloHistory } = await supabase.from("elo_history").select("*");
-  const history = (eloHistory ?? []) as EloHistory[];
+  // Paged: a bare select stops at 1000 rows and drops the newest.
+  const history = await fetchAllRows<EloHistory>((from, to) =>
+    supabase.from("elo_history").select("*").order("created_at").order("id")
+      .range(from, to)
+  );
 
   const { links, seasons, seasonStats, awardResults, awardVoters } =
     pre ?? (await readAchievementInputs(supabase));

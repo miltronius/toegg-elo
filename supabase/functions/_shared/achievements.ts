@@ -2,6 +2,7 @@
 // No browser-specific imports. Used by the calculate-elo edge function.
 
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { fetchAllRows } from "./fetchAll.ts";
 
 // ---------------------------------------------------------------------------
 // Types (mirrored from frontend)
@@ -1207,8 +1208,11 @@ export async function recomputeAllAchievements(
   }[] = [];
 
   // ELO history feeds the day-swing and partner-gap achievements.
-  const { data: eloHistory } = await supabase.from("elo_history").select("*");
-  const history = (eloHistory ?? []) as EloHistory[];
+  // Paged: a bare select stops at 1000 rows and drops the newest.
+  const history = await fetchAllRows<EloHistory>((from, to) =>
+    supabase.from("elo_history").select("*").order("created_at").order("id")
+      .range(from, to)
+  );
 
   const { links, seasons, seasonStats, awardResults, awardVoters } =
     pre ?? (await readAchievementInputs(supabase));

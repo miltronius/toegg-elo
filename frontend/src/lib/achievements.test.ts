@@ -711,7 +711,13 @@ describe("recomputeAllAchievements with pre-read inputs", () => {
           throw new Error(`${table} must not be read`);
         }
         if (table === "elo_history") {
-          return { select: async () => ({ data: [], error: null }) };
+          // Read in pages: select().order().order().range()
+          const query = {
+            select: () => query,
+            order: () => query,
+            range: async () => ({ data: [], error: null }),
+          };
+          return query;
         }
         return {
           upsert: async (
