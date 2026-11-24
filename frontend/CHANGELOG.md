@@ -1,5 +1,12 @@
 # toegg-elo-frontend
 
+## 1.14.1 (2026-11-24)
+
+### Patch Changes
+
+- [#142](https://github.com/miltronius/toegg-elo/pull/142) [`11dc7fc`](https://github.com/miltronius/toegg-elo/commit/11dc7fc3effc738d71e93fcb9c60879ae1c06816) Thanks [@miltronius](https://github.com/miltronius)! - Fix the newest matches showing no rating changes in History and on the leaderboard.
+  Reads of `elo_history`, `matches`, `player_season_stats` and `player_achievements` now page through Supabase's 1000-row response cap (`fetchAllRows`), which had silently dropped the newest rows. `calculate-elo` also checks every write and rolls back a half-recorded match instead of reporting success.
+
 ## 1.14.0 (2026-10-31)
 
 ### Minor Changes
