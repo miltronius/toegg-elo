@@ -1,6 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { recomputeAllAchievements, type AwardVoterRow } from "./achievements";
 import { didLose, didWin } from "./eloHistory";
+import { fetchAllRows } from "./fetchAll";
 import { releaseBannerMessage, releaseBannerWindow } from "./banners";
 import type { AwardId, AwardResult, AwardTurnout, AwardVote } from "./seasonAwards";
 
@@ -272,24 +273,26 @@ export async function recordMatch(
 }
 
 export async function getMatches(): Promise<Match[]> {
-  const { data, error } = await supabase
-    .from("matches")
-    .select("*")
-    .order("created_at", { ascending: false });
-
-  if (error) throw error;
-  return data || [];
+  return fetchAllRows<Match>((from, to) =>
+    supabase
+      .from("matches")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .order("id", { ascending: false })
+      .range(from, to),
+  );
 }
 
 export async function getEloHistory(playerId: string): Promise<EloHistory[]> {
-  const { data, error } = await supabase
-    .from("elo_history")
-    .select("*")
-    .eq("player_id", playerId)
-    .order("created_at", { ascending: false });
-
-  if (error) throw error;
-  return data || [];
+  return fetchAllRows<EloHistory>((from, to) =>
+    supabase
+      .from("elo_history")
+      .select("*")
+      .eq("player_id", playerId)
+      .order("created_at", { ascending: false })
+      .order("id", { ascending: false })
+      .range(from, to),
+  );
 }
 
 export async function deleteMatch(matchId: string) {
@@ -522,11 +525,13 @@ export async function getPlayerSeasonStats(
 }
 
 export async function getAllPlayerSeasonStats(): Promise<PlayerSeasonStats[]> {
-  const { data, error } = await supabase
-    .from("player_season_stats")
-    .select("*");
-  if (error) throw error;
-  return (data ?? []) as PlayerSeasonStats[];
+  return fetchAllRows<PlayerSeasonStats>((from, to) =>
+    supabase
+      .from("player_season_stats")
+      .select("*")
+      .order("id")
+      .range(from, to),
+  );
 }
 
 export async function endSeasonAndStartNew(
@@ -801,13 +806,16 @@ export async function upsertTeamName(
 }
 
 export async function getAllEloHistory(): Promise<EloHistory[]> {
-  const { data, error } = await supabase
-    .from("elo_history")
-    .select("*")
-    .order("created_at", { ascending: true });
-
-  if (error) throw error;
-  return data || [];
+  // Paged: a bare select stops at 1000 rows, and ascending order meant the
+  // newest match's rows were the ones dropped (2026-11).
+  return fetchAllRows<EloHistory>((from, to) =>
+    supabase
+      .from("elo_history")
+      .select("*")
+      .order("created_at", { ascending: true })
+      .order("id", { ascending: true })
+      .range(from, to),
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -817,11 +825,14 @@ export async function getAllEloHistory(): Promise<EloHistory[]> {
 export type { PlayerAchievementRow } from "./achievements";
 
 export async function getAllPlayerAchievements() {
-  const { data, error } = await supabase
-    .from("player_achievements")
-    .select("*");
-  if (error) throw error;
-  return (data ?? []) as import("./achievements").PlayerAchievementRow[];
+  return fetchAllRows<import("./achievements").PlayerAchievementRow>(
+    (from, to) =>
+      supabase
+        .from("player_achievements")
+        .select("*")
+        .order("id")
+        .range(from, to),
+  );
 }
 
 export async function getPlayerAchievements(playerId: string) {

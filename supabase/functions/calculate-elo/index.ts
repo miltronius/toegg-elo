@@ -1,6 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { recomputeAllAchievements } from "../_shared/achievements.ts";
 import { authorizeRecorder } from "./auth.ts";
+import { fetchAllRows } from "../_shared/fetchAll.ts";
 import {
   DEFAULT_PARTNER_WEIGHT,
   MAX_SERIES_GAMES,
@@ -317,53 +318,121 @@ Deno.serve(async (req) => {
       .single();
 
     if (matchError || !matchResult) {
+      console.error("Match insert failed:", matchError);
       return fail("Could not create match record");
     }
 
     const matchId = matchResult.id;
 
-    // Update player ELOs and create history records
-    for (const change of eloChanges) {
-      const playerData = players.find((p) => p.id === change.playerId);
+    // Snapshot the season rows before touching them, so a failed write below
+    // can put them back. increment_season_stats is relative, so there is no
+    // call that undoes it.
+    const { data: seasonRowsBefore, error: seasonRowsError } = await supabase
+      .from("player_season_stats")
+      .select("player_id, current_season_elo, wins, losses, last_match_at")
+      .eq("season_id", seasonId)
+      .in("player_id", eloChanges.map((c) => c.playerId));
 
-      // Update player ELO. Wins and losses count series, not games - one
-      // recorded match stays one result everywhere else in the app.
-      await supabase
-        .from("players")
-        .update({
-          current_elo: change.eloAfter,
-          matches_played: (playerData?.matches_played || 0) + 1,
-          wins: (playerData?.wins || 0) + (change.won ? 1 : 0),
-          losses: (playerData?.losses || 0) + (change.won ? 0 : 1),
-        })
-        .eq("id", change.playerId);
+    // From here on every write is checked. Until 2026-11 their errors were
+    // ignored, so a failure left a match row with no elo_history and no rating
+    // change behind it - and reported success.
+    const playersTouched: string[] = [];
+    const seasonTouched: string[] = [];
+    const rollback = async (reason: unknown) => {
+      console.error(`Recording match ${matchId} failed, rolling back:`, reason);
+      for (const id of playersTouched) {
+        const p = players.find((x) => x.id === id)!;
+        const { error } = await supabase.from("players").update({
+          current_elo: p.current_elo,
+          matches_played: p.matches_played,
+          wins: p.wins,
+          losses: p.losses,
+        }).eq("id", id);
+        if (error) console.error(`Rollback of player ${id} failed:`, error);
+      }
+      for (const id of seasonTouched) {
+        const row = seasonRowsBefore?.find((r) => r.player_id === id);
+        if (!row) continue;
+        const { error } = await supabase.from("player_season_stats").update({
+          current_season_elo: row.current_season_elo,
+          wins: row.wins,
+          losses: row.losses,
+          last_match_at: row.last_match_at,
+        }).eq("season_id", seasonId).eq("player_id", id);
+        if (error) console.error(`Rollback of season row ${id} failed:`, error);
+      }
+      const { error: historyError } = await supabase
+        .from("elo_history").delete().eq("match_id", matchId);
+      if (historyError) console.error("Rollback of elo_history failed:", historyError);
+      const { error: matchDeleteError } = await supabase
+        .from("matches").delete().eq("id", matchId);
+      if (matchDeleteError) console.error("Rollback of match failed:", matchDeleteError);
+    };
 
-      // Create ELO history record
-      await supabase.from("elo_history").insert({
-        player_id: change.playerId,
-        match_id: matchId,
-        season_id: seasonId,
-        elo_before: change.eloBefore,
-        elo_after: change.eloAfter,
-        elo_change: change.eloChange,
-        won: change.won,
-      });
+    try {
+      if (seasonRowsError) throw seasonRowsError;
 
-      // Update per-season stats
-      await supabase.rpc("increment_season_stats", {
-        p_player_id: change.playerId,
-        p_season_id: seasonId,
-        p_elo_before: change.eloBefore,
-        p_elo_after: change.eloAfter,
-        p_won: change.won,
-      });
+      // All four history rows in one insert: it either lands whole or not at all.
+      const { error: historyError } = await supabase.from("elo_history").insert(
+        eloChanges.map((change) => ({
+          player_id: change.playerId,
+          match_id: matchId,
+          season_id: seasonId,
+          elo_before: change.eloBefore,
+          elo_after: change.eloAfter,
+          elo_change: change.eloChange,
+          won: change.won,
+        })),
+      );
+      if (historyError) throw historyError;
+
+      for (const change of eloChanges) {
+        const playerData = players.find((p) => p.id === change.playerId);
+
+        // Wins and losses count series, not games - one recorded match stays
+        // one result everywhere else in the app.
+        playersTouched.push(change.playerId);
+        const { error: playerError } = await supabase
+          .from("players")
+          .update({
+            current_elo: change.eloAfter,
+            matches_played: (playerData?.matches_played || 0) + 1,
+            wins: (playerData?.wins || 0) + (change.won ? 1 : 0),
+            losses: (playerData?.losses || 0) + (change.won ? 0 : 1),
+          })
+          .eq("id", change.playerId);
+        if (playerError) throw playerError;
+
+        seasonTouched.push(change.playerId);
+        const { error: seasonStatsError } = await supabase.rpc(
+          "increment_season_stats",
+          {
+            p_player_id: change.playerId,
+            p_season_id: seasonId,
+            p_elo_before: change.eloBefore,
+            p_elo_after: change.eloAfter,
+            p_won: change.won,
+          },
+        );
+        if (seasonStatsError) throw seasonStatsError;
+      }
+    } catch (err) {
+      await rollback(err);
+      const detail = err && typeof err === "object" && "message" in err
+        ? String((err as { message: unknown }).message)
+        : String(err);
+      return fail(`Could not record the match: ${detail}`, 500);
     }
 
     // Recompute achievements for all players (non-fatal)
     try {
       const { data: allPlayers } = await supabase.from("players").select("*");
-      const { data: allMatches } = await supabase.from("matches").select("*");
-      if (allPlayers && allMatches) {
+      // Paged: a bare select stops at 1000 rows and drops the newest.
+      const allMatches = await fetchAllRows((from, to) =>
+        supabase.from("matches").select("*").order("created_at").order("id")
+          .range(from, to)
+      );
+      if (allPlayers) {
         await recomputeAllAchievements(supabase, allPlayers, allMatches);
       }
     } catch (err) {
